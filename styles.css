@@ -32,6 +32,12 @@
     cursor: pointer;
 }
 
+/* Fix for dropdown options visibility */
+#theme option {
+    color: black;
+    background: white;
+}
+
 /* Update existing styles to use variables */
 body {
     font-family: 'Roboto', sans-serif;
@@ -490,4 +496,147 @@ tr:nth-child(even) td {
     .player-name {
         font-size: 14px;
     }
+}
+
+/* Theme Selector Styles */
+.theme-selector-container {
+    margin: 20px auto;
+    max-width: 800px;
+    padding: 20px;
+    background: var(--surface-gradient);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.theme-selector-container h3 {
+    color: var(--text-color);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.theme-selector {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.tabs {
+    display: flex;
+    gap: 2px;
+    padding: 10px 10px 0;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.tab {
+    flex: 1;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px 8px 0 0;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+}
+
+.tab .color-preview {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.tab.active {
+    background: var(--main-color);
+    color: white;
+    transform: translateY(-4px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.preview-area {
+    padding: 30px;
+    background: rgba(0, 0, 0, 0.2);
+    min-height: 300px;
+}
+
+.preview-content {
+    background: var(--surface-gradient);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-header {
+    color: var(--text-color);
+    font-size: 18px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.preview-table {
+    margin-bottom: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.preview-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+}
+
+.preview-row.header {
+    background: linear-gradient(to bottom, var(--main-color), var(--secondary-color));
+    font-weight: bold;
+}
+
+.preview-button {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(to bottom, var(--main-color), var(--secondary-color));
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.preview-button:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+}
+
+/* Theme-specific color previews */
+[data-theme="classic-green"] .color-preview {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+}
+
+[data-theme="crimson-red"] .color-preview {
+    background: linear-gradient(135deg, #DC143C, #B01030);
+}
+
+/* Simple theme selector styles */
+.theme-controls {
+    margin: 10px 0;
+}
+
+#theme-selector {
+    padding: 8px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid var(--main-color);
+    background: var(--surface-gradient);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+#theme-selector:focus {
+    outline: none;
+    border-color: var(--main-color);
+    box-shadow: 0 0 5px var(--main-color);
 }

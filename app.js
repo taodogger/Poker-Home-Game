@@ -243,3 +243,22 @@ document.getElementById('reset-game').addEventListener('click', function() {
 document.getElementById('theme').addEventListener('change', function() {
     setTheme(this.value);
 });
+
+// Simple theme selector functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const themeSelector = document.getElementById('theme-selector');
+    
+    // Load saved theme
+    const savedTheme = localStorage.getItem('selectedTheme');
+    if (savedTheme) {
+        themeSelector.value = savedTheme;
+        setTheme(savedTheme);
+    }
+    
+    // Handle theme changes
+    themeSelector.addEventListener('change', (e) => {
+        const theme = e.target.value;
+        setTheme(theme);
+        localStorage.setItem('selectedTheme', theme);
+    });
+});
