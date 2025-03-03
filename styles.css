@@ -1,0 +1,444 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
+    background: linear-gradient(to right, #4CAF50, #45a049);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+header h1 {
+    margin: 0;
+    background: linear-gradient(to right, #fff, #e0e0e0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-fill-color: transparent;
+}
+
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #2a2a2a, #333);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+
+h2 {
+    margin-top: 0;
+    color: #4CAF50;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    border-bottom: 2px solid #4CAF50;
+    padding-bottom: 10px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(0,0,0,0.2);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+input, button {
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+input {
+    background: #444;
+    color: #fff;
+    border: 1px solid #555;
+}
+
+input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+button {
+    background: linear-gradient(to bottom, #4CAF50, #45a049);
+    color: white;
+    cursor: pointer;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+button:hover {
+    background: linear-gradient(to bottom, #45a049, #4CAF50);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
+}
+
+button:disabled {
+    background: linear-gradient(to bottom, #666, #555);
+    cursor: not-allowed;
+    transform: none;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 20px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+th {
+    background: linear-gradient(to bottom, #4CAF50, #45a049);
+    color: white;
+    padding: 15px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+td {
+    padding: 12px;
+    text-align: center;
+    background-color: rgba(68, 68, 68, 0.6);
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+tr:nth-child(even) td {
+    background-color: rgba(85, 85, 85, 0.6);
+}
+
+#animation {
+    display: none;  /* Initially hidden */
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+}
+
+#canvas {
+    border: 2px solid #4CAF50;
+    border-radius: 10px;
+}
+
+#payouts {
+    margin-top: 20px;
+}
+
+#payout-instructions {
+    margin-bottom: 10px;
+    font-style: italic;
+    color: #ccc;
+}
+
+#calculate-payouts {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: background-color 0.3s;
+}
+
+#calculate-payouts:hover {
+    background-color: #45a049;
+}
+
+#dealer-wheel {
+    position: relative;
+    margin: 20px auto;
+    border: 2px solid #4CAF50;
+}
+
+.player-marker {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: #4CAF50;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    transform-origin: center;
+    transition: transform 0.3s ease;
+}
+
+.dealer-marker {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: #ffd700;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-weight: bold;
+    transform-origin: center;
+    transition: transform 0.3s ease;
+    z-index: 1;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.spinning {
+    animation: spin 2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.danger {
+    background: linear-gradient(to bottom, #dc3545, #c82333) !important;
+}
+
+.danger:hover {
+    background: linear-gradient(to bottom, #c82333, #dc3545) !important;
+    box-shadow: 0 4px 8px rgba(220,53,69,0.3);
+}
+
+#game-controls {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.poker-table {
+    width: 1000px;
+    height: 500px;
+    margin: 20px auto;
+    background: radial-gradient(ellipse at center, #3e8e41, #2e7d32);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+.community-cards {
+    position: absolute;
+    top: 200px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    z-index: 1;
+}
+
+.player-area {
+    position: absolute;
+    width: 140px;
+    text-align: center;
+    transition: all 0.3s ease;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+}
+
+.player-area[data-position="top"] {
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.player-area[data-position="bottom"] {
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.player-area[data-position="left"] {
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.player-area[data-position="right"] {
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.player-area[data-position="top-left"] {
+    top: 30px;
+    left: 30px;
+}
+
+.player-area[data-position="top-right"] {
+    top: 30px;
+    right: 30px;
+}
+
+.player-area[data-position="bottom-left"] {
+    bottom: 30px;
+    left: 30px;
+}
+
+.player-area[data-position="bottom-right"] {
+    bottom: 30px;
+    right: 30px;
+}
+
+.player-name {
+    color: #fff;
+    font-size: 16px;
+    margin-bottom: 8px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    white-space: nowrap;
+}
+
+.hole-cards {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+}
+
+.card {
+    width: 60px;
+    height: 84px;
+    background: #fff;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease;
+    transform-style: preserve-3d;
+    position: relative;
+}
+
+.card.face-down {
+    background: linear-gradient(45deg, #b71c1c, #d32f2f);
+    background-image: 
+        repeating-linear-gradient(45deg, 
+            transparent,
+            transparent 10px,
+            rgba(0,0,0,0.1) 10px,
+            rgba(0,0,0,0.1) 20px
+        );
+}
+
+.card.flipping {
+    transform: rotateY(90deg);
+}
+
+.card.dealing {
+    animation: dealCard 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card[data-suit="♥"],
+.card[data-suit="♦"] {
+    color: #dc3545;
+}
+
+.card[data-suit="♠"],
+.card[data-suit="♣"] {
+    color: #000;
+}
+
+.winning-hand {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 215, 0, 0.9);
+    color: #000;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes dealCard {
+    from {
+        transform: translateY(-100px) scale(0.5);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.winner {
+    animation: winnerPulse 1.5s infinite;
+}
+
+@keyframes winnerPulse {
+    0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+    50% { box-shadow: 0 0 30px rgba(255,215,0,0.5); }
+    100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+}
+
+@media (max-width: 1100px) {
+    main {
+        max-width: 95%;
+    }
+    
+    .poker-table {
+        width: 100%;
+        height: 400px;
+    }
+    
+    .player-area {
+        width: 120px;
+    }
+    
+    .card {
+        width: 50px;
+        height: 70px;
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    .poker-table {
+        height: 300px;
+    }
+    
+    .player-area {
+        width: 100px;
+    }
+    
+    .card {
+        width: 40px;
+        height: 56px;
+        font-size: 16px;
+    }
+    
+    .player-name {
+        font-size: 14px;
+    }
+}

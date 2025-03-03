@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Home Game Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>♠️ Poker Home Game Manager ♥️</h1>
+    </header>
+    <main>
+        <section id="set-ratio">
+            <h2>Set Money to Chip Ratio</h2>
+            <form id="ratio-form">
+                <label for="real_money">Real Money ($):</label>
+                <input type="number" id="real_money" required min="0" step="0.01" autocomplete="off">
+                <label for="chips">Chips:</label>
+                <input type="number" id="chips" required min="1" autocomplete="off">
+                <button type="submit">Set Ratio</button>
+            </form>
+            <p id="ratio-display">Each chip is worth $1.00</p>
+        </section>
+        <section id="add-player">
+            <h2>Add Player</h2>
+            <form id="player-form">
+                <label for="name">Name:</label>
+                <input type="text" id="name" required autocomplete="name">
+                <label for="initial_chips">Initial Chips (Buy-in):</label>
+                <input type="number" id="initial_chips" required min="1" autocomplete="off">
+                <button type="submit">Add Player</button>
+            </form>
+        </section>
+        <section id="players">
+            <h2>Players</h2>
+            <table id="player-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Initial Chips</th>
+                        <th>Current Chips</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+        <section id="game-controls">
+            <button id="start-game">Start Game</button>
+            <button id="end-game" disabled>End Game</button>
+            <button id="reset-game" class="danger">Reset Game</button>
+        </section>
+        <section id="animation">
+            <h2>Dealer Selection</h2>
+            <div id="dealer-wheel" class="poker-table"></div>
+        </section>
+        <section id="payouts">
+            <h2>Payout Instructions</h2>
+            <p id="payout-instructions">Update the current chip counts and click 'Calculate Payouts' to see the settlement.</p>
+            <button id="calculate-payouts">Calculate Payouts</button>
+            <div id="payout-list"></div>
+        </section>
+    </main>
+    <script src="hand-animation.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
