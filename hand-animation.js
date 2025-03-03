@@ -3,6 +3,8 @@ class HandAnimation {
         this.container = document.getElementById(containerId);
         this.players = [];
         this.isAnimating = false;
+        this.lastDealerIndex = -1; // Track last dealer
+        this.dealerHistory = []; // Track dealer history
         this.positions = [
             'top', 'top-right', 'right', 'bottom-right',
             'bottom', 'bottom-left', 'left', 'top-left'
@@ -95,25 +97,61 @@ class HandAnimation {
         });
     }
 
+    // Add method to generate better random selection
+    getNextDealer() {
+        if (this.players.length <= 1) return 0;
+        
+        let availableIndices = [];
+        
+        // If we've dealt to everyone, reset the history
+        if (this.dealerHistory.length >= this.players.length - 1) {
+            this.dealerHistory = [this.lastDealerIndex];
+        }
+
+        // Get indices of players who haven't been dealer recently
+        for (let i = 0; i < this.players.length; i++) {
+            if (!this.dealerHistory.includes(i)) {
+                availableIndices.push(i);
+            }
+        }
+
+        // Select random index from available players
+        const randomIndex = Math.floor(Math.random() * availableIndices.length);
+        const selectedIndex = availableIndices[randomIndex];
+        
+        // Update history
+        this.lastDealerIndex = selectedIndex;
+        this.dealerHistory.push(selectedIndex);
+
+        return selectedIndex;
+    }
+
     async spin() {
         if (this.isAnimating || this.players.length < 2) return;
         this.isAnimating = true;
 
-        // Select random scenario and dealer
-        const scenario = this.scenarios[Math.floor(Math.random() * this.scenarios.length)];
-        const dealerIndex = Math.floor(Math.random() * this.players.length);
+        // Use new dealer selection method
+        const dealerIndex = this.getNextDealer();
         const dealer = this.players[dealerIndex];
 
+        // Select random scenario
+        const scenario = this.scenarios[Math.floor(Math.random() * this.scenarios.length)];
+        
         // Assign hands
         const hands = Array(this.players.length).fill(null);
         hands[dealerIndex] = scenario.dealerHand;
         
-        // Distribute other hands randomly
-        let handIndex = 0;
+        // Distribute other hands randomly but ensure variety
+        let usedHandIndices = new Set();
         for (let i = 0; i < this.players.length; i++) {
             if (i !== dealerIndex) {
-                hands[i] = scenario.otherHands[handIndex % scenario.otherHands.length];
-                handIndex++;
+                let handIndex;
+                do {
+                    handIndex = Math.floor(Math.random() * scenario.otherHands.length);
+                } while (usedHandIndices.has(handIndex) && usedHandIndices.size < scenario.otherHands.length);
+                
+                usedHandIndices.add(handIndex);
+                hands[i] = scenario.otherHands[handIndex];
             }
         }
 

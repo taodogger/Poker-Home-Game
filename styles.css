@@ -1,7 +1,42 @@
+:root {
+    /* Dynamic theme colors */
+    --main-color: #4CAF50;
+    --secondary-color: #45a049;
+    
+    /* Fixed modern gradients */
+    --body-gradient: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    --surface-gradient: linear-gradient(135deg, rgba(50,50,50,0.2), rgba(80,80,80,0.2));
+    --form-gradient: linear-gradient(135deg, rgba(40,40,40,0.3), rgba(60,60,60,0.3));
+    --text-color: #fff;
+    --table-row-odd: rgba(68, 68, 68, 0.6);
+    --table-row-even: rgba(85, 85, 85, 0.6);
+}
+
+/* Theme selector styles */
+#theme-selector {
+    margin-top: 10px;
+}
+
+#theme-selector label {
+    color: var(--text-color);
+    margin-right: 10px;
+}
+
+#theme-selector select {
+    padding: 8px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid var(--main-color);
+    background: var(--surface-gradient);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+/* Update existing styles to use variables */
 body {
     font-family: 'Roboto', sans-serif;
-    background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
-    color: #fff;
+    background: var(--body-gradient);
+    color: var(--text-color);
     margin: 0;
     padding: 20px;
     min-height: 100vh;
@@ -10,7 +45,7 @@ body {
 header {
     text-align: center;
     margin-bottom: 20px;
-    background: linear-gradient(to right, #4CAF50, #45a049);
+    background: linear-gradient(to right, var(--main-color), var(--secondary-color));
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -28,7 +63,7 @@ header h1 {
 main {
     max-width: 1200px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #2a2a2a, #333);
+    background: var(--surface-gradient);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0,0,0,0.3);
@@ -36,17 +71,18 @@ main {
 
 h2 {
     margin-top: 0;
-    color: #4CAF50;
+    color: var(--text-color);
     text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    border-bottom: 2px solid #4CAF50;
+    border-bottom: 2px solid var(--main-color);
     padding-bottom: 10px;
+    margin-bottom: 20px;
 }
 
 form {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: rgba(0,0,0,0.2);
+    background: var(--form-gradient);
     padding: 20px;
     border-radius: 8px;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
@@ -61,28 +97,29 @@ input, button {
 }
 
 input {
-    background: #444;
-    color: #fff;
-    border: 1px solid #555;
+    background: var(--input-background);
+    color: var(--text-color);
+    border: 1px solid var(--main-color);
 }
 
 input:focus {
     outline: none;
-    border-color: #4CAF50;
-    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    border-color: var(--main-color);
+    box-shadow: 0 0 10px var(--main-color);
 }
 
 button {
-    background: linear-gradient(to bottom, #4CAF50, #45a049);
-    color: white;
+    background: linear-gradient(to bottom, var(--main-color), var(--secondary-color));
+    color: var(--text-color);
     cursor: pointer;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    transition: all 0.3s ease;
 }
 
 button:hover {
-    background: linear-gradient(to bottom, #45a049, #4CAF50);
+    background: linear-gradient(to bottom, var(--secondary-color), var(--main-color));
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     transform: translateY(-1px);
 }
@@ -98,14 +135,14 @@ table {
     border-collapse: separate;
     border-spacing: 0;
     margin-top: 20px;
-    background: rgba(0,0,0,0.2);
+    background: var(--surface-gradient);
     border-radius: 8px;
     overflow: hidden;
 }
 
 th {
-    background: linear-gradient(to bottom, #4CAF50, #45a049);
-    color: white;
+    background: linear-gradient(to bottom, var(--main-color), var(--secondary-color));
+    color: var(--text-color);
     padding: 15px;
     font-weight: 500;
     text-transform: uppercase;
@@ -115,12 +152,13 @@ th {
 td {
     padding: 12px;
     text-align: center;
-    background-color: rgba(68, 68, 68, 0.6);
+    background-color: var(--table-row-odd);
+    color: var(--text-color);
     border-top: 1px solid rgba(255,255,255,0.1);
 }
 
 tr:nth-child(even) td {
-    background-color: rgba(85, 85, 85, 0.6);
+    background-color: var(--table-row-even);
 }
 
 #animation {
@@ -131,7 +169,7 @@ tr:nth-child(even) td {
 }
 
 #canvas {
-    border: 2px solid #4CAF50;
+    border: 2px solid var(--main-color);
     border-radius: 10px;
 }
 
@@ -146,8 +184,8 @@ tr:nth-child(even) td {
 }
 
 #calculate-payouts {
-    background-color: #4CAF50;
-    color: white;
+    background: linear-gradient(to bottom, var(--main-color), var(--secondary-color));
+    color: var(--text-color);
     padding: 10px;
     border: none;
     border-radius: 5px;
@@ -157,20 +195,20 @@ tr:nth-child(even) td {
 }
 
 #calculate-payouts:hover {
-    background-color: #45a049;
+    background: linear-gradient(to bottom, var(--secondary-color), var(--main-color));
 }
 
 #dealer-wheel {
     position: relative;
     margin: 20px auto;
-    border: 2px solid #4CAF50;
+    border: 2px solid var(--main-color);
 }
 
 .player-marker {
     position: absolute;
     width: 40px;
     height: 40px;
-    background: #4CAF50;
+    background: var(--main-color);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -230,7 +268,7 @@ tr:nth-child(even) td {
     width: 1000px;
     height: 500px;
     margin: 20px auto;
-    background: radial-gradient(ellipse at center, #3e8e41, #2e7d32);
+    background: radial-gradient(ellipse at center, var(--main-color), var(--secondary-color));
     border-radius: 10px;
     position: relative;
     overflow: hidden;
@@ -256,6 +294,7 @@ tr:nth-child(even) td {
     padding: 10px;
     background: rgba(0,0,0,0.3);
     border-radius: 8px;
+    border: 1px solid var(--main-color);
 }
 
 .player-area[data-position="top"] {
@@ -303,7 +342,7 @@ tr:nth-child(even) td {
 }
 
 .player-name {
-    color: #fff;
+    color: var(--text-color);
     font-size: 16px;
     margin-bottom: 8px;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
@@ -394,12 +433,22 @@ tr:nth-child(even) td {
 
 .winner {
     animation: winnerPulse 1.5s infinite;
+    border: 3px solid var(--main-color);
+    box-shadow: 0 0 20px var(--main-color);
 }
 
 @keyframes winnerPulse {
     0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
     50% { box-shadow: 0 0 30px rgba(255,215,0,0.5); }
     100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+}
+
+#payout-list {
+    color: var(--text-color);
+    background: var(--surface-gradient);
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
 }
 
 @media (max-width: 1100px) {

@@ -1,9 +1,68 @@
+// Define themes with main colors and gradients
+const themes = {
+    'classic-green': {
+        '--main-color': '#4CAF50',
+        '--secondary-color': '#45a049'
+    },
+    'royal-blue': {
+        '--main-color': '#1E90FF',
+        '--secondary-color': '#1C86EE'
+    },
+    'crimson-red': {
+        '--main-color': '#DC143C',
+        '--secondary-color': '#C71585'
+    },
+    'midnight-black': {
+        '--primary-color': '#000000',
+        '--secondary-color': '#1a1a1a',
+        '--background-color': '#000000',
+        '--surface-color': '#1a1a1a',
+        '--text-color': '#fff',
+        '--accent-color': '#ffffff'
+    },
+    'ocean-breeze': {
+        '--main-color': '#00CED1',
+        '--secondary-color': '#20B2AA'
+    },
+    'firestorm': {
+        '--main-color': '#FF4500',
+        '--secondary-color': '#FFD700'
+    },
+    'purple-haze': {
+        '--main-color': '#8A2BE2',
+        '--secondary-color': '#9400D3'
+    },
+    'neon-nights': {
+        '--main-color': '#FF00FF',
+        '--secondary-color': '#00FFFF'
+    }
+};
+
+// Function to apply theme
+function setTheme(themeName) {
+    const theme = themes[themeName];
+    if (theme) {
+        Object.entries(theme).forEach(([property, value]) => {
+            document.documentElement.style.setProperty(property, value);
+        });
+        localStorage.setItem('pokerTheme', themeName);
+    }
+}
+
 let players = [];
 let gameStarted = false;
 let dollarsPerChip = 1; // Default: $1 per chip
 
 // Load saved state when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    // Load saved theme
+    const savedTheme = localStorage.getItem('pokerTheme');
+    if (savedTheme && themes[savedTheme]) {
+        setTheme(savedTheme);
+        document.getElementById('theme').value = savedTheme;
+    }
+    
+    // Load saved game state
     loadSavedState();
 });
 
@@ -178,4 +237,9 @@ document.getElementById('reset-game').addEventListener('click', function() {
         
         alert('Game has been reset successfully.');
     }
+});
+
+// Add theme change listener
+document.getElementById('theme').addEventListener('change', function() {
+    setTheme(this.value);
 });
