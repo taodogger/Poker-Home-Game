@@ -97,15 +97,26 @@ function loadSavedState() {
     }
 }
 
-// Handle setting the money-to-chip ratio
+// Add toggle functionality
+document.getElementById('toggle-ratio').addEventListener('click', function() {
+    const formContainer = document.getElementById('ratio-form-container');
+    formContainer.classList.toggle('hidden');
+    this.textContent = formContainer.classList.contains('hidden') ? '+' : '−';
+});
+
+// Update the ratio form submission to collapse after setting
 document.getElementById('ratio-form').addEventListener('submit', function(e) {
     e.preventDefault();
     let realMoney = parseFloat(document.getElementById('real_money').value);
     let chips = parseInt(document.getElementById('chips').value);
     if (realMoney > 0 && chips > 0) {
         dollarsPerChip = realMoney / chips;
-        document.getElementById('ratio-display').textContent = `Each chip is worth $${dollarsPerChip.toFixed(2)}`;
+        document.getElementById('ratio-display').textContent = 
+            `Each chip is worth $${dollarsPerChip.toFixed(2)}`;
         saveState();
+        // Collapse the form after setting the ratio
+        document.getElementById('ratio-form-container').classList.add('hidden');
+        document.getElementById('toggle-ratio').textContent = '+';
     } else {
         alert('Please enter valid numbers for money and chips.');
     }

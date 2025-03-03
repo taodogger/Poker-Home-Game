@@ -640,3 +640,40 @@ tr:nth-child(even) td {
     border-color: var(--main-color);
     box-shadow: 0 0 5px var(--main-color);
 }
+
+/* Add these new styles */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-color);
+    margin-left: 10px;
+    transition: all 0.3s ease;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.toggle-btn:hover {
+    transform: scale(1.2);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#ratio-form-container.hidden {
+    display: none;
+}
+
+/* Update existing styles */
+#ratio-display {
+    margin-top: 10px;
+    font-weight: 500;
+    color: var(--text-color);
+    text-align: center;
+}

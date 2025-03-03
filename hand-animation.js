@@ -61,6 +61,10 @@ class HandAnimation {
                 ]
             }
         ];
+
+        // Add deck definition
+        this.suits = ['♠', '♦', '♥', '♣'];
+        this.ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     }
 
     setPlayers(players) {
@@ -126,41 +130,71 @@ class HandAnimation {
         return selectedIndex;
     }
 
+    // Add method to create and shuffle a deck
+    createDeck() {
+        let deck = [];
+        for (let suit of this.suits) {
+            for (let rank of this.ranks) {
+                deck.push({ rank, suit });
+            }
+        }
+        return deck;
+    }
+
+    // Add method to shuffle deck
+    shuffleDeck(deck) {
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        return deck;
+    }
+
+    // Update spin method to ensure unique cards
     async spin() {
         if (this.isAnimating || this.players.length < 2) return;
         this.isAnimating = true;
 
-        // Use new dealer selection method
         const dealerIndex = this.getNextDealer();
         const dealer = this.players[dealerIndex];
 
         // Select random scenario
         const scenario = this.scenarios[Math.floor(Math.random() * this.scenarios.length)];
-        
+
+        // Create and prepare deck
+        let deck = this.createDeck();
+        const usedCards = new Set();
+
+        // Track used cards from scenario
+        scenario.communityCards.forEach(card => 
+            usedCards.add(`${card.rank}${card.suit}`));
+        scenario.dealerHand.forEach(card => 
+            usedCards.add(`${card.rank}${card.suit}`));
+
+        // Remove used cards and shuffle remaining deck
+        deck = this.shuffleDeck(
+            deck.filter(card => !usedCards.has(`${card.rank}${card.suit}`))
+        );
+
         // Assign hands
         const hands = Array(this.players.length).fill(null);
         hands[dealerIndex] = scenario.dealerHand;
-        
-        // Distribute other hands randomly but ensure variety
-        let usedHandIndices = new Set();
+
+        // Deal random cards to non-dealer players
+        let deckIndex = 0;
         for (let i = 0; i < this.players.length; i++) {
             if (i !== dealerIndex) {
-                let handIndex;
-                do {
-                    handIndex = Math.floor(Math.random() * scenario.otherHands.length);
-                } while (usedHandIndices.has(handIndex) && usedHandIndices.size < scenario.otherHands.length);
-                
-                usedHandIndices.add(handIndex);
-                hands[i] = scenario.otherHands[handIndex];
+                hands[i] = [deck[deckIndex], deck[deckIndex + 1]];
+                deckIndex += 2;
             }
         }
 
-        // Animation sequence
+        // Run animation sequence
         await this.revealHoleCards(hands);
         await new Promise(resolve => setTimeout(resolve, 1000));
         await this.dealCommunityCards(scenario.communityCards);
         await this.highlightWinner(dealerIndex, scenario.name);
-        
+
         this.isAnimating = false;
         window.setDealer(dealer);
     }
