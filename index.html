@@ -9,10 +9,14 @@
 </head>
 <body>
     <header>
-        <h1>♠️ Poker Home Game Manager ♥️</h1>
-        <div id="theme-selector">
-            <label for="theme">Theme: </label>
-            <select id="theme">
+        <h1>
+            <span id="left-icon" class="title-icon">♠️</span>
+            Poker Home Game Manager
+            <span id="right-icon" class="title-icon">♥️</span>
+        </h1>
+        <div class="theme-controls">
+            <span>Theme:</span>
+            <select id="theme-selector" name="theme-selector">
                 <option value="classic-green">Classic Green</option>
                 <option value="royal-blue">Royal Blue</option>
                 <option value="crimson-red">Crimson Red</option>
@@ -21,6 +25,8 @@
                 <option value="firestorm">Firestorm</option>
                 <option value="purple-haze">Purple Haze</option>
                 <option value="neon-nights">Neon Nights</option>
+                <option value="rizzler">RIZZLER 💪</option>
+                <option value="doginme">Doginme 🐶</option>
             </select>
         </div>
     </header>
@@ -31,11 +37,29 @@
                 <button id="toggle-ratio" class="toggle-btn">−</button>
             </div>
             <div id="ratio-form-container">
-                <form id="ratio-form">
-                    <label for="real_money">Real Money ($):</label>
-                    <input type="number" id="real_money" required min="0" step="0.01" autocomplete="off">
-                    <label for="chips">Chips:</label>
-                    <input type="number" id="chips" required min="1" autocomplete="off">
+                <form id="ratio-form" class="setup-form">
+                    <div class="form-group">
+                        <label for="money-amount">Money Amount ($):</label>
+                        <input 
+                            type="number" 
+                            id="money-amount" 
+                            name="money-amount"
+                            autocomplete="off"
+                            placeholder="Enter money amount"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="chip-amount">Chip Amount:</label>
+                        <input 
+                            type="number" 
+                            id="chip-amount" 
+                            name="chip-amount"
+                            autocomplete="off"
+                            placeholder="Enter chip amount"
+                            required
+                        >
+                    </div>
                     <button type="submit">Set Ratio</button>
                 </form>
             </div>
@@ -43,11 +67,29 @@
         </section>
         <section id="add-player">
             <h2>Add Player</h2>
-            <form id="player-form">
-                <label for="name">Name:</label>
-                <input type="text" id="name" required autocomplete="name">
-                <label for="initial_chips">Initial Chips (Buy-in):</label>
-                <input type="number" id="initial_chips" required min="1" autocomplete="off">
+            <form id="player-form" class="setup-form">
+                <div class="form-group">
+                    <label for="player-name">Player Name:</label>
+                    <input 
+                        type="text" 
+                        id="player-name" 
+                        name="player-name" 
+                        autocomplete="name"
+                        placeholder="Enter player name"
+                        required
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="initial-chips">Initial Chips:</label>
+                    <input 
+                        type="number" 
+                        id="initial-chips" 
+                        name="initial-chips"
+                        autocomplete="off"
+                        placeholder="Enter chip amount"
+                        required
+                    >
+                </div>
                 <button type="submit">Add Player</button>
             </form>
         </section>

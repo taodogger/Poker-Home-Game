@@ -46,6 +46,10 @@ body {
     margin: 0;
     padding: 20px;
     min-height: 100vh;
+    transition: background 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 header {
@@ -69,10 +73,12 @@ header h1 {
 main {
     max-width: 1200px;
     margin: 0 auto;
-    background: var(--surface-gradient);
+    background: rgba(0, 0, 0, 0.7);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    position: relative;
+    z-index: 1;
 }
 
 h2 {
@@ -283,24 +289,19 @@ tr:nth-child(even) td {
 }
 
 .community-cards {
-    position: absolute;
-    top: 200px;
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
     gap: 15px;
-    z-index: 1;
+    justify-content: center;
+    align-items: center;
 }
 
 .player-area {
-    position: absolute;
-    width: 140px;
+    padding: 15px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    min-width: 120px;
     text-align: center;
-    transition: all 0.3s ease;
-    padding: 10px;
-    background: rgba(0,0,0,0.3);
-    border-radius: 8px;
-    border: 1px solid var(--main-color);
+    z-index: 1;
 }
 
 .player-area[data-position="top"] {
@@ -348,45 +349,43 @@ tr:nth-child(even) td {
 }
 
 .player-name {
-    color: var(--text-color);
     font-size: 16px;
-    margin-bottom: 8px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    font-weight: bold;
+    color: white;
+    margin-bottom: 5px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
 }
 
 .hole-cards {
     display: flex;
     gap: 5px;
-    justify-content: center;
+    margin: 10px 0;
+    position: relative;
+    z-index: 1;
 }
 
 .card {
     width: 60px;
     height: 84px;
-    background: #fff;
-    border: none;
+    background: #fff !important;
+    border: 1px solid #000;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    color: #000;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    transition: transform 0.3s ease;
-    transform-style: preserve-3d;
+    font-family: Arial, sans-serif;
+    color: #000 !important;
     position: relative;
+    margin: 0 5px;
 }
 
 .card.face-down {
-    background: linear-gradient(45deg, #b71c1c, #d32f2f);
-    background-image: 
-        repeating-linear-gradient(45deg, 
-            transparent,
-            transparent 10px,
-            rgba(0,0,0,0.1) 10px,
-            rgba(0,0,0,0.1) 20px
-        );
+    background: linear-gradient(135deg, #ff0000, #800000) !important;
+    color: transparent !important;
 }
 
 .card.flipping {
@@ -397,9 +396,8 @@ tr:nth-child(even) td {
     animation: dealCard 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card[data-suit="♥"],
-.card[data-suit="♦"] {
-    color: #dc3545;
+.card[data-suit="♥"], .card[data-suit="♦"] {
+    color: #dc3545 !important;
 }
 
 .card[data-suit="♠"],
@@ -438,15 +436,42 @@ tr:nth-child(even) td {
 }
 
 .winner {
-    animation: winnerPulse 1.5s infinite;
-    border: 3px solid var(--main-color);
-    box-shadow: 0 0 20px var(--main-color);
+    border: 3px solid gold;
+    background: rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    z-index: 2;
+    animation: celebrate 2s ease-in-out;
 }
 
-@keyframes winnerPulse {
-    0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
-    50% { box-shadow: 0 0 30px rgba(255,215,0,0.5); }
-    100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+.winning-message {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.winner-title {
+    font-size: 24px;
+    color: gold;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    animation: pulse 1s infinite;
+}
+
+.hand-name {
+    font-size: 16px;
+    color: #ffd700;
+    margin-top: 5px;
+}
+
+@keyframes celebrate {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.1); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
 }
 
 #payout-list {
@@ -622,23 +647,30 @@ tr:nth-child(even) td {
 
 /* Simple theme selector styles */
 .theme-controls {
-    margin: 10px 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-color);
+    margin-top: 10px;
 }
 
 #theme-selector {
-    padding: 8px;
-    font-size: 16px;
-    border-radius: 6px;
-    border: 1px solid var(--main-color);
-    background: var(--surface-gradient);
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    background: var(--input-background);
     color: var(--text-color);
     cursor: pointer;
 }
 
-#theme-selector:focus {
-    outline: none;
-    border-color: var(--main-color);
-    box-shadow: 0 0 5px var(--main-color);
+#theme-selector option {
+    color: black !important;
+    background: white !important;
+    padding: 8px;
+}
+
+#theme-selector option:hover {
+    background: #f0f0f0 !important;
 }
 
 /* Add these new styles */
@@ -676,4 +708,204 @@ tr:nth-child(even) td {
     font-weight: 500;
     color: var(--text-color);
     text-align: center;
+}
+
+.title-icon {
+    font-size: 2em;
+    vertical-align: middle;
+    margin: 0 15px;
+}
+
+.title-icon-img {
+    width: 32px;
+    height: 32px;
+    vertical-align: middle;
+    object-fit: contain;
+}
+
+/* Add specific styles for the rizzler theme background */
+body.theme-rizzler {
+    background-image: url('images/rizzler-background.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+}
+
+/* Ensure content remains readable over the background */
+main {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.equity-display {
+    font-size: 14px;
+    color: #ffd700;
+    margin: 5px 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.winning-hand {
+    font-size: 16px;
+    color: #00ff00;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+.player-area.winner {
+    border: 2px solid #00ff00;
+    background: rgba(0, 255, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.dealer-flip {
+    position: relative;
+    width: 80vw;
+    height: 60vh;
+    max-width: 1200px;
+    max-height: 900px;
+    margin: 0 auto;
+    background: var(--table-background);
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.table-center {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 50px;
+}
+
+.player-area {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.player-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+}
+
+.hole-cards {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin-top: 5px;
+}
+
+.card {
+    width: 60px;
+    height: 84px;
+    background: #3C2F2F;
+    border: 1px solid white;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    color: white;
+    transition: transform 0.3s ease;
+}
+
+.card.face-down {
+    background: #3C2F2F;
+    border: 1px solid white;
+}
+
+.card.face-up {
+    background: white;
+    color: #3C2F2F;
+}
+
+/* Debug styles */
+.debug .dealer-flip {
+    border: 2px solid red;
+}
+
+.debug .player-area {
+    border: 2px solid blue;
+}
+
+.debug .table-center {
+    border: 2px solid green;
+}
+
+.debug .community-cards {
+    border: 2px solid blue;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dealer-flip {
+        width: 95vw;
+        height: 70vh;
+    }
+}
+
+/* Theme-specific styles */
+body.theme-doginme {
+    background-image: url('images/doginme-background.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+}
+
+body.theme-doginme .dealer-flip {
+    background: rgba(30, 144, 255, 0.2);
+    box-shadow: 0 4px 8px rgba(16, 78, 139, 0.3);
+}
+
+body.theme-doginme .player-area {
+    background: rgba(16, 78, 139, 0.7);
+}
+
+body.theme-doginme .table-center {
+    background: rgba(30, 144, 255, 0.3);
+}
+
+/* Title icon styles */
+.title-icon {
+    font-size: 24px;
+    margin: 0 10px;
+}
+
+/* Theme selector styles */
+#theme-selector {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    background: var(--input-background);
+    color: var(--text-color);
+    cursor: pointer;
 }

@@ -1,24 +1,20 @@
 // Define themes with main colors and gradients
 const themes = {
     'classic-green': {
-        '--main-color': '#4CAF50',
-        '--secondary-color': '#45a049'
+        '--main-color': '#2E8B57',
+        '--secondary-color': '#3CB371'
     },
     'royal-blue': {
-        '--main-color': '#1E90FF',
-        '--secondary-color': '#1C86EE'
+        '--main-color': '#4169E1',
+        '--secondary-color': '#1E90FF'
     },
     'crimson-red': {
         '--main-color': '#DC143C',
-        '--secondary-color': '#C71585'
+        '--secondary-color': '#FF4500'
     },
     'midnight-black': {
-        '--primary-color': '#000000',
-        '--secondary-color': '#1a1a1a',
-        '--background-color': '#000000',
-        '--surface-color': '#1a1a1a',
-        '--text-color': '#fff',
-        '--accent-color': '#ffffff'
+        '--main-color': '#2F4F4F',
+        '--secondary-color': '#696969'
     },
     'ocean-breeze': {
         '--main-color': '#00CED1',
@@ -26,27 +22,62 @@ const themes = {
     },
     'firestorm': {
         '--main-color': '#FF4500',
-        '--secondary-color': '#FFD700'
+        '--secondary-color': '#FF6347'
     },
     'purple-haze': {
-        '--main-color': '#8A2BE2',
-        '--secondary-color': '#9400D3'
+        '--main-color': '#9370DB',
+        '--secondary-color': '#BA55D3'
     },
     'neon-nights': {
-        '--main-color': '#FF00FF',
-        '--secondary-color': '#00FFFF'
+        '--main-color': '#32CD32',
+        '--secondary-color': '#00FF00'
+    },
+    'rizzler': {
+        '--main-color': '#6A0DAD',
+        '--secondary-color': '#DAA520'
+    },
+    'doginme': {
+        '--main-color': '#1E90FF',    // Bright blue
+        '--secondary-color': '#104E8B' // Darker blue
     }
 };
 
-// Function to apply theme
+// Updated theme switching logic
 function setTheme(themeName) {
     const theme = themes[themeName];
-    if (theme) {
-        Object.entries(theme).forEach(([property, value]) => {
-            document.documentElement.style.setProperty(property, value);
-        });
-        localStorage.setItem('pokerTheme', themeName);
+    if (!theme) {
+        console.error(`Theme "${themeName}" not found!`);
+        return;
     }
+
+    // Remove existing theme-specific classes
+    document.body.classList.remove('theme-rizzler', 'theme-doginme');
+    
+    // Apply theme colors
+    Object.entries(theme).forEach(([property, value]) => {
+        document.documentElement.style.setProperty(property, value);
+    });
+    
+    // Update icons
+    const leftIcon = document.getElementById('left-icon');
+    const rightIcon = document.getElementById('right-icon');
+    
+    if (leftIcon && rightIcon) {
+        if (themeName === 'rizzler') {
+            leftIcon.innerHTML = '💪';
+            rightIcon.innerHTML = '💪';
+            document.body.classList.add('theme-rizzler');
+        } else if (themeName === 'doginme') {
+            leftIcon.innerHTML = '<img src="images/doginme-icon.png" alt="Doginme Icon" class="title-icon-img">';
+            rightIcon.innerHTML = '<img src="images/doginme-icon.png" alt="Doginme Icon" class="title-icon-img">';
+            document.body.classList.add('theme-doginme');
+        } else {
+            leftIcon.innerHTML = '♠️';
+            rightIcon.innerHTML = '♥️';
+        }
+    }
+    
+    localStorage.setItem('pokerTheme', themeName);
 }
 
 let players = [];
@@ -55,14 +86,28 @@ let dollarsPerChip = 1; // Default: $1 per chip
 
 // Load saved state when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    const themeSelector = document.getElementById('theme-selector');
+    
+    if (!themeSelector) {
+        console.error('Theme selector not found! Check if element with id="theme-selector" exists.');
+        return;
+    }
+
     // Load saved theme
     const savedTheme = localStorage.getItem('pokerTheme');
     if (savedTheme && themes[savedTheme]) {
         setTheme(savedTheme);
-        document.getElementById('theme').value = savedTheme;
+        themeSelector.value = savedTheme;
+    } else {
+        setTheme('classic-green');
+        themeSelector.value = 'classic-green';
     }
-    
-    // Load saved game state
+
+    // Add change listener
+    themeSelector.addEventListener('change', function() {
+        setTheme(this.value);
+    });
+
     loadSavedState();
 });
 
@@ -248,28 +293,4 @@ document.getElementById('reset-game').addEventListener('click', function() {
         
         alert('Game has been reset successfully.');
     }
-});
-
-// Add theme change listener
-document.getElementById('theme').addEventListener('change', function() {
-    setTheme(this.value);
-});
-
-// Simple theme selector functionality
-document.addEventListener('DOMContentLoaded', () => {
-    const themeSelector = document.getElementById('theme-selector');
-    
-    // Load saved theme
-    const savedTheme = localStorage.getItem('selectedTheme');
-    if (savedTheme) {
-        themeSelector.value = savedTheme;
-        setTheme(savedTheme);
-    }
-    
-    // Handle theme changes
-    themeSelector.addEventListener('change', (e) => {
-        const theme = e.target.value;
-        setTheme(theme);
-        localStorage.setItem('selectedTheme', theme);
-    });
 });
