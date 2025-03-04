@@ -353,41 +353,29 @@ class HandAnimation {
             if (msg) msg.remove();
         });
 
-        // Find the winner's player area
+        // Find the winner's player area and add winner class
         const playerAreas = this.container.querySelectorAll('.player-area');
         const winnerArea = playerAreas[winnerIndex];
-        
-        if (!winnerArea) {
-            console.error('Winner area not found for index:', winnerIndex);
-            return;
+        if (winnerArea) {
+            winnerArea.classList.add('winner');
         }
 
-        // Add winner class and create message
-        winnerArea.classList.add('winner');
-        
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'winning-message';
-        messageDiv.innerHTML = `
-            <div class="winner-title">WINNER!</div>
-            <div class="hand-name">${handName}</div>
+        // Create a centered overlay for the winner's message
+        const overlay = document.createElement('div');
+        overlay.className = 'winner-overlay';
+        overlay.innerHTML = `
+            <div class="winner-message">
+                <div class="winner-title">WINNER!</div>
+                <div class="hand-name">${handName}</div>
+                <div class="winner-name">${this.players[winnerIndex].name}</div>
+            </div>
         `;
-        
-        // Remove any existing winning message before adding new one
-        const existingMessage = winnerArea.querySelector('.winning-message');
-        if (existingMessage) {
-            existingMessage.remove();
-        }
-        
-        winnerArea.appendChild(messageDiv);
+        this.container.appendChild(overlay);
 
-        // Ensure the winner is visible
+        // Remove the overlay after 5 seconds
         setTimeout(() => {
-            winnerArea.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center',
-                inline: 'center'
-            });
-        }, 500);
+            overlay.remove();
+        }, 5000);
     }
 
     determineWinner(hands, communityCards) {
