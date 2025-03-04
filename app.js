@@ -2,47 +2,240 @@
 const themes = {
     'classic-green': {
         '--main-color': '#2E8B57',
-        '--secondary-color': '#3CB371'
+        '--secondary-color': '#3CB371',
+        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)'
     },
     'royal-blue': {
         '--main-color': '#4169E1',
-        '--secondary-color': '#1E90FF'
+        '--secondary-color': '#1E90FF',
+        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)'
     },
     'crimson-red': {
         '--main-color': '#DC143C',
-        '--secondary-color': '#FF4500'
+        '--secondary-color': '#FF4500',
+        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)'
     },
     'midnight-black': {
         '--main-color': '#2F4F4F',
-        '--secondary-color': '#696969'
+        '--secondary-color': '#696969',
+        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)'
     },
     'ocean-breeze': {
         '--main-color': '#00CED1',
-        '--secondary-color': '#20B2AA'
+        '--secondary-color': '#20B2AA',
+        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)'
     },
     'firestorm': {
         '--main-color': '#FF4500',
-        '--secondary-color': '#FF6347'
+        '--secondary-color': '#FF6347',
+        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)'
     },
     'purple-haze': {
         '--main-color': '#9370DB',
-        '--secondary-color': '#BA55D3'
+        '--secondary-color': '#BA55D3',
+        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)'
     },
     'neon-nights': {
         '--main-color': '#32CD32',
-        '--secondary-color': '#00FF00'
+        '--secondary-color': '#00FF00',
+        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)'
     },
     'rizzler': {
         '--main-color': '#6A0DAD',
-        '--secondary-color': '#DAA520'
+        '--secondary-color': '#DAA520',
+        'tableImage': './images/rizzler-board.jpg',
+        'icon': '💪',
+        '--body-background': 'url("./images/rizzler-background.jpg")'
     },
     'doginme': {
-        '--main-color': '#1E90FF',    // Bright blue
-        '--secondary-color': '#104E8B' // Darker blue
+        '--main-color': '#1E90FF',
+        '--secondary-color': '#104E8B',
+        'tableImage': './images/doginme-board.jpg',
+        'icon': './images/doginme-icon.png',
+        '--body-background': 'url("./images/doginme-background.jpg")'
     }
 };
 
-// Updated theme switching logic
+// Initialize state management
+let players = [];
+let gameStarted = false;
+let dealerWheel = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load saved players
+    const savedPlayers = localStorage.getItem('pokerPlayers');
+    if (savedPlayers) {
+        players = JSON.parse(savedPlayers);
+        updatePlayerList();
+    }
+
+    // Initialize hand animation
+    const container = document.getElementById('dealer-wheel');
+    if (container) {
+        dealerWheel = new HandAnimation(container);
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('pokerTheme');
+        if (savedTheme && themes[savedTheme]) {
+            setTheme(savedTheme);
+            const themeSelector = document.getElementById('theme-selector');
+            if (themeSelector) {
+                themeSelector.value = savedTheme;
+            }
+        } else {
+            setTheme('classic-green');
+        }
+
+        // Set up players if they exist
+        if (players.length > 0) {
+            dealerWheel.setPlayers(players);
+        }
+    } else {
+        console.error('Dealer wheel container not found');
+    }
+
+    // Set up event listeners
+    setupEventListeners();
+});
+
+// Set up all event listeners
+function setupEventListeners() {
+    // Theme selector
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.addEventListener('change', (e) => {
+            setTheme(e.target.value);
+            localStorage.setItem('pokerTheme', e.target.value);
+        });
+    }
+
+    // Ratio form handler
+    const ratioForm = document.getElementById('ratio-form');
+    if (ratioForm) {
+        ratioForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            let realMoney = parseFloat(document.getElementById('money-amount').value);
+            let chips = parseInt(document.getElementById('chip-amount').value);
+            
+            if (realMoney > 0 && chips > 0) {
+                dollarsPerChip = realMoney / chips;
+                document.getElementById('ratio-display').textContent = 
+                    `Each chip is worth $${dollarsPerChip.toFixed(2)}`;
+                saveState();
+                document.getElementById('ratio-content').classList.add('hidden');
+                document.getElementById('minimize-button').textContent = '+';
+            } else {
+                alert('Please enter valid numbers for money and chips.');
+            }
+        });
+    }
+
+    // Minimize button handler
+    const minimizeButton = document.getElementById('minimize-button');
+    const ratioContent = document.getElementById('ratio-content');
+    if (minimizeButton && ratioContent) {
+        // Set initial state
+        ratioContent.classList.remove('hidden');
+        minimizeButton.textContent = '−';
+        
+        // Add click event listener
+        minimizeButton.addEventListener('click', function() {
+            ratioContent.classList.toggle('hidden');
+            this.textContent = ratioContent.classList.contains('hidden') ? '+' : '−';
+        });
+    }
+
+    // Player form
+    const playerForm = document.getElementById('player-form');
+    if (playerForm) {
+        playerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('name');
+            const chipsInput = document.getElementById('chips');
+            
+            if (nameInput && chipsInput) {
+                const name = nameInput.value.trim();
+                const chips = parseInt(chipsInput.value) || 0;
+                
+                if (name) {
+                    addPlayer(name, chips);
+                    this.reset();
+                }
+            }
+        });
+    }
+
+    // Start game button
+    const startGameBtn = document.getElementById('start-game');
+    if (startGameBtn) {
+        startGameBtn.addEventListener('click', startGame);
+    }
+}
+
+// Add player function
+function addPlayer(name, chips) {
+    const player = {
+        name: name,
+        chips: chips,
+        id: Date.now() // Unique identifier
+    };
+    
+    players.push(player);
+    savePlayers();
+    updatePlayerList();
+}
+
+// Save players to localStorage
+function savePlayers() {
+    localStorage.setItem('pokerPlayers', JSON.stringify(players));
+}
+
+// Update player list in UI
+function updatePlayerList() {
+    const playerList = document.getElementById('player-list');
+    if (!playerList) return;
+
+    playerList.innerHTML = '';
+    players.forEach(player => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <span>${player.name}</span>
+            <span>${player.chips} chips</span>
+            <button onclick="removePlayer(${player.id})">Remove</button>
+        `;
+        playerList.appendChild(li);
+    });
+}
+
+// Remove player function
+function removePlayer(playerId) {
+    players = players.filter(p => p.id !== playerId);
+    savePlayers();
+    updatePlayerList();
+}
+
+// Start game function
+function startGame() {
+    if (players.length < 2) {
+        alert('Need at least 2 players to start the game.');
+        return;
+    }
+    
+    gameStarted = true;
+    document.getElementById('add-player').style.display = 'none';
+    document.getElementById('end-game').disabled = false;
+    document.getElementById('animation').style.display = 'flex';
+    
+    // Initialize and spin the dealer wheel with full player objects
+    if (dealerWheel) {
+        dealerWheel.setPlayers(players);
+        dealerWheel.spin();
+    }
+    
+    saveState();
+}
+
+// Theme setting function
 function setTheme(themeName) {
     const theme = themes[themeName];
     if (!theme) {
@@ -50,63 +243,96 @@ function setTheme(themeName) {
         return;
     }
 
-    // Remove existing theme-specific classes
+    // Remove existing theme classes
     document.body.classList.remove('theme-rizzler', 'theme-doginme');
-    
+
     // Apply theme colors
     Object.entries(theme).forEach(([property, value]) => {
-        document.documentElement.style.setProperty(property, value);
+        if (property !== 'tableImage' && property !== 'icon') {
+            document.documentElement.style.setProperty(property, value);
+        }
     });
-    
-    // Update icons
+
+    // Update dealer wheel theme if it exists
+    if (dealerWheel) {
+        dealerWheel.setTheme(theme);
+    }
+
+    // Update title icons
+    updateTitleIcons(themeName, theme);
+
+    // Save theme preference
+    localStorage.setItem('pokerTheme', themeName);
+}
+
+// Update title icons based on theme
+function updateTitleIcons(themeName, theme) {
     const leftIcon = document.getElementById('left-icon');
     const rightIcon = document.getElementById('right-icon');
     
     if (leftIcon && rightIcon) {
-        if (themeName === 'rizzler') {
-            leftIcon.innerHTML = '💪';
-            rightIcon.innerHTML = '💪';
-            document.body.classList.add('theme-rizzler');
-        } else if (themeName === 'doginme') {
-            leftIcon.innerHTML = '<img src="images/doginme-icon.png" alt="Doginme Icon" class="title-icon-img">';
-            rightIcon.innerHTML = '<img src="images/doginme-icon.png" alt="Doginme Icon" class="title-icon-img">';
-            document.body.classList.add('theme-doginme');
+        if (themeName === 'rizzler' || themeName === 'doginme') {
+            if (themeName === 'rizzler') {
+                leftIcon.innerHTML = theme.icon;
+                rightIcon.innerHTML = theme.icon;
+            } else { // doginme
+                const testIcon = new Image();
+                testIcon.onload = () => {
+                    leftIcon.innerHTML = `<img src="${theme.icon}" alt="Theme Icon" class="title-icon-img">`;
+                    rightIcon.innerHTML = `<img src="${theme.icon}" alt="Theme Icon" class="title-icon-img">`;
+                };
+                testIcon.onerror = () => {
+                    console.error(`Failed to load theme icon: ${theme.icon}`);
+                    leftIcon.innerHTML = '🐶';
+                    rightIcon.innerHTML = '🐶';
+                };
+                testIcon.src = theme.icon;
+            }
+            document.body.classList.add(`theme-${themeName}`);
         } else {
             leftIcon.innerHTML = '♠️';
             rightIcon.innerHTML = '♥️';
         }
     }
-    
-    localStorage.setItem('pokerTheme', themeName);
 }
 
-let players = [];
-let gameStarted = false;
 let dollarsPerChip = 1; // Default: $1 per chip
 
-// Load saved state when page loads
+// Safe player form handling
 document.addEventListener('DOMContentLoaded', function() {
+    const playerForm = document.getElementById('player-form');
+    if (playerForm) {
+        playerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('name');
+            if (nameInput) {
+                let name = nameInput.value;
+                // Process player name...
+            } else {
+                console.error('Player name input not found');
+            }
+        });
+    }
+
+    // Initialize dealerWheel
+    window.dealerWheel = new HandAnimation();
+
+    // Set initial theme
     const themeSelector = document.getElementById('theme-selector');
-    
-    if (!themeSelector) {
-        console.error('Theme selector not found! Check if element with id="theme-selector" exists.');
-        return;
-    }
+    if (themeSelector) {
+        const savedTheme = localStorage.getItem('pokerTheme');
+        if (savedTheme && themes[savedTheme]) {
+            setTheme(savedTheme);
+            themeSelector.value = savedTheme;
+        } else {
+            setTheme('classic-green');
+            themeSelector.value = 'classic-green';
+        }
 
-    // Load saved theme
-    const savedTheme = localStorage.getItem('pokerTheme');
-    if (savedTheme && themes[savedTheme]) {
-        setTheme(savedTheme);
-        themeSelector.value = savedTheme;
-    } else {
-        setTheme('classic-green');
-        themeSelector.value = 'classic-green';
+        themeSelector.addEventListener('change', (e) => {
+            setTheme(e.target.value);
+        });
     }
-
-    // Add change listener
-    themeSelector.addEventListener('change', function() {
-        setTheme(this.value);
-    });
 
     loadSavedState();
 });
@@ -142,46 +368,6 @@ function loadSavedState() {
     }
 }
 
-// Add toggle functionality
-document.getElementById('toggle-ratio').addEventListener('click', function() {
-    const formContainer = document.getElementById('ratio-form-container');
-    formContainer.classList.toggle('hidden');
-    this.textContent = formContainer.classList.contains('hidden') ? '+' : '−';
-});
-
-// Update the ratio form submission to collapse after setting
-document.getElementById('ratio-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    let realMoney = parseFloat(document.getElementById('real_money').value);
-    let chips = parseInt(document.getElementById('chips').value);
-    if (realMoney > 0 && chips > 0) {
-        dollarsPerChip = realMoney / chips;
-        document.getElementById('ratio-display').textContent = 
-            `Each chip is worth $${dollarsPerChip.toFixed(2)}`;
-        saveState();
-        // Collapse the form after setting the ratio
-        document.getElementById('ratio-form-container').classList.add('hidden');
-        document.getElementById('toggle-ratio').textContent = '+';
-    } else {
-        alert('Please enter valid numbers for money and chips.');
-    }
-});
-
-// Handle adding a player
-document.getElementById('player-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    if (players.length >= 9) {
-        alert('Maximum of 9 players allowed.');
-        return;
-    }
-    let name = document.getElementById('name').value;
-    let initialChips = parseInt(document.getElementById('initial_chips').value);
-    players.push({ name, initial_chips: initialChips, current_chips: initialChips });
-    updatePlayerTable();
-    saveState();
-    this.reset();
-});
-
 // Update the player table dynamically
 function updatePlayerTable() {
     let tbody = document.querySelector('#player-table tbody');
@@ -195,23 +381,6 @@ function updatePlayerTable() {
         tbody.innerHTML += row;
     });
 }
-
-// Start the game
-document.getElementById('start-game').addEventListener('click', function() {
-    if (players.length < 2) {
-        alert('Need at least 2 players to start the game.');
-        return;
-    }
-    gameStarted = true;
-    document.getElementById('add-player').style.display = 'none';
-    document.getElementById('end-game').disabled = false;
-    document.getElementById('animation').style.display = 'block';
-    
-    // Initialize and spin the dealer wheel
-    dealerWheel.setPlayers(players.map(p => p.name));
-    dealerWheel.spin();
-    saveState();
-});
 
 // End the game and enable chip input
 document.getElementById('end-game').addEventListener('click', function() {
@@ -253,20 +422,6 @@ document.getElementById('calculate-payouts').addEventListener('click', function(
     saveState();
 });
 
-// Callback to set the dealer
-window.setDealer = function(dealer) {
-    if (gameStarted) {
-        alert(`The dealer is ${dealer}`);
-    }
-};
-
-// Add event listener for chip input changes
-document.addEventListener('change', function(e) {
-    if (e.target && e.target.type === 'number' && e.target.closest('#player-table')) {
-        saveState();
-    }
-});
-
 // Reset game functionality
 document.getElementById('reset-game').addEventListener('click', function() {
     if (confirm('Are you sure you want to reset the game? This will clear all players and settings.')) {
@@ -288,9 +443,38 @@ document.getElementById('reset-game').addEventListener('click', function() {
         document.getElementById('ratio-form').reset();
         document.getElementById('player-form').reset();
         
-        // Clear dealer wheel
-        document.getElementById('dealer-wheel').innerHTML = '';
+        // Clear hand animation
+        const container = document.getElementById('dealer-wheel');
+        if (container) {
+            container.innerHTML = '';
+        }
         
         alert('Game has been reset successfully.');
     }
 });
+
+// Update the revealHoleCards method in HandAnimation class
+window.revealHoleCards = function() {
+    this.players.forEach((player, playerIndex) => {
+        if (!player.cards || player.cards.length === 0) {
+            console.warn(`No cards found for player ${playerIndex + 1}`);
+            return;
+        }
+
+        player.cards.forEach((card, cardIndex) => {
+            const cardEl = document.querySelector(`.player-${playerIndex + 1} .card-${cardIndex + 1}`);
+            if (!cardEl) {
+                console.error(`Card element not found for player ${playerIndex + 1}, card ${cardIndex + 1}`);
+                return;
+            }
+
+            // Set card content
+            cardEl.textContent = `${card.rank}${card.suit}`;
+            
+            // Add face-up class with delay for animation
+            setTimeout(() => {
+                cardEl.classList.add('face-up');
+            }, cardIndex * 200); // Stagger the card reveals
+        });
+    });
+}

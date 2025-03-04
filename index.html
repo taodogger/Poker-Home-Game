@@ -31,39 +31,41 @@
         </div>
     </header>
     <main>
-        <section id="set-ratio">
+        <section id="money-to-chip-ratio">
             <div class="section-header">
-                <h2>Set Money to Chip Ratio</h2>
-                <button id="toggle-ratio" class="toggle-btn">−</button>
+                <h2>Money to Chip Ratio</h2>
+                <button id="minimize-button">+</button>
             </div>
-            <div id="ratio-form-container">
-                <form id="ratio-form" class="setup-form">
-                    <div class="form-group">
-                        <label for="money-amount">Money Amount ($):</label>
-                        <input 
-                            type="number" 
-                            id="money-amount" 
-                            name="money-amount"
-                            autocomplete="off"
-                            placeholder="Enter money amount"
-                            required
-                        >
-                    </div>
-                    <div class="form-group">
-                        <label for="chip-amount">Chip Amount:</label>
-                        <input 
-                            type="number" 
-                            id="chip-amount" 
-                            name="chip-amount"
-                            autocomplete="off"
-                            placeholder="Enter chip amount"
-                            required
-                        >
-                    </div>
-                    <button type="submit">Set Ratio</button>
-                </form>
+            <div id="ratio-content">
+                <div id="ratio-form-container">
+                    <form id="ratio-form" class="setup-form">
+                        <div class="form-group">
+                            <label for="money-amount">Money Amount ($):</label>
+                            <input 
+                                type="number" 
+                                id="money-amount" 
+                                name="money-amount"
+                                autocomplete="off"
+                                placeholder="Enter money amount"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="chip-amount">Chip Amount:</label>
+                            <input 
+                                type="number" 
+                                id="chip-amount" 
+                                name="chip-amount"
+                                autocomplete="off"
+                                placeholder="Enter chip amount"
+                                required
+                            >
+                        </div>
+                        <button type="submit">Set Ratio</button>
+                    </form>
+                </div>
+                <p id="ratio-display">Each chip is worth $1.00</p>
             </div>
-            <p id="ratio-display">Each chip is worth $1.00</p>
         </section>
         <section id="add-player">
             <h2>Add Player</h2>
