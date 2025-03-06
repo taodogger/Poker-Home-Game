@@ -82,22 +82,47 @@ class HandAnimation {
         
         // Apply theme to container
         if (this.container) {
-            // Apply table image if available
+            // Apply theme-based background to the entire dealer selection area
+            this.container.style.background = `linear-gradient(135deg, ${theme['--main-color'] || '#1B5E20'}, ${theme['--secondary-color'] || '#388E3C'})`;
+            
+            // If there's a table image, we'll use it for the center area only
             if (theme.tableImage) {
-                this.container.style.backgroundImage = `url(${theme.tableImage})`;
-                this.container.style.backgroundSize = 'cover';
-                this.container.style.backgroundPosition = 'center';
+                // Create or update a center table area
+                let tableCenter = this.container.querySelector('.table-center');
+                if (!tableCenter) {
+                    tableCenter = document.createElement('div');
+                    tableCenter.className = 'table-center';
+                    tableCenter.style.cssText = `
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 60%;
+                        height: 60%;
+                        border-radius: var(--border-radius-lg);
+                        z-index: 1;
+                        background-image: url(${theme.tableImage});
+                        background-size: cover;
+                        background-position: center;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    `;
+                    this.container.insertBefore(tableCenter, this.container.firstChild);
+                } else {
+                    tableCenter.style.backgroundImage = `url(${theme.tableImage})`;
+                }
             } else {
-                // Reset to default table background
-                this.container.style.backgroundImage = 'none';
-                this.container.style.background = 'linear-gradient(135deg, #1B5E20, #388E3C)';
+                // Remove table center if no image is available
+                const tableCenter = this.container.querySelector('.table-center');
+                if (tableCenter) {
+                    tableCenter.remove();
+                }
             }
             
             // Update card backs with theme color
-        const cardBacks = this.container.querySelectorAll('.card-back');
+            const cardBacks = this.container.querySelectorAll('.card-back');
             cardBacks.forEach(card => {
                 card.style.background = `linear-gradient(135deg, ${theme['--main-color']}, ${theme['--secondary-color']})`;
-        });
+            });
         }
         
         // Re-render with new theme
