@@ -1,119 +1,157 @@
 class HandAnimation {
     constructor(container) {
+        if (!container || !(container instanceof HTMLElement)) {
+            console.error('Invalid container element provided to HandAnimation');
+            return;
+        }
+        
+        // Initialize properties
+        this.container = null;
         this.players = [];
+        this.currentTheme = null;
+        this.playerPositions = [];
+        this.communityCards = [];
+        this.deck = [];
+        this.isAnimating = false;
+        this.resizeObserver = null;
+        this.containerWidth = 0;
+        this.containerHeight = 0;
+        
+        // Bind methods to preserve context
+        this.bindMethods();
+        
+        // Initialize with the provided container
         this.initialize(container);
     }
 
     initialize(container) {
-        // Check if container is provided
         if (!container) {
-            console.error('No container element provided to HandAnimation');
+            console.error('No container provided to HandAnimation');
             return;
         }
 
         this.container = container;
         
-        // Initialize properties
-        this.currentTheme = null;
-        this.playerPositions = [];
-        this.playerCards = [];
-        this.communityCards = [];
-        this.isAnimating = false;
-        this.currentStep = 0;
-        this.totalSteps = 5;
-        this.animationDuration = 2000;
-        this.stepDuration = this.animationDuration / this.totalSteps;
-        this.handRankings = {
-            STRAIGHT_FLUSH: 1,
-            FOUR_OF_A_KIND: 2,
-            FULL_HOUSE: 3,
-            FLUSH: 4,
-            STRAIGHT: 5,
-            THREE_OF_A_KIND: 6,
-            TWO_PAIR: 7,
-            ONE_PAIR: 8,
-            HIGH_CARD: 9
-        };
-        this.rankValues = {
-            'A': 14, 'K': 13, 'Q': 12, 'J': 11, '10': 10,
-            '9': 9, '8': 8, '7': 7, '6': 6, '5': 5,
-            '4': 4, '3': 3, '2': 2
-        };
-        
-        this.suits = ['♠', '♦', '♥', '♣'];
-        this.ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-
-        // Setup container and bind methods
+        // Set up base container styles
         this.setupContainer();
+        
+        // Create a loading indicator
+        this.container.innerHTML = '<div class="loading-indicator">Initializing poker table...</div>';
+        
+        // Create a deck of cards
+        this.deck = this.createDeck();
+        
+        // Setup resize observer for responsive layout
         this.setupResizeObserver();
-        this.bindMethods();
+        
+        // Initial render
+        setTimeout(() => {
+            this.updateDimensions();
+            this.render();
+        }, 100);
     }
 
     bindMethods() {
-        // Bind all methods that need 'this' context
-        this.spin = this.spin.bind(this);
-        this.render = this.render.bind(this);
-        this.setupContainer = this.setupContainer.bind(this);
-        this.positionPlayers = this.positionPlayers.bind(this);
+        // Bind all methods to preserve 'this' context
+        this.initialize = this.initialize.bind(this);
         this.setTheme = this.setTheme.bind(this);
-        this.setPlayers = this.setPlayers.bind(this);
-        this.calculateContainerSize = this.calculateContainerSize.bind(this);
+        this.setupContainer = this.setupContainer.bind(this);
+        this.updateDimensions = this.updateDimensions.bind(this);
         this.createDeck = this.createDeck.bind(this);
         this.shuffleDeck = this.shuffleDeck.bind(this);
-        this.evaluateHand = this.evaluateHand.bind(this);
-        this.evaluateFiveCardHand = this.evaluateFiveCardHand.bind(this);
-        this.determineWinner = this.determineWinner.bind(this);
+        this.spin = this.spin.bind(this);
         this.revealHoleCards = this.revealHoleCards.bind(this);
         this.dealCommunityCards = this.dealCommunityCards.bind(this);
         this.flipCard = this.flipCard.bind(this);
+        this.celebrateWinner = this.celebrateWinner.bind(this);
+        this.addConfetti = this.addConfetti.bind(this);
+        this.determineWinner = this.determineWinner.bind(this);
+        this.evaluateHand = this.evaluateHand.bind(this);
+        this.setPlayers = this.setPlayers.bind(this);
+        this.positionPlayers = this.positionPlayers.bind(this);
+        this.render = this.render.bind(this);
     }
 
     setTheme(theme) {
-        if (!this.container) {
-            console.warn('Cannot set theme: container not initialized');
+        if (!theme) {
+            console.error('No theme provided to setTheme');
             return;
         }
 
         this.currentTheme = theme;
-        const boardBackground = this.container.querySelector('.board-background');
-        if (boardBackground && theme.tableImage) {
-            boardBackground.style.backgroundImage = `url('${theme.tableImage}')`;
-            boardBackground.style.backgroundSize = 'cover';
-            boardBackground.style.backgroundPosition = 'center';
-            boardBackground.style.backgroundRepeat = 'no-repeat';
+        
+        // Apply theme to container
+        if (this.container) {
+            // Apply table image if available
+            if (theme.tableImage) {
+                this.container.style.backgroundImage = `url(${theme.tableImage})`;
+                this.container.style.backgroundSize = 'cover';
+                this.container.style.backgroundPosition = 'center';
+            } else {
+                // Reset to default table background
+                this.container.style.backgroundImage = 'none';
+                this.container.style.background = 'linear-gradient(135deg, #1B5E20, #388E3C)';
+            }
+            
+            // Update card backs with theme color
+        const cardBacks = this.container.querySelectorAll('.card-back');
+            cardBacks.forEach(card => {
+                card.style.background = `linear-gradient(135deg, ${theme['--main-color']}, ${theme['--secondary-color']})`;
+        });
         }
+        
+        // Re-render with new theme
+        this.render();
     }
 
     setupContainer() {
         if (!this.container) return;
 
-        this.container.style.width = '100%';
-        this.container.style.height = '70vh';
+        // Set basic styles for the container
         this.container.style.position = 'relative';
-        this.container.style.margin = '0';
-        this.container.style.padding = '0';
-        this.container.style.border = '2px solid var(--main-color)';
+        this.container.style.background = 'linear-gradient(135deg, #1B5E20, #388E3C)';
+        this.container.style.borderRadius = 'var(--border-radius-lg)';
         this.container.style.overflow = 'hidden';
-        this.container.style.boxSizing = 'border-box';
+        this.container.style.boxShadow = 'var(--card-shadow)';
         
-        this.container.offsetHeight;
-        
-        this.updateDimensions();
+        // Add loading animation
+        const loadingStyle = document.createElement('style');
+        loadingStyle.textContent = `
+                .loading-indicator {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: white;
+                font-size: 1.2rem;
+                    text-align: center;
+                animation: pulse 1.5s infinite ease-in-out;
+            }
+            @keyframes pulse {
+                0% { opacity: 0.6; }
+                50% { opacity: 1; }
+                100% { opacity: 0.6; }
+            }
+        `;
+        document.head.appendChild(loadingStyle);
     }
 
     setupResizeObserver() {
-        this.resizeObserver = new ResizeObserver(() => {
-            requestAnimationFrame(() => {
+        if (!this.container || typeof ResizeObserver === 'undefined') return;
+        
+        // Create a resize observer to update dimensions when container size changes
+        this.resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                if (entry.target === this.container) {
                 this.updateDimensions();
+                    this.positionPlayers();
+                    this.render();
+                }
+            }
             });
-        });
+        
+        // Start observing the container
         this.resizeObserver.observe(this.container);
-
-        document.addEventListener('fullscreenchange', () => {
-            requestAnimationFrame(() => {
-                this.updateDimensions();
-            });
-        });
     }
 
     updateDimensions() {
@@ -122,674 +160,668 @@ class HandAnimation {
         const rect = this.container.getBoundingClientRect();
         this.containerWidth = rect.width;
         this.containerHeight = rect.height;
-        this.centerX = this.containerWidth / 2;
-        this.centerY = this.containerHeight / 2;
 
-        if (this.containerWidth > 0 && this.containerHeight > 0) {
-            console.log(`Container dimensions: ${this.containerWidth}x${this.containerHeight}`);
-            console.log(`Center point: (${this.centerX}, ${this.centerY})`);
-        }
-
-        if (this.containerWidth > 0 && this.containerHeight > 0) {
+        // Calculate player positions based on new dimensions
             this.positionPlayers();
-        }
     }
 
     calculateContainerSize(playerCount) {
-        const minSize = 600;
-        const sizeIncrement = 100;
-        return Math.max(minSize, 600 + (playerCount - 2) * sizeIncrement);
+        // Calculate optimal container size based on player count
+        const minSize = Math.min(this.containerWidth, this.containerHeight);
+        return Math.max(minSize, 300); // Minimum size of 300px
     }
 
     createDeck() {
-        let deck = [];
-        for (let suit of this.suits) {
-            for (let rank of this.ranks) {
-                deck.push({ rank, suit });
+        const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        
+        const deck = [];
+        for (const suit of suits) {
+            for (const value of values) {
+                deck.push({ suit, value });
             }
         }
+        
         return this.shuffleDeck(deck);
     }
 
     shuffleDeck(deck) {
-        for (let i = deck.length - 1; i > 0; i--) {
+        const shuffled = [...deck];
+        for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [deck[i], deck[j]] = [deck[j], deck[i]];
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
-        return deck;
+        return shuffled;
     }
 
     async spin() {
-        if (this.isAnimating || this.players.length < 2) return;
+        if (this.isAnimating) {
+            console.warn('Animation already in progress');
+            return;
+        }
+        
+        if (!this.players || this.players.length < 2) {
+            showToast('Need at least 2 players to start', 'error');
+            return;
+        }
+        
         this.isAnimating = true;
 
-        // Clear any previous game state
-        const communityArea = this.container.querySelector('.community-cards');
-        if (communityArea) {
-            communityArea.innerHTML = '';
+        try {
+            // Create a fresh deck
+            this.deck = this.createDeck();
+            
+            // Clear previous state
+            this.container.innerHTML = '';
+            
+            // Position players
+            this.positionPlayers();
+            
+            // Create player elements - remove dealer button logic entirely
+            for (let i = 0; i < this.players.length; i++) {
+                const player = this.players[i];
+                const position = this.playerPositions[i];
+                
+                const playerEl = document.createElement('div');
+                playerEl.className = 'player-area';
+                playerEl.setAttribute('data-player-id', player.id);
+                playerEl.style.left = position.x + 'px';
+                playerEl.style.top = position.y + 'px';
+                
+                playerEl.innerHTML = `
+                    <div class="player-name">${player.name}</div>
+                    <div class="player-cards"></div>
+                `;
+                
+                this.container.appendChild(playerEl);
+            }
+            
+            // Wait a short delay before dealing cards
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Deal two cards to each player
+            const hands = [];
+            for (let i = 0; i < this.players.length; i++) {
+                hands[i] = [
+                    this.deck.pop(),
+                    this.deck.pop()
+                ];
+            }
+
+            // Reveal hole cards
+            await this.revealHoleCards(hands);
+
+            // Deal community cards
+            const flopCards = [this.deck.pop(), this.deck.pop(), this.deck.pop()];
+            const turnCard = this.deck.pop();
+            const riverCard = this.deck.pop();
+            
+            // Deal flop
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await this.dealCommunityCards(flopCards, 'flop');
+            
+            // Deal turn
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await this.dealCommunityCards([turnCard], 'turn');
+            
+            // Deal river
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await this.dealCommunityCards([riverCard], 'river');
+            
+            // Determine winner
+            const communityCards = [...flopCards, turnCard, riverCard];
+            const result = this.determineWinner(hands, communityCards);
+            
+            if (result) {
+                await this.celebrateWinner(result.winnerIndex, result.handName);
+            }
+            
+        } catch (error) {
+            console.error('Error during animation:', error);
+            showToast('Error during animation', 'error');
+        } finally {
+            this.isAnimating = false;
         }
-        
-        // Remove any previous winner
-        const existingWinners = this.container.querySelectorAll('.winner');
-        existingWinners.forEach(el => {
-            el.classList.remove('winner');
-            const msg = el.querySelector('.winning-message');
-            if (msg) msg.remove();
-        });
-
-        // Create and shuffle deck
-        const deck = this.createDeck();
-        const playersHands = [];
-        const communityCards = [];
-        
-        // Deal cards to all players
-        for (let i = 0; i < this.players.length; i++) {
-            playersHands[i] = [deck.pop()];
-        }
-        
-        // Second round of dealing
-        for (let i = 0; i < this.players.length; i++) {
-            playersHands[i].push(deck.pop());
-        }
-
-        // Reveal cards
-        await this.revealHoleCards(playersHands);
-        await new Promise(r => setTimeout(r, 1000));
-
-        // Deal community cards
-        communityCards.push(...deck.splice(0, 3));
-        await this.dealCommunityCards(communityCards.slice(0, 3));
-        await new Promise(r => setTimeout(r, 1000));
-
-        communityCards.push(deck.pop());
-        await this.dealCommunityCards([communityCards[3]]);
-        await new Promise(r => setTimeout(r, 1000));
-
-        communityCards.push(deck.pop());
-        await this.dealCommunityCards([communityCards[4]]);
-        await new Promise(r => setTimeout(r, 1000));
-
-        // Determine winner
-        const { index: winnerIndex, handName } = this.determineWinner(playersHands, communityCards);
-        await this.celebrateWinner(winnerIndex, handName);
-
-        this.isAnimating = false;
     }
 
     async revealHoleCards(hands) {
-        // Reset all cards to initial state first
-        for (let i = 0; i < this.playerCards.length; i++) {
-            const [card1, card2] = this.playerCards[i];
-            if (card1) {
-                card1.classList.remove('flipped');
-                const card1Front = card1.querySelector('.card-front');
-                if (card1Front && hands[i] && hands[i][0]) {
-                    card1Front.textContent = `${hands[i][0].rank}${hands[i][0].suit}`;
-                    card1Front.setAttribute('data-suit', hands[i][0].suit);
-                }
-            }
-            if (card2) {
-                card2.classList.remove('flipped');
-                const card2Front = card2.querySelector('.card-front');
-                if (card2Front && hands[i] && hands[i][1]) {
-                    card2Front.textContent = `${hands[i][1].rank}${hands[i][1].suit}`;
-                    card2Front.setAttribute('data-suit', hands[i][1].suit);
-                }
-            }
-        }
-
-        // Now reveal each player's cards with proper timing
-        for (let i = 0; i < this.playerCards.length; i++) {
-            if (!this.playerCards[i] || !hands[i]) {
-                console.error('Missing cards or hands for player', i);
-                continue;
-            }
-
-            const [card1, card2] = this.playerCards[i];
+        if (!hands || !hands.length || !this.players) return;
+        
+        const playerEls = this.container.querySelectorAll('.player-area');
+        
+        for (let i = 0; i < playerEls.length; i++) {
+            const playerEl = playerEls[i];
+            const cardsContainer = playerEl.querySelector('.player-cards');
             
-            // Add a delay before starting each player's cards
+            if (!cardsContainer) continue;
+            
+            cardsContainer.innerHTML = '';
+            
+            // Create card elements
+            for (let j = 0; j < Math.min(2, hands[i].length); j++) {
+                const card = hands[i][j];
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                
+                cardElement.innerHTML = `
+                    <div class="card-back"></div>
+                    <div class="card-front" data-suit="${card.suit}" data-value="${card.value}">
+                        <div class="card-value">${card.value}</div>
+                        <div class="card-suit ${card.suit}"></div>
+                    </div>
+                `;
+                
+                cardsContainer.appendChild(cardElement);
+                
+                // Apply theme to card back
+                if (this.currentTheme) {
+                    const cardBack = cardElement.querySelector('.card-back');
+                    cardBack.style.background = `linear-gradient(135deg, ${this.currentTheme['--main-color'] || '#388E3C'}, ${this.currentTheme['--secondary-color'] || '#1B5E20'})`;
+                }
+            }
+            
+            // Arrange cards side by side
+            cardsContainer.style.display = 'flex';
+            cardsContainer.style.gap = '5px';
+            cardsContainer.style.justifyContent = 'center';
+        }
+        
+        // Wait a moment before revealing
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Flip cards with a delay between players
+        for (let i = 0; i < playerEls.length; i++) {
+            const playerEl = playerEls[i];
+            const cardElements = playerEl.querySelectorAll('.card');
+            
+            for (let card of cardElements) {
             await new Promise(resolve => setTimeout(resolve, 200));
-
-            // Flip first card
-            if (card1) {
-                card1.classList.add('flipped');
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
-
-            // Flip second card
-            if (card2) {
-                card2.classList.add('flipped');
-                await new Promise(resolve => setTimeout(resolve, 300));
+                card.classList.add('flipped');
             }
         }
     }
 
-    updateEquities(hands, communityCards) {
-        const equities = this.calculateEquities(hands, communityCards);
-        const playerAreas = this.container.querySelectorAll('.player-area');
+    async dealCommunityCards(cards, stage) {
+        if (!cards || !cards.length) return;
         
-        playerAreas.forEach((area, index) => {
-            const equityDisplay = area.querySelector('.equity-display');
-            if (equityDisplay) {
-                equityDisplay.textContent = `Equity: ${equities[index].toFixed(1)}%`;
-                equityDisplay.style.opacity = '1';
-            }
-        });
-    }
-
-    calculateEquities(hands, communityCards) {
-        const simulations = 1000;
-        const wins = new Array(hands.length).fill(0);
-        
-        for (let i = 0; i < simulations; i++) {
-            const remainingCards = this.getRemainingCards(hands, communityCards);
-            const simulatedCommunity = [...communityCards];
-            
-            while (simulatedCommunity.length < 5) {
-                const randomIndex = Math.floor(Math.random() * remainingCards.length);
-                simulatedCommunity.push(remainingCards.splice(randomIndex, 1)[0]);
-            }
-
-            const winner = this.determineWinner(hands, simulatedCommunity);
-            wins[winner]++;
-        }
-
-        return wins.map(w => (w / simulations) * 100);
-    }
-
-    async dealCommunityCards(cards) {
-        const communityArea = this.container.querySelector('.community-cards');
+        // Create or get community area
+        let communityArea = this.container.querySelector('.community-area');
         if (!communityArea) {
-            console.error('Community cards container not found');
-            return;
+            communityArea = document.createElement('div');
+            communityArea.className = 'community-area';
+            communityArea.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                display: flex;
+                gap: 10px;
+                padding: 10px;
+                border-radius: var(--border-radius-md);
+                background: rgba(0, 0, 0, 0.2);
+                z-index: 5;
+            `;
+            this.container.appendChild(communityArea);
         }
-        for (let card of cards) {
-            const cardEl = document.createElement('div');
-            cardEl.className = 'card';
+        
+        // Add stage indicator
+        const stageIndicator = document.createElement('div');
+        stageIndicator.className = 'stage-indicator';
+        stageIndicator.textContent = stage.toUpperCase();
+        stageIndicator.style.cssText = `
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            background: var(--main-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        communityArea.appendChild(stageIndicator);
+        
+        // Show stage indicator
+        setTimeout(() => {
+            stageIndicator.style.opacity = '1';
+        }, 100);
+        
+        // Flip each card with a small delay
+        for (const card of cards) {
+            // Add card to community cards array
+            this.communityCards.push(card);
             
-            // Create card back
-            const cardBack = document.createElement('div');
-            cardBack.className = 'card-back';
-            cardEl.appendChild(cardBack);
+            // Create card element
+            const cardElement = document.createElement('div');
+            cardElement.className = 'card';
             
-            // Create card front
-            const cardFront = document.createElement('div');
-            cardFront.className = 'card-front';
-            cardFront.textContent = `${card.rank}${card.suit}`;
-            cardFront.setAttribute('data-suit', card.suit);
-            cardEl.appendChild(cardFront);
+            cardElement.innerHTML = `
+                <div class="card-back"></div>
+                <div class="card-front" data-suit="${card.suit}" data-value="${card.value}">
+                    <div class="card-value">${card.value}</div>
+                    <div class="card-suit ${card.suit}"></div>
+                </div>
+            `;
             
-            communityArea.appendChild(cardEl);
-            await new Promise(resolve => setTimeout(resolve, 100));
-            cardEl.classList.add('flipped');
-            await new Promise(resolve => setTimeout(resolve, 400));
+            // Apply theme to card back
+            if (this.currentTheme) {
+                const cardBack = cardElement.querySelector('.card-back');
+                cardBack.style.background = `linear-gradient(135deg, ${this.currentTheme['--main-color'] || '#388E3C'}, ${this.currentTheme['--secondary-color'] || '#1B5E20'})`;
+            }
+            
+            communityArea.appendChild(cardElement);
+            
+            // Flip after a small delay
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await this.flipCard(cardElement, card);
         }
     }
 
     async flipCard(cardElement, cardData) {
-        if (!cardElement || !cardData) {
-            console.error('Missing card element or data:', { cardElement, cardData });
-            return;
-        }
-
-        cardElement.classList.remove('face-down');
-        cardElement.classList.add('face-up');
-        cardElement.textContent = `${cardData.rank}${cardData.suit}`;
-        cardElement.setAttribute('data-suit', cardData.suit);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        return new Promise(resolve => {
+            // Add flipped class to start animation
+            cardElement.classList.add('flipped');
+            
+            // Wait for animation to complete
+            setTimeout(() => {
+                resolve();
+            }, 600);
+        });
     }
 
     async celebrateWinner(winnerIndex, handName) {
-        if (winnerIndex === undefined || winnerIndex < 0 || winnerIndex >= this.players.length) {
-            console.error('Invalid winner index:', winnerIndex);
-            return;
-        }
-
-        // Remove any existing winner classes and messages
-        const existingWinners = this.container.querySelectorAll('.winner');
-        existingWinners.forEach(el => {
-            el.classList.remove('winner');
-            const msg = el.querySelector('.winning-message');
-            if (msg) msg.remove();
-        });
-
-        // Find the winner's player area and add winner class
-        const playerAreas = this.container.querySelectorAll('.player-area');
-        const winnerArea = playerAreas[winnerIndex];
-        if (winnerArea) {
-            winnerArea.classList.add('winner');
-        }
-
-        // Create a centered overlay for the winner's message
+        const playerEls = this.container.querySelectorAll('.player-area');
+        if (!playerEls.length || winnerIndex >= playerEls.length) return;
+        
+        const winnerEl = playerEls[winnerIndex];
+        if (!winnerEl) return;
+        
+        // Add winner class for highlight effect
+        winnerEl.classList.add('winner');
+        
+        // Create winner overlay
         const overlay = document.createElement('div');
         overlay.className = 'winner-overlay';
         overlay.innerHTML = `
             <div class="winner-message">
                 <div class="winner-title">WINNER!</div>
                 <div class="hand-name">${handName}</div>
-                <div class="winner-name">${this.players[winnerIndex].name}</div>
+                <div class="winner-name">${this.players[winnerIndex]?.name || 'Player'}</div>
             </div>
         `;
+        
         this.container.appendChild(overlay);
 
-        // Remove the overlay after 5 seconds
+        // Add confetti effect
+        this.addConfetti();
+
+        // Remove overlay after 5 seconds
         setTimeout(() => {
-            overlay.remove();
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.5s ease';
+            
+        setTimeout(() => {
+                if (overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+                winnerEl.classList.remove('winner');
+            }, 500);
         }, 5000);
     }
 
-    determineWinner(hands, communityCards) {
-        let bestHandInfo = {
-            rank: Number.MAX_VALUE,
-            highCard: -1,
-            secondaryRanks: [],
-            index: -1
-        };
-
-        hands.forEach((hand, playerIndex) => {
-            const allCards = [...hand, ...communityCards];
-            const evaluation = this.evaluateHand(allCards);
+    addConfetti() {
+        // Simple confetti effect
+        const confettiCount = 150;
+        const colors = ['#ff5252', '#ffbd59', '#66bb6a', '#42a5f5', '#ab47bc', '#ec407a', '#26c6da'];
+        
+        for (let i = 0; i < confettiCount; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
             
-            const currentHandInfo = {
-                rank: evaluation.rank,
-                highCard: evaluation.highCard,
-                secondaryRanks: evaluation.secondaryRanks,
-                index: playerIndex
-            };
+            const size = Math.random() * 10 + 5;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            confetti.style.cssText = `
+                    position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                background-color: ${color};
+                top: -20px;
+                left: ${Math.random() * 100}%;
+                opacity: ${Math.random() * 0.5 + 0.5};
+                transform: rotate(${Math.random() * 360}deg);
+                z-index: 999;
+                border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+                animation: fall ${Math.random() * 3 + 2}s linear forwards;
+            `;
+            
+            this.container.appendChild(confetti);
+            
+            // Remove confetti after animation
+            setTimeout(() => {
+                if (confetti.parentNode) {
+                    confetti.parentNode.removeChild(confetti);
+                }
+            }, 5000);
+        }
+        
+        // Add the animation style
+        const styleId = 'confetti-style';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                @keyframes fall {
+                    0% { 
+                        transform: translateY(0) rotate(0deg); 
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(${this.containerHeight}px) rotate(360deg); 
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
 
-            if (this.isHandBetter(currentHandInfo, bestHandInfo)) {
-                bestHandInfo = currentHandInfo;
+    // Proper hand evaluation function
+    determineWinner(hands, communityCards) {
+        if (!hands || !hands.length || !communityCards || communityCards.length !== 5) {
+            return null;
+        }
+        
+        let bestHandResult = null;
+        let winnerIndex = -1;
+        
+        // Evaluate each player's hand
+        for (let i = 0; i < hands.length; i++) {
+            // Consider all 7 cards (2 hole + 5 community)
+            const playerCards = [...hands[i], ...communityCards];
+            const result = this.evaluateHand(playerCards);
+            
+            if (!bestHandResult || this.isHandBetter(result, bestHandResult)) {
+                bestHandResult = result;
+                winnerIndex = i;
             }
-        });
-
-        return {
-            index: bestHandInfo.index,
-            handName: this.getHandName(bestHandInfo.rank)
-        };
+        }
+        
+        if (winnerIndex >= 0 && bestHandResult) {
+            return {
+                winnerIndex,
+                handName: this.getHandName(bestHandResult.rank)
+            };
+        }
+        
+        return null;
     }
 
     isHandBetter(hand1, hand2) {
-        // Lower rank is better (e.g., STRAIGHT_FLUSH = 1 is best)
+        // Higher rank always wins
         if (hand1.rank !== hand2.rank) {
-            return hand1.rank < hand2.rank;
+            return hand1.rank > hand2.rank;
         }
-
-        // If ranks are equal, compare high cards
-        if (hand1.highCard !== hand2.highCard) {
-            return hand1.highCard > hand2.highCard;
-        }
-
-        // If high cards are equal, compare secondary ranks
-        for (let i = 0; i < Math.min(hand1.secondaryRanks.length, hand2.secondaryRanks.length); i++) {
-            if (hand1.secondaryRanks[i] !== hand2.secondaryRanks[i]) {
-                return hand1.secondaryRanks[i] > hand2.secondaryRanks[i];
+        
+        // If same rank, compare high cards
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        
+        // Compare kickers in descending order
+        for (let i = 0; i < hand1.kickers.length && i < hand2.kickers.length; i++) {
+            const value1Index = values.indexOf(hand1.kickers[i]);
+            const value2Index = values.indexOf(hand2.kickers[i]);
+            
+            if (value1Index !== value2Index) {
+                return value1Index > value2Index;
             }
         }
-
-        return false; // Hands are equal
-    }
-
-    getHandName(rank) {
-        const handNames = {
-            1: 'Straight Flush',
-            2: 'Four of a Kind',
-            3: 'Full House',
-            4: 'Flush',
-            5: 'Straight',
-            6: 'Three of a Kind',
-            7: 'Two Pair',
-            8: 'One Pair',
-            9: 'High Card'
-        };
-        return handNames[rank] || 'Unknown Hand';
+        
+        // Complete tie
+        return false;
     }
 
     evaluateHand(cards) {
-        if (!cards || cards.length !== 7) {
-            console.error('Invalid number of cards for evaluation:', cards?.length);
-            return { rank: this.handRankings.HIGH_CARD, name: 'Invalid Hand', highCard: 0, secondaryRanks: [] };
+        if (!cards || cards.length < 5) {
+            return { rank: 0, kickers: [] };
         }
-
-        const fiveCardCombos = this.combinations(cards, 5);
-        let bestHand = {
-            rank: this.handRankings.HIGH_CARD,
-            highCard: 0,
-            secondaryRanks: [],
-            cards: []
+        
+        // Convert card values to numbers for easier comparison
+        const valueMap = {
+            '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8,
+            '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
         };
-
-        for (const combo of fiveCardCombos) {
-            const currentHand = this.evaluateFiveCardHand(combo);
-            if (this.isHandBetter({
-                rank: currentHand.rank,
-                highCard: currentHand.highCard,
-                secondaryRanks: currentHand.secondaryRanks
-            }, {
-                rank: bestHand.rank,
-                highCard: bestHand.highCard,
-                secondaryRanks: bestHand.secondaryRanks
-            })) {
-                bestHand = currentHand;
+        
+        // Get all possible 5-card combinations
+        const combinations = this.getAllFiveCardCombinations(cards);
+        
+        // Evaluate each combination and find the best one
+        let bestHand = { rank: 0, kickers: [] };
+        
+        for (const combo of combinations) {
+            const result = this.evaluateFiveCardHand(combo);
+            if (this.isHandBetter(result, bestHand)) {
+                bestHand = result;
             }
         }
-
+        
         return bestHand;
     }
 
     evaluateFiveCardHand(cards) {
-        const values = cards.map(card => this.rankValues[card.rank]).sort((a, b) => b - a);
+        // Map the cards for easier evaluation
+        const values = cards.map(card => card.value);
         const suits = cards.map(card => card.suit);
-        const valueCounts = this.getValueCounts(values);
-        const isFlush = new Set(suits).size === 1;
-        const straightHighCard = this.getStraightHighCard(values);
-        const isStraight = straightHighCard > 0;
-
-        // Log hand evaluation for debugging
-        console.log('Evaluating hand:', {
-            cards: cards.map(c => `${c.rank}${c.suit}`),
-            values,
-            straightHighCard,
-            isStraight
-        });
-
-        // Straight Flush
+        
+        // Count frequencies of each value
+        const valueCounts = {};
+        for (const value of values) {
+            valueCounts[value] = (valueCounts[value] || 0) + 1;
+        }
+        
+        // Check for flush
+        const isFlush = suits.every(suit => suit === suits[0]);
+        
+        // Check for straight
+        const valueMap = {
+            '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8,
+            '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
+        };
+        
+        // Special case for A-5 straight
+        let numericValues = values.map(v => valueMap[v]).sort((a, b) => a - b);
+        
+        if (numericValues.includes(14)) { // If we have an Ace
+            // Create a copy with Ace as 1 for A-5 straight check
+            const withAceAsOne = [...numericValues.filter(v => v !== 14), 1].sort((a, b) => a - b);
+            
+            // Check if it makes a straight
+            const isAceLowStraight = withAceAsOne.every((v, i, arr) => 
+                i === 0 || v === arr[i-1] + 1
+            );
+            
+            if (isAceLowStraight) {
+                numericValues = withAceAsOne;
+            }
+        }
+        
+        const isStraight = numericValues.every((v, i, arr) => 
+            i === 0 || v === arr[i-1] + 1
+        );
+        
+        // Royal flush
+        if (isFlush && isStraight && numericValues.includes(14) && !numericValues.includes(1)) {
+            return { rank: 9, kickers: values };
+        }
+        
+        // Straight flush
         if (isFlush && isStraight) {
-            return {
-                rank: this.handRankings.STRAIGHT_FLUSH,
-                highCard: straightHighCard,
-                secondaryRanks: [],
-                cards
-            };
+            return { rank: 8, kickers: values };
         }
-
-        // Four of a Kind
-        const fourOfAKind = valueCounts.find(count => count.count === 4);
-        if (fourOfAKind) {
-            const kicker = values.find(v => v !== fourOfAKind.value);
-            return {
-                rank: this.handRankings.FOUR_OF_A_KIND,
-                highCard: fourOfAKind.value,
-                secondaryRanks: [kicker],
-                cards
-            };
+        
+        // Four of a kind
+        const hasFourOfAKind = Object.values(valueCounts).includes(4);
+        if (hasFourOfAKind) {
+            const fourValue = Object.keys(valueCounts).find(v => valueCounts[v] === 4);
+            const kicker = Object.keys(valueCounts).find(v => valueCounts[v] === 1);
+            return { rank: 7, kickers: [fourValue, kicker] };
         }
-
-        // Full House
-        const threeOfAKind = valueCounts.find(count => count.count === 3);
-        const pair = valueCounts.find(count => count.count === 2);
-        if (threeOfAKind && pair) {
-            return {
-                rank: this.handRankings.FULL_HOUSE,
-                highCard: threeOfAKind.value,
-                secondaryRanks: [pair.value],
-                cards
-            };
+        
+        // Full house
+        const hasThreeOfAKind = Object.values(valueCounts).includes(3);
+        const hasOnePair = Object.values(valueCounts).includes(2);
+        if (hasThreeOfAKind && hasOnePair) {
+            const threeValue = Object.keys(valueCounts).find(v => valueCounts[v] === 3);
+            const pairValue = Object.keys(valueCounts).find(v => valueCounts[v] === 2);
+            return { rank: 6, kickers: [threeValue, pairValue] };
         }
-
+        
         // Flush
         if (isFlush) {
-            return {
-                rank: this.handRankings.FLUSH,
-                highCard: values[0],
-                secondaryRanks: values.slice(1),
-                cards
-            };
+            return { rank: 5, kickers: values.sort((a, b) => valueMap[b] - valueMap[a]) };
         }
-
+        
         // Straight
         if (isStraight) {
-            return {
-                rank: this.handRankings.STRAIGHT,
-                highCard: straightHighCard,
-                secondaryRanks: values.filter(v => v <= straightHighCard && v > straightHighCard - 5),
-                cards
-            };
+            return { rank: 4, kickers: values };
         }
-
-        // Three of a Kind
-        if (threeOfAKind) {
-            const kickers = values.filter(v => v !== threeOfAKind.value).slice(0, 2);
-            return {
-                rank: this.handRankings.THREE_OF_A_KIND,
-                highCard: threeOfAKind.value,
-                secondaryRanks: kickers,
-                cards
-            };
+        
+        // Three of a kind
+        if (hasThreeOfAKind) {
+            const threeValue = Object.keys(valueCounts).find(v => valueCounts[v] === 3);
+            const kickers = Object.keys(valueCounts)
+                .filter(v => valueCounts[v] === 1)
+                .sort((a, b) => valueMap[b] - valueMap[a]);
+            return { rank: 3, kickers: [threeValue, ...kickers] };
         }
-
-        // Two Pair
-        const pairs = valueCounts.filter(count => count.count === 2);
+        
+        // Two pair
+        const pairs = Object.keys(valueCounts).filter(v => valueCounts[v] === 2);
         if (pairs.length === 2) {
-            const kicker = values.find(v => !pairs.some(p => p.value === v));
-            return {
-                rank: this.handRankings.TWO_PAIR,
-                highCard: Math.max(pairs[0].value, pairs[1].value),
-                secondaryRanks: [Math.min(pairs[0].value, pairs[1].value), kicker],
-                cards
-            };
+            const kicker = Object.keys(valueCounts).find(v => valueCounts[v] === 1);
+            pairs.sort((a, b) => valueMap[b] - valueMap[a]);
+            return { rank: 2, kickers: [...pairs, kicker] };
         }
-
-        // One Pair
-        if (pair) {
-            const kickers = values.filter(v => v !== pair.value).slice(0, 3);
-            return {
-                rank: this.handRankings.ONE_PAIR,
-                highCard: pair.value,
-                secondaryRanks: kickers,
-                cards
-            };
+        
+        // One pair
+        if (hasOnePair) {
+            const pairValue = Object.keys(valueCounts).find(v => valueCounts[v] === 2);
+            const kickers = Object.keys(valueCounts)
+                .filter(v => valueCounts[v] === 1)
+                .sort((a, b) => valueMap[b] - valueMap[a]);
+            return { rank: 1, kickers: [pairValue, ...kickers] };
         }
-
-        // High Card
-        return {
-            rank: this.handRankings.HIGH_CARD,
-            highCard: values[0],
-            secondaryRanks: values.slice(1),
-            cards
+        
+        // High card
+        return { 
+            rank: 0, 
+            kickers: values.sort((a, b) => valueMap[b] - valueMap[a]) 
         };
     }
 
-    getValueCounts(values) {
-        const counts = new Map();
-        values.forEach(value => counts.set(value, (counts.get(value) || 0) + 1));
-        return Array.from(counts.entries())
-            .map(([value, count]) => ({ value, count }))
-            .sort((a, b) => b.count - a.count || b.value - a.value);
-    }
-
-    getStraightHighCard(values) {
-        // Sort values in descending order
-        const sortedValues = [...new Set(values)].sort((a, b) => b - a);
-        
-        // Check for regular straights
-        for (let i = 0; i <= sortedValues.length - 5; i++) {
-            let isSequential = true;
-            for (let j = 0; j < 4; j++) {
-                if (sortedValues[i + j] !== sortedValues[i + j + 1] + 1) {
-                    isSequential = false;
-                    break;
-                }
-            }
-            if (isSequential) {
-                return sortedValues[i]; // Return highest card of the straight
-            }
-        }
-        
-        // Special check for Ace-low straight (A,2,3,4,5)
-        if (sortedValues.includes(14) && // Ace
-            sortedValues.includes(2) &&
-            sortedValues.includes(3) &&
-            sortedValues.includes(4) &&
-            sortedValues.includes(5)) {
-            return 5; // In A-5 straight, 5 is the highest card
-        }
-        
-        return 0; // No straight found
-    }
-
-    combinations(array, k) {
+    getAllFiveCardCombinations(cards) {
         const result = [];
-        function combine(arr, start, chosen) {
-            if (chosen.length === k) {
-                result.push([...chosen]);
+        
+        const generateCombinations = (start, current) => {
+            if (current.length === 5) {
+                result.push([...current]);
                 return;
             }
-            for (let i = start; i < arr.length; i++) {
-                chosen.push(arr[i]);
-                combine(arr, i + 1, chosen);
-                chosen.pop();
+            
+            for (let i = start; i < cards.length; i++) {
+                current.push(cards[i]);
+                generateCombinations(i + 1, current);
+                current.pop();
             }
-        }
-        combine(array, 0, []);
+        };
+        
+        generateCombinations(0, []);
         return result;
     }
 
-    getCardCounts(cards) {
-        const counts = new Map();
-        cards.forEach(card => {
-            counts.set(card.rank, (counts.get(card.rank) || 0) + 1);
-        });
-        return counts;
-    }
-
-    getRemainingCards(hands, communityCards) {
-        const usedCards = [...communityCards];
-        hands.forEach(hand => usedCards.push(...hand));
+    // Get the name of the hand based on rank
+    getHandName(rank) {
+        const handNames = [
+            'High Card',
+            'Pair',
+            'Two Pair',
+            'Three of a Kind',
+            'Straight',
+            'Flush',
+            'Full House',
+            'Four of a Kind',
+            'Straight Flush',
+            'Royal Flush'
+        ];
         
-        return this.createDeck().filter(card => 
-            !usedCards.some(used => 
-                used.rank === card.rank && used.suit === card.suit
-            )
-        );
+        return handNames[rank] || 'Unknown Hand';
     }
 
+    // Set players for the animation
     setPlayers(players) {
-        if (!Array.isArray(players)) {
-            console.error('Players must be an array');
+        if (!players || !Array.isArray(players)) {
+            console.error('Invalid players data provided to setPlayers');
             return;
         }
         
-        this.players = players.map(player => ({
-            name: player.name,
-            chips: player.chips || 0
+        this.players = players.map(p => ({
+            id: p.id,
+            name: p.name,
+            initial_chips: p.initial_chips,
+            current_chips: p.current_chips || p.initial_chips
         }));
         
-        // Calculate player positions
-        const numPlayers = this.players.length;
-        this.playerPositions = [];
+        // Recalculate player positions
+        this.positionPlayers();
         
-        const centerX = this.container.offsetWidth / 2;
-        const centerY = this.container.offsetHeight / 2;
-        const radius = Math.min(centerX, centerY) * 0.8;
-        
-        for (let i = 0; i < numPlayers; i++) {
-            const angle = (i * (2 * Math.PI / numPlayers)) - (Math.PI / 2);
-            this.playerPositions.push({
-                x: centerX + radius * Math.cos(angle),
-                y: centerY + radius * Math.sin(angle)
-            });
-        }
-        
+        // Re-render with new players
         this.render();
     }
 
+    // Calculate positions for players around the table
     positionPlayers() {
-        if (!this.container || !this.players.length) return;
-
-        const containerWidth = this.container.clientWidth;
-        const containerHeight = this.container.clientHeight;
+        if (!this.container || !this.players || !this.players.length) return;
         
-        if (containerWidth === 0 || containerHeight === 0) {
-            console.warn('Container has zero dimensions, skipping player positioning');
-            return;
+        const centerX = this.containerWidth / 2;
+        const centerY = this.containerHeight / 2;
+        const radius = Math.min(centerX, centerY) * 0.8;
+        
+        this.playerPositions = [];
+        
+        const count = this.players.length;
+        for (let i = 0; i < count; i++) {
+            // Calculate position on a circle
+            // Starting from the bottom and going clockwise
+            const angle = (Math.PI * 2 * i / count) + Math.PI / 2;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            
+            this.playerPositions.push({ x, y });
         }
-
-        const centerX = containerWidth / 2;
-        const centerY = containerHeight / 2;
-        const radius = Math.min(containerWidth, containerHeight) * 0.35; // Reduced from 0.45 for better positioning
-        
-        this.playerPositions = this.players.map((_, index) => {
-            // Start from -90 degrees (top) and distribute players clockwise
-            const angle = (-Math.PI / 2) + (index * 2 * Math.PI / this.players.length);
-            return {
-                x: centerX + radius * Math.cos(angle),
-                y: centerY + radius * Math.sin(angle)
-            };
-        });
-
-        console.log('Player positions updated:', this.playerPositions);
     }
-
+    
+    // Render the current state
     render() {
-        if (!this.container) {
-            console.error('Cannot render: container is null');
-            return;
-        }
-
-        this.container.innerHTML = '';
-        this.playerCards = [];
-
-        // Create table center
-        const tableCenter = document.createElement('div');
-        tableCenter.className = 'table-center';
-
-        // Create board background
-        const boardBackground = document.createElement('div');
-        boardBackground.className = 'board-background';
-        if (this.currentTheme && this.currentTheme.tableImage) {
-            boardBackground.style.backgroundImage = `url('${this.currentTheme.tableImage}')`;
-        }
-        tableCenter.appendChild(boardBackground);
-
-        // Create community cards container
-        const communityCards = document.createElement('div');
-        communityCards.className = 'community-cards';
-        tableCenter.appendChild(communityCards);
-
-        this.container.appendChild(tableCenter);
-
-        // Render player areas
-        this.players.forEach((player, index) => {
-            if (!player || !this.playerPositions[index]) {
-                console.warn(`Missing player or position data for index ${index}`);
+        if (!this.container) return;
+        
+        // If no players, show message
+        if (!this.players || this.players.length === 0) {
+            this.container.innerHTML = '<div class="empty-message">Add players to start the game</div>';
                 return;
             }
 
-            const playerArea = document.createElement('div');
-            playerArea.className = 'player-area';
-            playerArea.style.position = 'absolute';
-            playerArea.style.left = `${this.playerPositions[index].x}px`;
-            playerArea.style.top = `${this.playerPositions[index].y}px`;
-            playerArea.style.transform = 'translate(-50%, -50%)';
-
-            // Add player name
-            const playerName = document.createElement('div');
-            playerName.className = 'player-name';
-            playerName.textContent = player.name || `Player ${index + 1}`;
-            playerArea.appendChild(playerName);
-
-            // Add player cards
-            const playerCardsContainer = document.createElement('div');
-            playerCardsContainer.className = 'player-cards';
-
-            for (let i = 0; i < 2; i++) {
-                const card = document.createElement('div');
-                card.className = 'card';
-                
-                const cardBack = document.createElement('div');
-                cardBack.className = 'card-back';
-                card.appendChild(cardBack);
-                
-                const cardFront = document.createElement('div');
-                cardFront.className = 'card-front';
-                card.appendChild(cardFront);
-                
-                playerCardsContainer.appendChild(card);
-            }
-
-            this.playerCards.push(playerCardsContainer.children);
-            playerArea.appendChild(playerCardsContainer);
-            this.container.appendChild(playerArea);
-        });
+        // For existing players, update positions
+        const playerEls = this.container.querySelectorAll('.player-area');
+        if (playerEls.length > 0) {
+            playerEls.forEach((el, i) => {
+                if (this.playerPositions[i]) {
+                    el.style.left = this.playerPositions[i].x + 'px';
+                    el.style.top = this.playerPositions[i].y + 'px';
+                }
+            });
+        }
     }
 } 

@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Poker Home Game Manager</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="description" content="A modern poker home game manager to track chips, select dealers, and calculate payouts">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -16,7 +19,7 @@
         </h1>
         <div class="theme-controls">
             <span>Theme:</span>
-            <select id="theme-selector" name="theme-selector">
+            <select id="theme-selector" name="theme-selector" aria-label="Select theme">
                 <option value="classic-green">Classic Green</option>
                 <option value="royal-blue">Royal Blue</option>
                 <option value="crimson-red">Crimson Red</option>
@@ -32,10 +35,7 @@
     </header>
     <main>
         <section id="money-to-chip-ratio">
-            <div class="section-header">
-                <h2>Money to Chip Ratio</h2>
-                <button id="minimize-button">+</button>
-            </div>
+            <h2>Money to Chip Ratio</h2>
             <div id="ratio-content">
                 <div id="ratio-form-container">
                     <form id="ratio-form" class="setup-form">
@@ -47,6 +47,8 @@
                                 name="money-amount"
                                 autocomplete="off"
                                 placeholder="Enter money amount"
+                                min="0"
+                                step="0.01"
                                 required
                             >
                         </div>
@@ -58,15 +60,20 @@
                                 name="chip-amount"
                                 autocomplete="off"
                                 placeholder="Enter chip amount"
+                                min="0"
+                                step="1"
                                 required
                             >
                         </div>
                         <button type="submit">Set Ratio</button>
                     </form>
                 </div>
-                <p id="ratio-display">Each chip is worth $1.00</p>
+                <div class="ratio-result">
+                    <p id="ratio-display">Each chip is worth $1.00</p>
+                </div>
             </div>
-        </section>
+        </section>d
+        
         <section id="add-player">
             <h2>Add Player</h2>
             <form id="player-form" class="setup-form">
@@ -89,41 +96,73 @@
                         name="initial-chips"
                         autocomplete="off"
                         placeholder="Enter chip amount"
+                        min="0"
+                        step="1"
                         required
                     >
                 </div>
                 <button type="submit">Add Player</button>
             </form>
         </section>
+        
         <section id="players">
             <h2>Players</h2>
-            <table id="player-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Initial Chips</th>
-                        <th>Current Chips</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-container">
+                <table id="player-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Initial Chips</th>
+                            <th>Current Chips</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty-state" id="no-players-message">
+                <p>No players added yet. Add players to start your game.</p>
+            </div>
         </section>
+        
         <section id="game-controls">
-            <button id="start-game">Start Game</button>
-            <button id="end-game" disabled>End Game</button>
-            <button id="reset-game" class="danger">Reset Game</button>
+            <h2>Game Controls</h2>
+            <div class="game-control-buttons">
+                <button id="start-game" class="action-button start-button">
+                    <span class="button-icon">▶</span> Start Game
+                </button>
+                <button id="simulate-hand" class="action-button simulate-button" disabled>
+                    <span class="button-icon">🎲</span> Simulate Hand
+                </button>
+                <button id="end-game" class="action-button end-button" disabled>
+                    <span class="button-icon">⏹</span> End Game
+                </button>
+                <button id="reset-game" class="action-button reset-button">
+                    <span class="button-icon">↺</span> Reset Game
+                </button>
+            </div>
+            <div class="game-status" id="game-status">
+                <p>Game not started. Add players to begin.</p>
+            </div>
         </section>
+        
         <section id="animation">
             <h2>Dealer Selection</h2>
             <div id="dealer-wheel" class="poker-table"></div>
         </section>
+        
         <section id="payouts">
             <h2>Payout Instructions</h2>
             <p id="payout-instructions">Update the current chip counts and click 'Calculate Payouts' to see the settlement.</p>
-            <button id="calculate-payouts">Calculate Payouts</button>
-            <div id="payout-list"></div>
+            <button id="calculate-payouts" class="primary">Calculate Payouts</button>
+            <div id="payout-list" class="payout-results"></div>
         </section>
     </main>
+
+    <footer>
+        <p>Poker Home Game Manager &copy; 2023</p>
+    </footer>
+
     <script src="hand-animation.js"></script>
     <script src="app.js"></script>
 </body>
