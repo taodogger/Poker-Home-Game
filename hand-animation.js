@@ -243,7 +243,7 @@ class HandAnimation {
             this.positionPlayers();
             
             // Create player elements - remove dealer button logic entirely
-            for (let i = 0; i < this.players.length; i++) {
+        for (let i = 0; i < this.players.length; i++) {
                 const player = this.players[i];
                 const position = this.playerPositions[i];
                 
@@ -276,7 +276,7 @@ class HandAnimation {
             // Reveal hole cards
             await this.revealHoleCards(hands);
 
-            // Deal community cards
+        // Deal community cards
             const flopCards = [this.deck.pop(), this.deck.pop(), this.deck.pop()];
             const turnCard = this.deck.pop();
             const riverCard = this.deck.pop();
@@ -292,8 +292,8 @@ class HandAnimation {
             // Deal river
             await new Promise(resolve => setTimeout(resolve, 500));
             await this.dealCommunityCards([riverCard], 'river');
-            
-            // Determine winner
+
+        // Determine winner
             const communityCards = [...flopCards, turnCard, riverCard];
             const result = this.determineWinner(hands, communityCards);
             
@@ -305,7 +305,7 @@ class HandAnimation {
             console.error('Error during animation:', error);
             showToast('Error during animation', 'error');
         } finally {
-            this.isAnimating = false;
+        this.isAnimating = false;
         }
     }
 
@@ -577,10 +577,10 @@ class HandAnimation {
         }
         
         if (winnerIndex >= 0 && bestHandResult) {
-            return {
+        return {
                 winnerIndex,
                 handName: this.getHandName(bestHandResult.rank)
-            };
+        };
         }
         
         return null;
@@ -632,7 +632,7 @@ class HandAnimation {
                 bestHand = result;
             }
         }
-        
+
         return bestHand;
     }
 
@@ -703,12 +703,12 @@ class HandAnimation {
             const pairValue = Object.keys(valueCounts).find(v => valueCounts[v] === 2);
             return { rank: 6, kickers: [threeValue, pairValue] };
         }
-        
+
         // Flush
         if (isFlush) {
             return { rank: 5, kickers: values.sort((a, b) => valueMap[b] - valueMap[a]) };
         }
-        
+
         // Straight
         if (isStraight) {
             return { rank: 4, kickers: values };
@@ -741,7 +741,7 @@ class HandAnimation {
         }
         
         // High card
-        return { 
+        return {
             rank: 0, 
             kickers: values.sort((a, b) => valueMap[b] - valueMap[a]) 
         };
