@@ -645,10 +645,91 @@ label {
     color: white !important;
 }
 
+#theme-selector {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    height: 28px;
+    max-width: 90px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8.825L1.175 4 2.238 2.938 6 6.7l3.763-3.763L10.825 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    padding-right: 1.5rem;
+}
+
 #theme-selector option {
     background: #1a1a1a;
     color: white;
     padding: 10px;
+    font-size: 0.75rem;
+}
+
+#theme-selector:hover {
+    border-color: var(--main-color);
+    background-color: rgba(0, 0, 0, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+#theme-selector:focus {
+    outline: none;
+    border-color: var(--main-color);
+    box-shadow: 0 0 0 2px rgba(var(--main-color-rgb), 0.2);
+}
+
+/* Theme-specific icon styles */
+.theme-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+/* Theme-specific styles */
+[data-theme="dogeinme"] .theme-icon {
+    content: url('doginme-icon.png');
+}
+
+[data-theme="rizzler"] .theme-icon {
+    content: url('rizzler-icon.png');
+}
+
+[data-theme="neon-nights"] .theme-icon {
+    content: url('neon-icon.png');
+}
+
+[data-theme="purple-haze"] .theme-icon {
+    content: url('purple-icon.png');
+}
+
+[data-theme="firestorm"] .theme-icon {
+    content: url('fire-icon.png');
+}
+
+[data-theme="ocean-breeze"] .theme-icon {
+    content: url('ocean-icon.png');
+}
+
+[data-theme="midnight-black"] .theme-icon {
+    content: url('midnight-icon.png');
+}
+
+[data-theme="crimson-red"] .theme-icon {
+    content: url('crimson-icon.png');
+}
+
+[data-theme="royal-blue"] .theme-icon {
+    content: url('royal-icon.png');
+}
+
+[data-theme="classic-green"] .theme-icon {
+    content: url('classic-icon.png');
 }
 
 /* Theme Controls */
@@ -668,25 +749,6 @@ label {
 .theme-controls span {
     color: white;
     font-weight: 500;
-}
-
-#theme-selector {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    color: rgba(255, 255, 255, 0.8);
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    height: 28px;
-    max-width: 90px;
-}
-
-#theme-selector:hover {
-    border-color: var(--main-color);
-    background: rgba(0, 0, 0, 0.7);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    color: var(--main-color);
 }
 
 /* Responsive Design */
