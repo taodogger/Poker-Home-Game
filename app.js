@@ -626,6 +626,9 @@ function initialize() {
     
     // Then initialize the main app
     PokerApp.initialize();
+    
+    // Setup Firebase listeners for real-time updates
+    setupFirebaseListeners();
 }
 
 // Initialize when the page loads
@@ -1340,3 +1343,87 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Setup Firebase listeners for real-time player updates
+function setupFirebaseListeners() {
+    if (PokerApp.state.sessionId && typeof firebase !== 'undefined' && firebase.database) {
+        // Listen for player list changes
+        const playersRef = firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`);
+        
+        playersRef.on('value', (snapshot) => {
+            const playersData = snapshot.val();
+            
+            // Only update if we have valid player data
+            if (playersData && Array.isArray(playersData)) {
+                console.log('Received player update from Firebase:', playersData);
+                
+                // Update the local state with the new player data
+                PokerApp.state.players = playersData.map(player => ({
+                    id: parseInt(player.id),
+                    name: player.name,
+                    initial_chips: parseInt(player.initial_chips),
+                    current_chips: parseInt(player.current_chips)
+                }));
+                
+                // Update UI
+                updatePlayerList();
+                updateEmptyState();
+                
+                // Update hand animation if it exists
+                if (window.handAnimation) {
+                    window.handAnimation.setPlayers(PokerApp.state.players);
+                }
+            }
+        });
+        
+        // Listen for game state changes
+        firebase.database().ref(`games/${PokerApp.state.sessionId}`).on('value', (snapshot) => {
+            const gameData = snapshot.val();
+            if (gameData && gameData.ratio) {
+                PokerApp.state.chipRatio = parseFloat(gameData.ratio);
+                
+                // Update ratio display
+                const ratioDisplay = document.getElementById('ratio-display');
+                if (ratioDisplay) {
+                    ratioDisplay.textContent = `Each chip is worth $${PokerApp.state.chipRatio.toFixed(2)}`;
+                }
+            }
+        });
+    }
+}
+
+function endGame() {
+    PokerApp.state.gameInProgress = false;
+    updateEmptyState();
+    
+    // Update UI elements
+    document.getElementById('start-game').disabled = false;
+    document.getElementById('simulate-hand').disabled = true;
+    document.getElementById('end-game').disabled = true;
+    document.getElementById('game-status').textContent = 'Game ended';
+    document.getElementById('game-status').classList.remove('active');
+    
+    // Clean up Firebase
+    if (PokerApp.state.sessionId) {
+        // Update game status to ended
+        firebase.database().ref(`games/${PokerApp.state.sessionId}`).update({
+            status: 'ended',
+            active: false
+        });
+        
+        // Remove all listeners
+        firebase.database().ref(`games/${PokerApp.state.sessionId}`).off();
+        firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).off();
+        
+        // Reset session info
+        PokerApp.state.sessionId = null;
+        PokerApp.state.gameName = null;
+        PokerApp.state.lobbyActive = false;
+    }
+    
+    // Update lobby UI
+    updateLobbyUI(false);
+    
+    // Save state
+    saveState();
+}
