@@ -684,12 +684,27 @@ label {
     background-repeat: no-repeat;
     background-position: right 0.5rem center;
     background-size: 1.5em;
+    min-width: 120px;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Stronger selector for theme dropdown */
+html body header .header-controls #theme-selector,
+.header-controls #theme-selector,
+select#theme-selector,
+#theme-selector:focus,
+#theme-selector:active,
+#theme-selector:hover {
+    color: white !important;
+    background-color: #1a1a1a !important;
 }
 
 #theme-selector option {
     background-color: #1a1a1a !important;
     color: white !important;
     padding: 0.5rem;
+    font-size: 1rem;
 }
 
 #theme-selector:focus {
@@ -702,16 +717,30 @@ label {
     border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* Ensure the selected option is visible */
+/* Selected option styles */
 #theme-selector option:checked {
-    background-color: #1a1a1a !important;
+    background-color: #333 !important;
     color: white !important;
+    font-weight: bold;
 }
 
-/* For Firefox */
-#theme-selector:-moz-focusring {
-    color: white !important;
-    text-shadow: 0 0 0 white;
+/* Firefox-specific fixes */
+@-moz-document url-prefix() {
+    #theme-selector {
+        color: white !important;
+        background-color: #1a1a1a !important;
+        text-shadow: none;
+    }
+    
+    #theme-selector option {
+        color: white !important;
+        background-color: #1a1a1a !important;
+    }
+    
+    #theme-selector:-moz-focusring {
+        color: white !important;
+        text-shadow: 0 0 0 white;
+    }
 }
 
 /* Theme-specific icon styles */
@@ -781,15 +810,30 @@ label {
     header {
         padding: 6px;
         min-height: 40px;
+        flex-wrap: nowrap;
+        justify-content: space-between;
     }
 
     .header-title {
-        font-size: 1rem;
-        max-width: 40%;
+        font-size: 0.875rem;
+        max-width: 50%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .header-controls {
         gap: 6px;
+        flex-shrink: 0;
+    }
+
+    #theme-selector {
+        min-width: 90px;
+        max-width: 120px;
+        padding: 4px 24px 4px 8px;
+        font-size: 0.875rem;
+        background-position: right 4px center;
+        background-size: 16px;
     }
 
     main {
@@ -818,35 +862,6 @@ label {
         padding: 0.875rem;
         height: 3rem;
     }
-    
-    .theme-controls {
-        flex-direction: column;
-        padding: var(--spacing-md);
-        gap: var(--spacing-sm);
-    }
-
-    #theme-selector {
-        max-width: 100px;
-        font-size: 12px;
-    }
-
-    .action-button {
-        padding: 4px 6px;
-        font-size: 12px;
-    }
-
-    .qr-wrapper {
-        width: 100%;
-        max-width: 280px;
-        height: auto;
-        aspect-ratio: 1;
-    }
-
-    .join-url {
-        font-size: 0.875rem;
-        max-width: 100%;
-        word-break: break-all;
-    }
 }
 
 @media (max-width: 480px) {
@@ -867,11 +882,27 @@ label {
 
     .header-title {
         font-size: 0.75rem;
+        max-width: 45%;
     }
 
     .title-icon {
         width: 1rem;
         height: 1rem;
+    }
+
+    #theme-selector {
+        min-width: 80px;
+        max-width: 100px;
+        padding: 4px 20px 4px 6px;
+        font-size: 0.75rem;
+        height: 28px;
+        background-position: right 4px center;
+        background-size: 14px;
+    }
+
+    #theme-selector option {
+        font-size: 0.75rem;
+        padding: 4px 6px;
     }
 
     main {
@@ -903,37 +934,25 @@ label {
     .buy-in-request-actions button {
         width: 100%;
     }
-    
-    .manual-entry-note {
-        font-size: 0.75rem;
-        padding: var(--spacing-sm);
-    }
-
-    .chip-preview {
-        padding: var(--spacing-md);
-    }
-
-    .chip-preview p {
-        font-size: 0.875rem;
-    }
-
-    .status {
-        font-size: 0.875rem;
-        padding: var(--spacing-sm);
-    }
-
-    #theme-selector {
-        font-size: 0.6875rem;
-        padding: 0.25rem;
-        height: 24px;
-        max-width: 80px;
-    }
 
     .action-button {
-        font-size: 0.6875rem !important;
-        padding: 0.25rem 0.5rem !important;
-        height: 24px !important;
-        min-height: 24px !important;
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+        height: 32px;
+        min-height: 32px;
+    }
+
+    .qr-wrapper {
+        width: 100%;
+        max-width: 280px;
+        height: auto;
+        aspect-ratio: 1;
+    }
+
+    .join-url {
+        font-size: 0.875rem;
+        max-width: 100%;
+        word-break: break-all;
     }
 }
 
