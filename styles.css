@@ -1693,3 +1693,159 @@ section > h2 {
     text-shadow: none;
 }
 
+/* Modern UI Typography */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    color: white;
+    text-shadow: none;
+    letter-spacing: -0.5px;
+}
+
+h1 {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    background: none;
+    -webkit-text-fill-color: white;
+}
+
+/* Modern Form Elements */
+input, 
+select, 
+textarea {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 12px !important;
+    color: white !important;
+    font-size: 1.2rem !important;
+    padding: 1rem 1.5rem !important;
+    transition: all 0.3s ease !important;
+    backdrop-filter: blur(10px);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--main-color) !important;
+    box-shadow: 0 0 0 4px rgba(var(--main-color-rgb), 0.2) !important;
+    outline: none !important;
+}
+
+/* Modern Button Styles */
+button {
+    background: var(--main-color) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    color: white !important;
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    padding: 1rem 2rem !important;
+    transition: all 0.3s ease !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    box-shadow: 0 4px 15px rgba(var(--main-color-rgb), 0.3) !important;
+}
+
+button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(var(--main-color-rgb), 0.4) !important;
+}
+
+button:active {
+    transform: translateY(0) !important;
+}
+
+/* Modern Card Styles */
+.card,
+.game-stats,
+.player-stats,
+.chip-preview {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 16px !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* Modern Text Styles */
+.game-name,
+.chip-ratio,
+.player-name,
+.buy-in-amount,
+.status {
+    color: white !important;
+    font-weight: 500 !important;
+    text-shadow: none !important;
+}
+
+.status.success {
+    color: #2ecc71 !important;
+}
+
+.status.pending {
+    color: #f1c40f !important;
+}
+
+.status.error {
+    color: #e74c3c !important;
+}
+
+/* Modern Labels */
+label {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Modern Section Headers */
+section > h2 {
+    font-size: 2rem !important;
+    font-weight: 600 !important;
+    color: white !important;
+    margin-bottom: 1.5rem !important;
+    text-align: center !important;
+}
+
+/* Modern Info Text */
+.info-text,
+.helper-text {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+}
+
+/* Modern Chip Preview */
+.chip-preview {
+    border: 2px solid rgba(var(--main-color-rgb), 0.3) !important;
+    background: rgba(var(--main-color-rgb), 0.1) !important;
+}
+
+.chip-preview p {
+    color: white !important;
+    font-size: 1.1rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Modern Form Groups */
+.form-group {
+    margin-bottom: 1.5rem !important;
+}
+
+.form-group span {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 0.9rem !important;
+    margin-top: 0.5rem !important;
+    display: block !important;
+}
+
+/* Remove any remaining embossed effects */
+*[class*="text-"] {
+    text-shadow: none !important;
+}
+
+*[class*="title-"] {
+    text-shadow: none !important;
+}
+
