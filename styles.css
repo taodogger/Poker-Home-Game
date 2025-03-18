@@ -237,6 +237,7 @@ section {
     color: white;
 }
 
+/* Section style with before and after */
 section::before {
     content: '';
     position: absolute;
@@ -251,6 +252,7 @@ section::before {
     z-index: 2;
 }
 
+/* Base section::after styling */
 section::after {
     content: '';
     position: absolute;
@@ -260,6 +262,47 @@ section::after {
     height: 3px;
     background: var(--accent-gradient);
     opacity: 0.8;
+}
+
+/* Theme-specific section::after styling */
+[data-theme="classic-green"] section::after {
+    background: linear-gradient(45deg, #2E8B57, #3CB371);
+}
+
+[data-theme="royal-blue"] section::after {
+    background: linear-gradient(45deg, #4169E1, #1E90FF);
+}
+
+[data-theme="crimson-red"] section::after {
+    background: linear-gradient(45deg, #DC143C, #FF4500);
+}
+
+[data-theme="midnight-black"] section::after {
+    background: linear-gradient(45deg, #2F4F4F, #696969);
+}
+
+[data-theme="ocean-breeze"] section::after {
+    background: linear-gradient(45deg, #20B2AA, #5F9EA0);
+}
+
+[data-theme="firestorm"] section::after {
+    background: linear-gradient(45deg, #FF6347, #FF4500);
+}
+
+[data-theme="purple-haze"] section::after {
+    background: linear-gradient(45deg, #9370DB, #8A2BE2);
+}
+
+[data-theme="neon-nights"] section::after {
+    background: linear-gradient(45deg, #00FFFF, #00CED1);
+}
+
+[data-theme="rizzler"] section::after {
+    background: linear-gradient(45deg, #ff00ff, #bf00ff);
+}
+
+[data-theme="doginme"] section::after {
+    background: linear-gradient(45deg, #1e90ff, #4169e1);
 }
 
 section:hover {
@@ -2321,11 +2364,11 @@ button:active {
     color-scheme: dark;
 }
 
-[data-theme="doginme"] .kahoot-card h2::after {
+[data-theme="doginme"] .poker-card h2::after {
     background: linear-gradient(to right, #1e90ff, #4169e1);
 }
 
-[data-theme="doginme"] .kahoot-button {
+[data-theme="doginme"] .poker-button {
     background: linear-gradient(135deg, #1e90ff, #4169e1);
 }
 
@@ -2339,56 +2382,103 @@ button:active {
 }
 
 /* Theme-specific styling for card accents and buttons */
-[data-theme="classic-green"] .kahoot-card h2::after,
-[data-theme="royal-blue"] .kahoot-card h2::after,
-[data-theme="crimson-red"] .kahoot-card h2::after,
-[data-theme="midnight-black"] .kahoot-card h2::after,
-[data-theme="ocean-breeze"] .kahoot-card h2::after,
-[data-theme="firestorm"] .kahoot-card h2::after,
-[data-theme="purple-haze"] .kahoot-card h2::after,
-[data-theme="neon-nights"] .kahoot-card h2::after,
-[data-theme="rizzler"] .kahoot-card h2::after,
-[data-theme="doginme"] .kahoot-card h2::after {
-    background: linear-gradient(to right, var(--main-color), var(--secondary-color));
+[data-theme="classic-green"] .poker-card h2::after,
+[data-theme="classic-green"] .poker-button {
+    background: linear-gradient(to right, #2E8B57, #3CB371);
 }
 
-[data-theme="classic-green"] .kahoot-button,
-[data-theme="royal-blue"] .kahoot-button,
-[data-theme="crimson-red"] .kahoot-button,
-[data-theme="midnight-black"] .kahoot-button,
-[data-theme="ocean-breeze"] .kahoot-button,
-[data-theme="firestorm"] .kahoot-button,
-[data-theme="purple-haze"] .kahoot-button,
-[data-theme="neon-nights"] .kahoot-button,
-[data-theme="rizzler"] .kahoot-button,
-[data-theme="doginme"] .kahoot-button {
-    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+[data-theme="royal-blue"] .poker-card h2::after,
+[data-theme="royal-blue"] .poker-button {
+    background: linear-gradient(to right, #4169E1, #1E90FF);
 }
 
-[data-theme="classic-green"] .player-avatar,
-[data-theme="royal-blue"] .player-avatar,
-[data-theme="crimson-red"] .player-avatar,
-[data-theme="midnight-black"] .player-avatar,
-[data-theme="ocean-breeze"] .player-avatar,
-[data-theme="firestorm"] .player-avatar,
-[data-theme="purple-haze"] .player-avatar,
-[data-theme="neon-nights"] .player-avatar,
-[data-theme="rizzler"] .player-avatar,
-[data-theme="doginme"] .player-avatar {
-    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+[data-theme="crimson-red"] .poker-card h2::after,
+[data-theme="crimson-red"] .poker-button {
+    background: linear-gradient(to right, #DC143C, #FF4500);
+}
+
+[data-theme="midnight-black"] .poker-card h2::after,
+[data-theme="midnight-black"] .poker-button {
+    background: linear-gradient(to right, #2F4F4F, #696969);
+}
+
+[data-theme="ocean-breeze"] .poker-card h2::after,
+[data-theme="ocean-breeze"] .poker-button {
+    background: linear-gradient(to right, #20B2AA, #5F9EA0);
+}
+
+[data-theme="firestorm"] .poker-card h2::after,
+[data-theme="firestorm"] .poker-button {
+    background: linear-gradient(to right, #FF6347, #FF4500);
+}
+
+[data-theme="purple-haze"] .poker-card h2::after,
+[data-theme="purple-haze"] .poker-button {
+    background: linear-gradient(to right, #9370DB, #8A2BE2);
+}
+
+[data-theme="neon-nights"] .poker-card h2::after,
+[data-theme="neon-nights"] .poker-button {
+    background: linear-gradient(to right, #00FFFF, #00CED1);
+}
+
+[data-theme="rizzler"] .poker-card h2::after,
+[data-theme="rizzler"] .poker-button {
+    background: linear-gradient(to right, #ff00ff, #bf00ff);
+}
+
+[data-theme="doginme"] .poker-card h2::after,
+[data-theme="doginme"] .poker-button {
+    background: linear-gradient(to right, #1e90ff, #4169e1);
 }
 
 [data-theme="classic-green"] .game-status-badge.active span,
+[data-theme="classic-green"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
 [data-theme="royal-blue"] .game-status-badge.active span,
+[data-theme="royal-blue"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
 [data-theme="crimson-red"] .game-status-badge.active span,
+[data-theme="crimson-red"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
 [data-theme="midnight-black"] .game-status-badge.active span,
+[data-theme="midnight-black"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
 [data-theme="ocean-breeze"] .game-status-badge.active span,
+[data-theme="ocean-breeze"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
 [data-theme="firestorm"] .game-status-badge.active span,
+[data-theme="firestorm"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
 [data-theme="purple-haze"] .game-status-badge.active span,
+[data-theme="purple-haze"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
 [data-theme="neon-nights"] .game-status-badge.active span,
+[data-theme="neon-nights"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
 [data-theme="rizzler"] .game-status-badge.active span,
-[data-theme="doginme"] .game-status-badge.active span {
-    background: var(--main-color);
-    box-shadow: 0 0 10px rgba(var(--main-color-rgb), 0.5);
+[data-theme="rizzler"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
+[data-theme="doginme"] .game-status-badge.active span,
+[data-theme="doginme"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
 }
 
