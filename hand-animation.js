@@ -830,35 +830,57 @@ class HandAnimation {
         const centerX = this.containerWidth / 2;
         const centerY = this.containerHeight / 2;
         
+        // Calculate optimal radius based on container size and player count
+        const baseRadius = Math.min(centerX, centerY) * 0.85;
+        let radius = baseRadius;
+        
         // Adjust radius based on screen size and player count
-        let radius = Math.min(centerX, centerY) * 0.8;
-        
-        // For mobile screens, adjust the radius further
         if (window.innerWidth <= 768) {
-            radius = Math.min(centerX, centerY) * 0.7;
+            radius = baseRadius * 0.8;
         }
-        
-        // For very small screens, reduce even more
         if (window.innerWidth <= 480) {
-            radius = Math.min(centerX, centerY) * 0.6;
+            radius = baseRadius * 0.7;
         }
         
-        // Adjust radius based on player count to prevent overcrowding
-        if (this.players.length > 6) {
-            radius *= 0.9;
+        // Adjust spacing based on player count
+        const count = this.players.length;
+        if (count > 6) {
+            radius *= 0.95;
         }
         
         this.playerPositions = [];
         
-        const count = this.players.length;
+        // Calculate optimal starting angle based on player count
+        // This ensures players are distributed evenly with a preference for the bottom half
+        let startAngle = Math.PI / 2; // Start from bottom
+        if (count <= 4) {
+            // For 2-4 players, distribute in bottom half
+            startAngle = Math.PI / 2 - (Math.PI / 4);
+        } else if (count <= 6) {
+            // For 5-6 players, distribute in bottom 2/3
+            startAngle = Math.PI / 2 - (Math.PI / 3);
+        }
+        
+        // Calculate angle between players
+        const totalArc = (count <= 4) ? Math.PI * 1.5 : Math.PI * 2;
+        const angleStep = totalArc / count;
+        
         for (let i = 0; i < count; i++) {
-            // Calculate position on a circle
-            // Starting from the bottom and going clockwise
-            const angle = (Math.PI * 2 * i / count) + Math.PI / 2;
-            const x = centerX + radius * Math.cos(angle);
-            const y = centerY + radius * Math.sin(angle);
+            const angle = startAngle + (angleStep * i);
             
-            this.playerPositions.push({ x, y });
+            // Add slight vertical offset for better visual distribution
+            const verticalOffset = Math.sin(angle) * (radius * 0.1);
+            
+            // Calculate position with smooth curve
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle) + verticalOffset;
+            
+            this.playerPositions.push({ 
+                x,
+                y,
+                angle, // Store angle for animation purposes
+                scale: 1 // Base scale for animation
+            });
         }
     }
     
@@ -869,19 +891,32 @@ class HandAnimation {
         // If no players, show message
         if (!this.players || this.players.length === 0) {
             this.container.innerHTML = '<div class="empty-message">Add players to start the game</div>';
-                return;
-            }
-
-        // For existing players, update positions
-        const playerEls = this.container.querySelectorAll('.player-area');
-        if (playerEls.length > 0) {
-            playerEls.forEach((el, i) => {
-                if (this.playerPositions[i]) {
-                    el.style.left = this.playerPositions[i].x + 'px';
-                    el.style.top = this.playerPositions[i].y + 'px';
-                }
-            });
+            return;
         }
+        
+        // For existing players, update positions with animation
+        const playerEls = this.container.querySelectorAll('.player-area');
+        playerEls.forEach((el, i) => {
+            if (this.playerPositions[i]) {
+                const pos = this.playerPositions[i];
+                
+                // Apply smooth transition
+                el.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                el.style.transform = `
+                    translate(-50%, -50%) 
+                    rotate(${pos.angle * (180 / Math.PI)}deg) 
+                    scale(${pos.scale})
+                `;
+                el.style.left = `${pos.x}px`;
+                el.style.top = `${pos.y}px`;
+                
+                // Ensure player name is always readable
+                const nameEl = el.querySelector('.player-name');
+                if (nameEl) {
+                    nameEl.style.transform = `rotate(${-pos.angle * (180 / Math.PI)}deg)`;
+                }
+            }
+        });
     }
 
     // Helper function to convert hex to rgb

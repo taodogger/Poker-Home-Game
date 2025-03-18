@@ -64,8 +64,73 @@ const themes = {
     }
 };
 
-// Define application namespaces for better organization and future extensibility
-const PokerApp = {
+// Create toast container and styles
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+
+    // Add toast styles if they don't exist
+    if (!document.getElementById('toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
+        style.textContent = `
+            .toast-container {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                z-index: 9999;
+            }
+            .toast {
+                padding: 12px 16px;
+                border-radius: 8px;
+                color: white;
+                max-width: 300px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                animation: slideIn 0.3s ease forwards;
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            .toast.success {
+                background: linear-gradient(to right, #00b09b, #96c93d);
+            }
+            .toast.error {
+                background: linear-gradient(to right, #ff5f6d, #ffc371);
+            }
+            .toast.info {
+                background: linear-gradient(to right, #2193b0, #6dd5ed);
+            }
+            @keyframes slideIn {
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+            .toast.fade-out {
+                animation: slideOut 0.3s ease forwards;
+            }
+            @keyframes slideOut {
+                to {
+                    opacity: 0;
+                    transform: translateX(50px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    return container;
+}
+
+// Initialize PokerApp immediately
+window.PokerApp = {
     // Core application state
     state: {
         players: [],
@@ -73,41 +138,34 @@ const PokerApp = {
         dealerId: null,
         nextPlayerId: 1,
         chipRatio: 1.0,
-        theme: 'classic-green', // Default theme
-        sessionId: null
+        theme: 'classic-green',
+        sessionId: null,
+        gameName: null,
+        lobbyActive: false
     },
     
     // UI module for handling display and user interface
     UI: {
         handAnimation: null,
         toastTimeout: null,
-        
-        // Method to initialize the UI components
-        initialize() {
+        showToast: function(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        },
+        initialize: function() {
             initializeUI();
             initializeDealerWheel();
             updateEmptyState();
-            
-            // Set default theme if none is saved
             if (!this.theme) {
                 setTheme(PokerApp.state.theme);
             }
-        },
-        
-        // Show a toast message to the user
-        showToast(message, type = 'success') {
-            return showToast(message, type);
-        },
-        
-        // Update the UI to reflect the current game state
-        updateUI() {
-            updatePlayerList();
-            updateEmptyState();
-        },
-        
-        // Set the application theme
-        setTheme(themeName) {
-            return setTheme(themeName);
         }
     },
     
@@ -168,33 +226,50 @@ const PokerApp = {
     },
     
     // Initialize the application
-    initialize() {
-        // Load saved state if available
-        this.Storage.load();
+    initialize: async function() {
+        console.log('Initializing PokerApp...');
         
-        // Initialize UI components
-        this.UI.initialize();
-        
-        // Setup event listeners
-        setupEventListeners();
-        
-        // Make sure the empty state and payout instructions are updated
-        updateEmptyState();
-        
-        console.log('Poker Home Game Manager initialized successfully');
-        console.log('Player count:', gameState.players.length);
-        console.log('Game in progress:', gameState.gameInProgress);
-        console.log('Chip ratio:', gameState.chipRatio);
+        try {
+            // Load saved state from localStorage
+            const savedState = localStorage.getItem('pokerGameState');
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                this.state.players = state.players || [];
+                this.state.gameInProgress = state.gameInProgress || false;
+                this.state.chipRatio = state.chipRatio || 1.0;
+                this.state.theme = state.theme || 'classic-green';
+            }
+            
+            // Initialize UI components
+            this.UI.initialize();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Set up auto-save
+            setInterval(() => saveState(), 5000); // Save every 5 seconds
+            window.addEventListener('beforeunload', () => saveState());
+            
+            // Update UI with loaded state
+            updatePlayerList();
+            updateEmptyState();
+            
+            console.log('PokerApp initialized successfully');
+        } catch (error) {
+            console.error('Error during initialization:', error);
+        }
     }
 };
 
-// For backward compatibility - will reference the new structure internally
-let gameState = PokerApp.state;
+// For backward compatibility
+let gameState = window.PokerApp.state;
 let handAnimation = null;
 
-// Initialize the application when the DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    PokerApp.initialize();
+// Initialize when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    initialize();
+    updateEmptyState();
+    setTheme(gameState.theme || 'classic-green');
 });
 
 // Initialize UI elements
@@ -503,6 +578,33 @@ function setupEventListeners() {
             }
         });
     });
+
+    // Lobby form handler
+    const lobbyForm = document.getElementById('lobby-form');
+    if (lobbyForm) {
+        lobbyForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const gameName = document.getElementById('game-name').value.trim();
+            
+            if (!gameName) {
+                showToast('Please enter a game name', 'error');
+                return;
+            }
+            
+            // Disable form while creating lobby
+            const submitButton = this.querySelector('button[type="submit"]');
+            const gameNameInput = document.getElementById('game-name');
+            if (submitButton) submitButton.disabled = true;
+            if (gameNameInput) gameNameInput.disabled = true;
+            
+            try {
+                await createGameLobby(gameName);
+            } catch (error) {
+                console.error('Failed to create game lobby:', error);
+                // Form will be re-enabled by updateLobbyUI(false) in createGameLobby error handler
+            }
+        });
+    }
 }
 
 // Touch event handlers for mobile
@@ -544,87 +646,220 @@ function handleTouchEnd(e) {
     }
 }
 
-// Add player function
-function addPlayer(name, chips) {
-    if (!name || !chips) {
-        console.error('Cannot add player: Missing name or chips');
-        return false;
+// Function to set theme
+function setTheme(themeName) {
+    if (!themes[themeName]) {
+        console.error('Theme not found:', themeName);
+        return;
     }
     
-    // Normalize and validate inputs
-    name = name.trim();
-    chips = parseInt(chips);
+    const theme = themes[themeName];
+    gameState.theme = themeName;
     
-    if (name === '') {
-        console.error('Cannot add player: Empty name');
-        return false;
+    // Apply theme colors to root
+    const root = document.documentElement;
+    root.style.setProperty('--main-color', theme['--main-color']);
+    root.style.setProperty('--secondary-color', theme['--secondary-color']);
+    
+    // Apply background
+    document.body.style.background = theme['--body-background'];
+    
+    // Update icons
+    const leftIcon = document.getElementById('left-icon');
+    const rightIcon = document.getElementById('right-icon');
+    
+    if (leftIcon && rightIcon) {
+        if (theme.icon.startsWith('./')) {
+            // Custom image icon
+            leftIcon.innerHTML = `<img src="${theme.icon}" alt="Theme Icon" style="width: 24px; height: 24px;">`;
+            rightIcon.innerHTML = `<img src="${theme.icon}" alt="Theme Icon" style="width: 24px; height: 24px;">`;
+        } else {
+            // Emoji or text icon
+            leftIcon.textContent = theme.icon;
+            rightIcon.textContent = theme.icon;
+        }
     }
     
-    if (isNaN(chips) || chips <= 0) {
-        console.error('Cannot add player: Invalid chip amount');
-        return false;
+    // Update dealer wheel if it exists
+    if (handAnimation) {
+        handAnimation.setTheme(theme);
     }
     
-    console.log(`Adding player: ${name} with ${chips} chips`);
+    // Save theme preference
+    localStorage.setItem('pokerTheme', themeName);
+}
+
+// Initialize theme on load
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('pokerTheme') || gameState.theme || 'classic-green';
+    const themeSelector = document.getElementById('theme-selector');
     
-    // Check if player already exists
-    const existingPlayerIndex = gameState.players.findIndex(
-        p => p.name.toLowerCase() === name.toLowerCase()
-    );
-    
-    if (existingPlayerIndex !== -1) {
-        // Add chips to existing player instead of showing an error
-        const existingPlayer = gameState.players[existingPlayerIndex];
-        const previousChips = existingPlayer.initial_chips;
-        existingPlayer.initial_chips += chips;
-        existingPlayer.current_chips += chips;
-        
-        // Save players to localStorage
-        savePlayers();
-        
-        // Update UI
-        updatePlayerList();
-        updateEmptyState();
-        
-        // Show success message
-        showToast(`Added ${chips} chips to ${name}. New total: ${existingPlayer.initial_chips} chips`, 'success');
-        return true;
+    if (themeSelector) {
+        themeSelector.value = savedTheme;
     }
     
-    // Add new player
-    const newPlayer = {
-        id: Date.now(), // Use timestamp as unique ID
-        name: name,
-        initial_chips: chips,
-        current_chips: chips
+    setTheme(savedTheme);
+}
+
+// Initialize game state
+function initialize() {
+    // Start with a completely fresh state
+    gameState = {
+        players: [],
+        gameInProgress: false,
+        dealerId: null,
+        nextPlayerId: 1,
+        chipRatio: 1.0,
+        theme: 'classic-green',
+        sessionId: null,
+        gameName: null,
+        lobbyActive: false
     };
     
-    // Add player to state
-    gameState.players.push(newPlayer);
-    
-    // Save players to localStorage
-    savePlayers();
+    // Only load saved state if we're not coming from a reset
+    const wasReset = sessionStorage.getItem('gameWasReset');
+    if (!wasReset) {
+        const savedState = localStorage.getItem('pokerGameState');
+        const savedSession = localStorage.getItem('activePokerSession');
+        
+        if (savedState) {
+            try {
+                const parsedState = JSON.parse(savedState);
+                // Update gameState with saved values
+                Object.assign(gameState, parsedState);
+                
+                // Restore lobby state if there was an active session
+                if (savedSession) {
+                    const session = JSON.parse(savedSession);
+                    gameState.sessionId = session.sessionId;
+                    gameState.gameName = session.gameName;
+                    gameState.lobbyActive = true;
+                    
+                    // Restore the lobby UI
+                    const qrContainer = document.getElementById('qr-code-container');
+                    const gameName = document.getElementById('game-name');
+                    if (gameName) {
+                        gameName.value = session.gameName;
+                        gameName.disabled = true;
+                    }
+                    if (qrContainer) {
+                        qrContainer.style.display = 'block';
+                        qrContainer.classList.add('fade-in');
+                    }
+                    
+                    // Regenerate QR code
+                    generateQRCode();
+                    
+                    // Update lobby UI
+                    updateLobbyUI(true);
+                    
+                    // Reconnect to Firebase
+                    setupStateSync(session.sessionId);
+                }
+            } catch (error) {
+                console.error('Error loading saved state:', error);
+                PokerApp.UI.showToast('Error loading saved state', 'error');
+            }
+        }
+    } else {
+        // Clear the reset flag
+        sessionStorage.removeItem('gameWasReset');
+    }
     
     // Update UI
     updatePlayerList();
     updateEmptyState();
     
-    // Show success message
-    showToast(`Added ${name} with ${chips} chips`, 'success');
-    
-    // Initialize dealer wheel animation if needed
-    if (gameState.players.length === 1) {
-        initializeDealerWheel();
-    } else if (handAnimation) {
+    // Update dealer wheel if it exists
+    if (handAnimation) {
         handAnimation.setPlayers(gameState.players);
     }
     
-    return true;
+    // Initialize theme
+    initializeTheme();
+    
+    // Set up auto-save
+    window.addEventListener('beforeunload', saveState);
+    setInterval(saveState, 5000); // Auto-save every 5 seconds
 }
 
-// Save players to localStorage
-function savePlayers() {
-    localStorage.setItem('pokerPlayers', JSON.stringify(gameState.players));
+// Save game state
+function saveState() {
+    try {
+        // Add timestamp to state
+        const stateToSave = {
+            ...gameState,
+            lastSaved: Date.now()
+        };
+        
+        // Save to localStorage
+        localStorage.setItem('pokerGameState', JSON.stringify(stateToSave));
+    } catch (error) {
+        console.error('Error saving state:', error);
+        PokerApp.UI.showToast('Error saving game state', 'error');
+    }
+}
+
+// Function to add a player
+function addPlayer(name, chips) {
+    if (!name || !chips) {
+        PokerApp.UI.showToast('Please enter both name and chips', 'error');
+        return;
+    }
+    
+    // Check for duplicate names
+    if (gameState.players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        PokerApp.UI.showToast('A player with this name already exists', 'error');
+        return;
+    }
+    
+    // Add player
+    gameState.players.push({
+        id: Date.now(),
+        name: name,
+        initial_chips: parseInt(chips),
+        current_chips: parseInt(chips)
+    });
+    
+    // Update UI
+    updatePlayerList();
+    updateEmptyState();
+    
+    // Update dealer wheel if it exists
+    if (handAnimation) {
+        handAnimation.setPlayers(gameState.players);
+    }
+    
+    // Save state
+    saveState();
+    
+    PokerApp.UI.showToast(`Added player ${name} with ${chips} chips`, 'success');
+}
+
+// Function to remove a player
+function removePlayer(playerId) {
+    const playerIndex = gameState.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) {
+        PokerApp.UI.showToast('Player not found', 'error');
+        return;
+    }
+    
+    const playerName = gameState.players[playerIndex].name;
+    gameState.players.splice(playerIndex, 1);
+    
+    // Update UI
+    updatePlayerList();
+    updateEmptyState();
+    
+    // Update dealer wheel if it exists
+    if (handAnimation) {
+        handAnimation.setPlayers(gameState.players);
+    }
+    
+    // Save state
+    saveState();
+    
+    PokerApp.UI.showToast(`Removed player ${playerName}`, 'success');
 }
 
 // Update player list in UI
@@ -846,714 +1081,6 @@ function forceUpdateChipValues() {
     }
 }
 
-// Remove player function
-function removePlayer(playerId) {
-    // Don't allow removing players if game has started
-    if (gameState.gameInProgress) {
-        showToast('Cannot remove players during an active game.', 'error');
-        return;
-    }
-    
-    const playerIndex = gameState.players.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) {
-        console.error('Player not found for removal:', playerId);
-        return;
-    }
-    
-    const playerName = gameState.players[playerIndex].name;
-    gameState.players = gameState.players.filter(p => p.id !== playerId);
-    
-    // Save state and update UI
-    PokerApp.Storage.save();
-    updatePlayerList(); // This will call updateEmptyState
-    
-    // Update dealer wheel if it exists
-    if (handAnimation) {
-        handAnimation.setPlayers(gameState.players);
-    }
-    
-    // Show success message
-    showToast(`Player ${playerName} removed successfully`, 'success');
-}
-
-// Add game session management to gameState
-gameState.sessionId = null;
-
-// Function to initialize a new game session
-async function initializeGameSession() {
-    if (gameState.sessionId) {
-        // Clear old session listeners
-        database.ref(`games/${gameState.sessionId}`).off();
-    }
-    
-    // Create new session
-    const sessionRef = database.ref('games').push();
-    gameState.sessionId = sessionRef.key;
-    
-    // Set initial session data
-    await sessionRef.set({
-        ratio: gameState.chipRatio,
-        active: true,
-        requests: {}
-    });
-    
-    // Listen for buy-in requests
-    listenForBuyInRequests();
-    
-    // Generate and display QR code
-    generateQRCode();
-}
-
-// Function to generate QR code
-function generateQRCode() {
-    const buyInUrl = `${window.location.origin}/buy-in.html?gameId=${gameState.sessionId}`;
-    
-    // Create QR code container if it doesn't exist
-    let qrContainer = document.getElementById('qr-code-container');
-    if (!qrContainer) {
-        qrContainer = document.createElement('div');
-        qrContainer.id = 'qr-code-container';
-        qrContainer.className = 'qr-code-section';
-        
-        const header = document.createElement('h2');
-        header.textContent = 'Buy-in QR Code';
-        qrContainer.appendChild(header);
-        
-        const qrWrapper = document.createElement('div');
-        qrWrapper.className = 'qr-wrapper';
-        qrContainer.appendChild(qrWrapper);
-        
-        const instructions = document.createElement('p');
-        instructions.textContent = 'Players can scan this QR code to buy into the game';
-        qrContainer.appendChild(instructions);
-        
-        // Add container after the money-to-chip-ratio section
-        const ratioSection = document.getElementById('money-to-chip-ratio');
-        ratioSection.parentNode.insertBefore(qrContainer, ratioSection.nextSibling);
-    }
-    
-    // Generate QR code using qrcode.js library
-    const qrWrapper = qrContainer.querySelector('.qr-wrapper');
-    qrWrapper.innerHTML = '';
-    new QRCode(qrWrapper, {
-        text: buyInUrl,
-        width: 200,
-        height: 200,
-        colorDark: getComputedStyle(document.documentElement).getPropertyValue('--main-color').trim(),
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
-}
-
-// Function to listen for buy-in requests
-function listenForBuyInRequests() {
-    const requestsRef = database.ref(`games/${gameState.sessionId}/requests`);
-    
-    requestsRef.on('child_added', (snapshot) => {
-        const request = snapshot.val();
-        if (request.status === 'pending') {
-            showBuyInRequest(snapshot.key, request);
-        }
-    });
-}
-
-// Function to show buy-in request
-function showBuyInRequest(requestId, request) {
-    // Create request notification
-    const notification = document.createElement('div');
-    notification.className = 'buy-in-request';
-    notification.innerHTML = `
-        <div class="request-details">
-            <h3>Buy-in Request</h3>
-            <p><strong>${request.name}</strong> wants to buy in for:</p>
-            <p class="amount">$${request.buyInAmount.toFixed(2)} (${request.chipAmount} chips)</p>
-        </div>
-        <div class="request-actions">
-            <button class="approve-btn">Approve</button>
-            <button class="reject-btn">Reject</button>
-        </div>
-    `;
-    
-    // Add to notifications area
-    let notificationsArea = document.getElementById('notifications-area');
-    if (!notificationsArea) {
-        notificationsArea = document.createElement('div');
-        notificationsArea.id = 'notifications-area';
-        document.querySelector('main').insertBefore(notificationsArea, document.querySelector('main').firstChild);
-    }
-    notificationsArea.appendChild(notification);
-    
-    // Handle approve/reject actions
-    notification.querySelector('.approve-btn').addEventListener('click', () => {
-        handleBuyInResponse(requestId, 'approved', request);
-        notification.remove();
-    });
-    
-    notification.querySelector('.reject-btn').addEventListener('click', () => {
-        handleBuyInResponse(requestId, 'rejected', request);
-        notification.remove();
-    });
-}
-
-// Function to handle buy-in response
-async function handleBuyInResponse(requestId, status, request) {
-    try {
-        // Update request status
-        await database.ref(`games/${gameState.sessionId}/requests/${requestId}`).update({
-            status: status
-        });
-        
-        if (status === 'approved') {
-            // Add player to the game
-            addPlayer(request.name, request.chipAmount);
-            showToast(`${request.name} has been added to the game with ${request.chipAmount} chips`);
-        }
-    } catch (error) {
-        console.error('Error handling buy-in response:', error);
-        showToast('Error processing buy-in request', 'error');
-    }
-}
-
-// Modify startGame function to initialize game session
-const originalStartGame = startGame;
-startGame = async function() {
-    if (gameState.players.length < 2) {
-        showToast('Need at least 2 players to start the game.', 'error');
-        return;
-    }
-    
-    // Initialize game session first
-    await initializeGameSession();
-    
-    // Call original startGame function
-    originalStartGame();
-};
-
-// Add QR code library to the page
-const qrScript = document.createElement('script');
-qrScript.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js';
-document.head.appendChild(qrScript);
-
-// Start game function
-function startGame() {
-    if (gameState.players.length < 2) {
-        showToast('Need at least 2 players to start the game.', 'error');
-        return;
-    }
-    
-    if (gameState.gameInProgress) {
-        showToast('Game is already in progress.', 'error');
-        return;
-    }
-    
-    gameState.gameInProgress = true;
-    
-    // Record the session start time
-    gameState.sessionStartTime = Date.now();
-    
-    // Update UI with more visual feedback
-    const addPlayerSection = document.getElementById('add-player');
-    const gameControls = document.getElementById('game-controls');
-    const endGameBtn = document.getElementById('end-game');
-    const startGameBtn = document.getElementById('start-game');
-    const simulateHandBtn = document.getElementById('simulate-hand');
-    const animationSection = document.getElementById('animation');
-    
-    if (addPlayerSection) {
-        addPlayerSection.style.display = 'none';
-        addPlayerSection.classList.add('fade-out');
-    }
-    
-    if (gameControls) {
-        gameControls.classList.add('active-game');
-    }
-    
-    if (endGameBtn) endGameBtn.disabled = false;
-    if (startGameBtn) startGameBtn.disabled = true;
-    if (simulateHandBtn) simulateHandBtn.disabled = false;
-    
-    if (animationSection) {
-        animationSection.style.display = 'flex';
-        animationSection.classList.add('fade-in');
-    }
-    
-    // Disable all player chip inputs
-    document.querySelectorAll('.chip-input').forEach(input => {
-        input.disabled = true;
-    });
-    
-    // Disable remove player buttons
-    document.querySelectorAll('.remove-player').forEach(button => {
-        button.disabled = true;
-    });
-    
-    // Run initial animation
-    if (handAnimation) {
-        handAnimation.setPlayers(gameState.players);
-        try {
-            handAnimation.spin();
-        } catch (error) {
-            console.error('Error in initial animation:', error);
-            showToast('Error with animation. Please try again.', 'error');
-        }
-    }
-    
-    PokerApp.Storage.save();
-    showToast('Game started! Players locked in.');
-}
-
-// End game function
-function endGame() {
-    if (!gameState.gameInProgress) {
-        showToast('No game in progress to end.', 'info');
-        return;
-    }
-    
-    gameState.gameInProgress = false;
-    
-    // Update UI with clear visual transitions
-    const addPlayerSection = document.getElementById('add-player');
-    const gameControls = document.getElementById('game-controls');
-    const endGameBtn = document.getElementById('end-game');
-    const startGameBtn = document.getElementById('start-game');
-    const simulateHandBtn = document.getElementById('simulate-hand');
-    const animationSection = document.getElementById('animation');
-    
-    if (endGameBtn) endGameBtn.disabled = true;
-    if (startGameBtn) startGameBtn.disabled = false;
-    if (simulateHandBtn) simulateHandBtn.disabled = true;
-    
-    if (gameControls) {
-        gameControls.classList.remove('active-game');
-    }
-    
-    // Enable chip inputs for final counts
-    document.querySelectorAll('.chip-input').forEach(input => {
-        input.disabled = false;
-        input.classList.add('highlight-input');
-        setTimeout(() => input.classList.remove('highlight-input'), 2000);
-    });
-    
-    // Enable remove player buttons
-    document.querySelectorAll('.remove-player').forEach(button => {
-        button.disabled = false;
-    });
-    
-    // Show add player section again with animation
-    if (addPlayerSection) {
-        addPlayerSection.style.display = 'block';
-        addPlayerSection.classList.remove('fade-out');
-        addPlayerSection.classList.add('fade-in');
-    }
-    
-    if (animationSection) {
-        animationSection.classList.remove('fade-in');
-        animationSection.classList.add('fade-out');
-        setTimeout(() => {
-            animationSection.style.display = 'none';
-            animationSection.classList.remove('fade-out');
-        }, 500);
-    }
-    
-    PokerApp.Storage.save();
-    showToast('Game ended. Update chip counts and calculate payouts.', 'info');
-    
-    // Add clear call to action for next steps
-    const calculatePayoutsBtn = document.getElementById('calculate-payouts');
-    if (calculatePayoutsBtn) {
-        calculatePayoutsBtn.classList.add('pulse-animation');
-        setTimeout(() => calculatePayoutsBtn.classList.remove('pulse-animation'), 3000);
-    }
-    
-    // Smooth scroll to payouts section
-    const payoutsSection = document.getElementById('payouts');
-    if (payoutsSection) {
-        payoutsSection.scrollIntoView({ behavior: 'smooth' });
-    }
-}
-
-// Reset game functionality
-function resetGame() {
-    // Save the current theme before resetting
-    const currentTheme = gameState.theme || 'classic-green';
-    
-    // Clear localStorage but keep theme
-    localStorage.removeItem('pokerGameState');
-    localStorage.removeItem('pokerPlayers');
-    // Don't remove theme: localStorage.removeItem('pokerTheme');
-    
-    // Reset variables
-    gameState.players = [];
-    gameState.gameInProgress = false;
-    gameState.chipRatio = 1.0;
-    // Preserve theme
-    gameState.theme = currentTheme;
-    
-    // Reset UI
-    const playerTableBody = document.querySelector('#player-table tbody');
-    const ratioDisplay = document.getElementById('ratio-display');
-    const addPlayerSection = document.getElementById('add-player');
-    const endGameBtn = document.getElementById('end-game');
-    const startGameBtn = document.getElementById('start-game');
-    const animationSection = document.getElementById('animation');
-    const payoutList = document.getElementById('payout-list');
-    const ratioForm = document.getElementById('ratio-form');
-    const playerForm = document.getElementById('player-form');
-    
-    if (playerTableBody) playerTableBody.innerHTML = '';
-    if (ratioDisplay) ratioDisplay.textContent = 'Each chip is worth $1.00';
-    if (addPlayerSection) addPlayerSection.style.display = 'block';
-    if (endGameBtn) endGameBtn.disabled = true;
-    if (startGameBtn) startGameBtn.disabled = true;
-    if (animationSection) animationSection.style.display = 'none';
-    if (payoutList) payoutList.innerHTML = '';
-    if (ratioForm) ratioForm.reset();
-    if (playerForm) playerForm.reset();
-    
-    // Clear hand animation
-    const container = document.getElementById('dealer-wheel');
-    if (container) {
-        container.innerHTML = '';
-        initializeDealerWheel();
-    }
-    
-    // Update theme selector to match preserved theme
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        themeSelector.value = currentTheme;
-    }
-    
-    // Update empty state message
-    updateEmptyState();
-    
-    // Save state to preserve the theme
-    PokerApp.Storage.save();
-    
-    showToast('Game has been reset successfully.');
-}
-
-// Calculate and display payouts based on the ratio
-function calculatePayouts() {
-    // Force read the current input values from the DOM before calculating
-    forceUpdateChipValues();
-    
-    // Calculate total chips in play and money value
-    const totalInitialChips = gameState.players.reduce((sum, player) => sum + player.initial_chips, 0);
-    const totalCurrentChips = gameState.players.reduce((sum, player) => sum + player.current_chips, 0);
-    const totalInitialMoney = totalInitialChips * gameState.chipRatio;
-    const totalCurrentMoney = totalCurrentChips * gameState.chipRatio;
-    
-    console.log('Calculating payouts with:', {
-        totalInitialChips,
-        totalCurrentChips,
-        totalInitialMoney,
-        totalCurrentMoney,
-        chipRatio: gameState.chipRatio,
-        players: gameState.players
-    });
-    
-    // Get the payout display element
-    const payoutList = document.getElementById('payout-list');
-    if (!payoutList) {
-        console.error('Payout list element not found');
-        return;
-    }
-    
-    // Force a thorough check for changes in each player's chips
-    let winners = [];
-    let losers = [];
-    let anyChanges = false;
-    
-    // Calculate net changes for each player to identify winners and losers
-    for (const player of gameState.players) {
-        player.net_change = player.current_chips - player.initial_chips;
-        
-        // Log for debugging
-        console.log(`Player ${player.name}: Initial ${player.initial_chips}, Current ${player.current_chips}, Diff ${player.net_change}`);
-        
-        // Any non-zero difference means we have changes
-        if (player.net_change !== 0) {
-            anyChanges = true;
-            
-            // Calculate dollar amount
-            let netDollars = player.net_change * gameState.chipRatio;
-            // Round to exactly 2 decimal places
-            netDollars = Math.round(netDollars * 100) / 100;
-            
-            console.log(`${player.name} change: ${player.net_change} chips = $${netDollars}`);
-            
-            if (netDollars > 0) {
-                winners.push({ name: player.name, owed: netDollars });
-                console.log(`${player.name} is a winner, owed: $${netDollars}`);
-            } else if (netDollars < 0) {
-                losers.push({ name: player.name, debt: -netDollars });
-                console.log(`${player.name} is a loser, owes: $${-netDollars}`);
-            }
-        }
-    }
-    
-    console.log('Any changes detected:', anyChanges);
-    console.log('Winners:', winners.length, 'Losers:', losers.length);
-    
-    if (!anyChanges || (winners.length === 0 && losers.length === 0)) {
-        showToast('No chip differences to calculate.', 'info');
-        payoutList.innerHTML = `
-            <div class="payout-summary">
-                <h3>Game Summary</h3>
-                <p>No payments needed. Everyone has the same amount of chips they started with.</p>
-                <div class="prize-pool">
-                    <p><strong>Total Prize Pool: $${totalInitialMoney.toFixed(2)}</strong></p>
-                    <p>Total Chips in Play: ${totalInitialChips}</p>
-                    <p>Chip Value: $${gameState.chipRatio.toFixed(2)} each</p>
-                </div>
-            </div>
-        `;
-        return;
-    }
-    
-    // Sort winners and losers by amount
-    winners.sort((a, b) => b.owed - a.owed);
-    losers.sort((a, b) => a.debt - b.debt);
-    
-    // Calculate transfers
-    let payments = [];
-    
-    // Balance check
-    const totalWinnings = winners.reduce((sum, w) => sum + w.owed, 0);
-    const totalLosses = losers.reduce((sum, l) => sum + l.debt, 0);
-    
-    // Round to 2 decimal places for comparison
-    const roundedWinnings = Math.round(totalWinnings * 100) / 100;
-    const roundedLosses = Math.round(totalLosses * 100) / 100;
-    
-    console.log('Payout balance check:', { 
-        totalWinnings: roundedWinnings.toFixed(2), 
-        totalLosses: roundedLosses.toFixed(2) 
-    });
-    
-    if (Math.abs(roundedWinnings - roundedLosses) > 0.01) {
-        showToast('Warning: Total winnings and losses don\'t match exactly. This might be due to rounding.', 'error');
-        console.warn('Balance mismatch:', { totalWinnings, totalLosses });
-    }
-    
-    // Algorithm to calculate minimal payments
-    while (winners.length > 0 && losers.length > 0) {
-        const winner = winners[0];
-        const loser = losers[0];
-        
-        const amount = Math.min(winner.owed, loser.debt);
-        
-        // Round to 2 decimal places
-        const roundedAmount = Math.round(amount * 100) / 100;
-        
-        if (roundedAmount > 0) {
-            payments.push({
-                from: loser.name,
-                to: winner.name,
-                amount: roundedAmount
-            });
-        }
-        
-        winner.owed -= amount;
-        loser.debt -= amount;
-        
-        if (winner.owed <= 0.01) winners.shift();
-        if (loser.debt <= 0.01) losers.shift();
-    }
-    
-    // Display the payments
-    displayPayments(payments, totalInitialChips, totalCurrentChips, totalInitialMoney, totalCurrentMoney);
-    
-    // Show toast with summary
-    showToast(`Payouts calculated. ${payments.length} payments needed.`, 'success');
-}
-
-// Function to display the payment instructions
-function displayPayments(payments, totalInitialChips, totalCurrentChips, totalInitialMoney, totalCurrentMoney) {
-    const payoutList = document.getElementById('payout-list');
-    if (!payoutList) {
-        console.error('Payout list element not found');
-        return;
-    }
-    
-    // Verify we have all the data we need
-    console.log('Display payments with:', {
-        totalInitialChips,
-        totalCurrentChips,
-        totalInitialMoney,
-        totalCurrentMoney,
-        paymentsCount: payments.length
-    });
-    
-    // Calculate fun statistics
-    const playerStats = calculateGameStatistics();
-    
-    if (!payments || payments.length === 0) {
-        payoutList.innerHTML = `
-            <div class="payout-summary">
-                <h3>Game Summary</h3>
-                <p class="no-payments">No payments needed.</p>
-                <div class="prize-pool">
-                    <p><strong>Total Prize Pool: $${totalInitialMoney.toFixed(2)}</strong></p>
-                    <p>Total Initial Chips: ${totalInitialChips}</p>
-                    <p>Total Final Chips: ${totalCurrentChips}</p>
-                    <p>Chip Value: $${gameState.chipRatio.toFixed(2)} each</p>
-                </div>
-                
-                ${playerStats ? `
-                <div class="game-stats">
-                    <h4>Game Statistics</h4>
-                    ${playerStats}
-                </div>` : ''}
-            </div>
-        `;
-        return;
-    }
-    
-    // Build payment instructions
-    let html = `
-        <div class="payout-summary">
-            <h3>Game Summary</h3>
-            <div class="prize-pool">
-                <p><strong>Total Prize Pool: $${totalInitialMoney.toFixed(2)}</strong></p>
-                <p>Total Initial Chips: ${totalInitialChips}</p>
-                <p>Total Final Chips: ${totalCurrentChips}</p>
-                <p>Chip Value: $${gameState.chipRatio.toFixed(2)} each</p>
-            </div>
-            
-            ${playerStats ? `
-            <div class="game-stats">
-                <h4>Game Statistics</h4>
-                ${playerStats}
-            </div>` : ''}
-        </div>
-        <div class="payment-list">
-            <h3>Payment Instructions</h3>
-            <ul>
-    `;
-    
-    payments.forEach(payment => {
-        html += `
-            <li>
-                <span class="from">${payment.from}</span>
-                <span class="arrow">→</span>
-                <span class="to">${payment.to}</span>
-                <span class="amount">$${payment.amount.toFixed(2)}</span>
-            </li>
-        `;
-    });
-    
-    html += `
-            </ul>
-        </div>
-    `;
-    
-    payoutList.innerHTML = html;
-    
-    // Animate the payment list items one by one for a nice effect
-    setTimeout(() => {
-        const items = payoutList.querySelectorAll('.payment-list li');
-        items.forEach((item, index) => {
-            setTimeout(() => {
-                item.classList.add('fade-in');
-            }, index * 100);
-        });
-    }, 100);
-}
-
-// Calculate fun game statistics
-function calculateGameStatistics() {
-    if (!gameState.players || gameState.players.length === 0) {
-        return null;
-    }
-    
-    // Calculate player performance stats
-    const playersWithStats = gameState.players.map(player => {
-        const netChips = player.current_chips - player.initial_chips;
-        const netMoney = netChips * gameState.chipRatio;
-        const percentChange = (player.current_chips / player.initial_chips) * 100 - 100;
-        
-        return {
-            name: player.name,
-            initial: player.initial_chips,
-            current: player.current_chips,
-            netChips: netChips,
-            netMoney: netMoney,
-            percentChange: percentChange
-        };
-    });
-    
-    // Sort players by various metrics
-    const sortedByNet = [...playersWithStats].sort((a, b) => b.netChips - a.netChips);
-    const sortedByPercent = [...playersWithStats].sort((a, b) => b.percentChange - a.percentChange);
-    
-    // Get session duration if it was tracked
-    const sessionDuration = gameState.sessionStartTime ? 
-        Math.floor((Date.now() - gameState.sessionStartTime) / 60000) : 
-        null;
-    
-    // Calculate interesting stats
-    const stats = [];
-    
-    // Top performer
-    if (sortedByNet.length > 0 && sortedByNet[0].netChips > 0) {
-        stats.push(`<p>🏆 <strong>Top Performer:</strong> ${sortedByNet[0].name} (+${sortedByNet[0].netChips} chips / $${sortedByNet[0].netMoney.toFixed(2)})</p>`);
-    }
-    
-    // Biggest loser
-    if (sortedByNet.length > 1 && sortedByNet[sortedByNet.length-1].netChips < 0) {
-        const biggestLoser = sortedByNet[sortedByNet.length-1];
-        stats.push(`<p>📉 <strong>Biggest Loser:</strong> ${biggestLoser.name} (${biggestLoser.netChips} chips / $${biggestLoser.netMoney.toFixed(2)})</p>`);
-    }
-    
-    // Highest percentage gain
-    if (sortedByPercent.length > 0 && sortedByPercent[0].percentChange > 0) {
-        stats.push(`<p>📈 <strong>Highest ROI:</strong> ${sortedByPercent[0].name} (+${sortedByPercent[0].percentChange.toFixed(1)}%)</p>`);
-    }
-    
-    // Most consistent
-    let mostConsistent = null;
-    let smallestChange = Infinity;
-    for (const player of playersWithStats) {
-        const absChange = Math.abs(player.percentChange);
-        if (absChange < smallestChange) {
-            smallestChange = absChange;
-            mostConsistent = player;
-        }
-    }
-    if (mostConsistent) {
-        stats.push(`<p>🧘 <strong>Most Consistent:</strong> ${mostConsistent.name} (${mostConsistent.percentChange > 0 ? '+' : ''}${mostConsistent.percentChange.toFixed(1)}%)</p>`);
-    }
-    
-    // Big stack
-    const biggestStack = [...playersWithStats].sort((a, b) => b.current - a.current)[0];
-    stats.push(`<p>💰 <strong>Big Stack:</strong> ${biggestStack.name} with ${biggestStack.current} chips</p>`);
-    
-    // Session duration
-    if (sessionDuration !== null) {
-        const hours = Math.floor(sessionDuration / 60);
-        const minutes = sessionDuration % 60;
-        let duration = '';
-        if (hours > 0) {
-            duration = `${hours} hour${hours > 1 ? 's' : ''}`;
-            if (minutes > 0) duration += ` ${minutes} minute${minutes > 1 ? 's' : ''}`;
-        } else {
-            duration = `${minutes} minute${minutes > 1 ? 's' : ''}`;
-        }
-        stats.push(`<p>⏱️ <strong>Session Duration:</strong> ${duration}</p>`);
-    }
-    
-    // Random fun fact
-    const funFacts = [
-        `On average, players ${sortedByNet[0].netChips > 0 ? 'won' : 'lost'} ${Math.abs(sortedByNet.reduce((sum, p) => sum + p.netChips, 0) / sortedByNet.length).toFixed(1)} chips each.`,
-        `The overall chip redistribution was ${sortedByNet.reduce((sum, p) => sum + Math.abs(p.netChips), 0)} chips.`,
-        `The average player's stack ${sortedByNet.reduce((sum, p) => sum + p.percentChange, 0) / sortedByNet.length > 0 ? 'increased' : 'decreased'} by ${Math.abs(sortedByNet.reduce((sum, p) => sum + p.percentChange, 0) / sortedByNet.length).toFixed(1)}%.`
-    ];
-    stats.push(`<p>🎲 <strong>Fun Fact:</strong> ${funFacts[Math.floor(Math.random() * funFacts.length)]}</p>`);
-    
-    return stats.join('');
-}
-
 // Show/hide empty state message
 function updateEmptyState() {
     const noPlayersMessage = document.getElementById('no-players-message');
@@ -1608,273 +1135,382 @@ function updateEmptyState() {
     }
 }
 
-// Toast notification system
-function showToast(message, type = 'success') {
-    if (!message) return;
-    
-    // Create toast container if it doesn't exist
-    let toastContainer = document.querySelector('.toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container';
-        document.body.appendChild(toastContainer);
-    }
-    
-    // Add toast styles if they don't exist
-    const toastStyleId = 'toast-styles';
-    if (!document.getElementById(toastStyleId)) {
-        const style = document.createElement('style');
-        style.id = toastStyleId;
-        style.textContent = `
-            .toast-container {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                z-index: 9999;
-            }
-            .toast {
-                padding: 12px 16px;
-                border-radius: 8px;
-                color: white;
-                max-width: 300px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                animation: slideIn 0.3s ease forwards;
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            .toast.success {
-                background: linear-gradient(to right, #00b09b, #96c93d);
-            }
-            .toast.error {
-                background: linear-gradient(to right, #ff5f6d, #ffc371);
-            }
-            .toast.info {
-                background: linear-gradient(to right, #2193b0, #6dd5ed);
-            }
-            @keyframes slideIn {
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-            @keyframes slideOut {
-                to {
-                    opacity: 0;
-                    transform: translateX(50px);
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // Create the toast
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <span>${message}</span>
-    `;
-    
-    // Add to container
-    toastContainer.appendChild(toast);
-    
-    // Remove after delay
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease forwards';
-        setTimeout(() => {
-            if (toast.parentElement) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
-
-// Save state to localStorage
-function saveState() {
-    const state = {
-        players: gameState.players,
-        gameInProgress: gameState.gameInProgress,
-        chipRatio: gameState.chipRatio,
-        theme: gameState.theme // Save the current theme
-    };
-    
-    try {
-        localStorage.setItem('pokerGameState', JSON.stringify(state));
-    } catch (error) {
-        console.error('Error saving game state:', error);
-        showToast('Error saving game state. Local storage might be full.', 'error');
-    }
-}
-
-// Load state from localStorage
-function loadSavedState() {
-    try {
-        const savedState = localStorage.getItem('pokerGameState');
-        if (!savedState) return;
-        
-        const state = JSON.parse(savedState);
-        
-        // Validate state
-        if (!state || typeof state !== 'object') {
-            console.error('Invalid saved state format');
-            return;
-        }
-        
-        gameState.players = Array.isArray(state.players) ? state.players : [];
-        gameState.gameInProgress = !!state.gameInProgress;
-        gameState.chipRatio = typeof state.chipRatio === 'number' ? state.chipRatio : 1.0;
-        
-        // Restore theme if saved
-        if (state.theme && themes[state.theme]) {
-            gameState.theme = state.theme;
-            setTheme(state.theme);
-            
-            // Update theme selector to match
-            const themeSelector = document.getElementById('theme-selector');
-            if (themeSelector) {
-                themeSelector.value = state.theme;
+// Function to set up automatic state saving
+function setupAutoSave() {
+    // Save state every 30 seconds
+    setInterval(async () => {
+        if (gameState.sessionId) {
+            try {
+                await saveState();
+            } catch (error) {
+                console.error('Auto-save failed:', error);
             }
         }
-        
-        // Update UI with saved state
-        PokerApp.Players.updateList();
-        
-        const ratioDisplay = document.getElementById('ratio-display');
-        if (ratioDisplay) {
-            ratioDisplay.textContent = `Each chip is worth $${gameState.chipRatio.toFixed(2)}`;
-        }
-        
-        if (gameState.gameInProgress) {
-            const addPlayerSection = document.getElementById('add-player');
-            const endGameBtn = document.getElementById('end-game');
-            const startGameBtn = document.getElementById('start-game');
-            const animationSection = document.getElementById('animation');
-            
-            if (addPlayerSection) addPlayerSection.style.display = 'none';
-            if (endGameBtn) endGameBtn.disabled = false;
-            if (startGameBtn) startGameBtn.disabled = true;
-            if (animationSection) animationSection.style.display = 'flex';
-            
-            // Disable chip inputs
-            document.querySelectorAll('.chip-input').forEach(input => {
-                input.disabled = true;
-            });
-            
-            // Disable remove player buttons
-            document.querySelectorAll('.remove-player').forEach(button => {
-                button.disabled = true;
-            });
-        }
-    } catch (error) {
-        console.error('Error loading saved state:', error);
-        showToast('Error loading saved game. Starting fresh.', 'error');
-    }
-}
+    }, 30000);
 
-// Theme setting function
-function setTheme(themeName) {
-    if (!themeName || typeof themeName !== 'string') {
-        console.error('Invalid theme name:', themeName);
-        return;
-    }
-    
-    const theme = themes[themeName];
-    if (!theme) {
-        console.error(`Theme "${themeName}" not found!`);
-        return;
-    }
-
-    // Store the current theme in gameState
-    gameState.theme = themeName;
-    
-    // Remove existing theme classes
-    document.body.classList.remove(...Object.keys(themes).map(t => `theme-${t}`));
-    
-    // Add current theme class to body
-    document.body.classList.add(`theme-${themeName}`);
-
-    // Apply theme CSS variables
-    Object.entries(theme).forEach(([property, value]) => {
-        if (property.startsWith('--')) {
-            document.documentElement.style.setProperty(property, value);
-            
-            // Add RGB versions of colors for transparency effects
-            if (property === '--main-color') {
-                const rgb = hexToRgb(value);
-                if (rgb) {
-                    document.documentElement.style.setProperty('--main-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
-                }
-            }
-            if (property === '--secondary-color') {
-                const rgb = hexToRgb(value);
-                if (rgb) {
-                    document.documentElement.style.setProperty('--secondary-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
-                }
+    // Save state before page unload
+    window.addEventListener('beforeunload', async (event) => {
+        if (gameState.sessionId) {
+            try {
+                await saveState();
+            } catch (error) {
+                console.error('Final state save failed:', error);
             }
         }
     });
-    
-    // Update theme-color meta tag for mobile browsers
-    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (metaThemeColor) {
-        metaThemeColor.setAttribute('content', theme['--main-color']);
-    }
-
-    // Update dealer wheel theme if it exists
-    if (handAnimation) {
-        handAnimation.setTheme(theme);
-    }
-
-    // Update title icons
-    updateTitleIcons(themeName, theme);
-    
-    // Save state to persist theme choice
-    saveState();
 }
 
-// Helper function to convert hex color to RGB
-function hexToRgb(hex) {
-    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-    hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
-
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-        ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
+// Load state from localStorage or Firebase
+async function loadSavedState() {
+    try {
+        // First try to load from Firebase if we have an active session
+        if (gameState.sessionId) {
+            const snapshot = await database.ref(`games/${gameState.sessionId}/state`).once('value');
+            const firebaseState = snapshot.val();
+            if (firebaseState) {
+                gameState.players = firebaseState.players || [];
+                gameState.gameInProgress = firebaseState.gameInProgress || false;
+                gameState.chipRatio = firebaseState.chipRatio || 1.0;
+                gameState.theme = firebaseState.theme || 'classic-green';
+                return;
+            }
         }
-        : null;
+        
+        // Fallback to localStorage
+        const savedState = localStorage.getItem('pokerGameState');
+        if (savedState) {
+            const state = JSON.parse(savedState);
+            gameState.players = state.players || [];
+            gameState.gameInProgress = state.gameInProgress || false;
+            gameState.chipRatio = state.chipRatio || 1.0;
+            gameState.theme = state.theme || 'classic-green';
+        }
+    } catch (error) {
+        console.error('Error loading saved state:', error);
+    }
+    
+    // Update UI after loading state
+    updatePlayerList();
+    updateEmptyState();
+    if (gameState.theme) {
+        setTheme(gameState.theme);
+    }
 }
 
-// Update title icons based on theme
-function updateTitleIcons(themeName, theme) {
-    const leftIcon = document.getElementById('left-icon');
-    const rightIcon = document.getElementById('right-icon');
+// Function to set up real-time state synchronization
+function setupStateSync(sessionId) {
+    const stateRef = database.ref(`games/${sessionId}/state`);
     
-    if (!leftIcon || !rightIcon) {
-        console.error('Title icon elements not found');
+    // Listen for state changes
+    stateRef.on('value', (snapshot) => {
+        const firebaseState = snapshot.val();
+        if (!firebaseState) return;
+        
+        // Update local state with Firebase data
+        if (firebaseState.players) {
+            gameState.players = firebaseState.players;
+            updatePlayerList();
+            updateEmptyState();
+        }
+        
+        if (firebaseState.gameInProgress !== undefined) {
+            gameState.gameInProgress = firebaseState.gameInProgress;
+        }
+        
+        if (firebaseState.chipRatio) {
+            gameState.chipRatio = firebaseState.chipRatio;
+        }
+        
+        if (firebaseState.theme) {
+            gameState.theme = firebaseState.theme;
+            setTheme(gameState.theme);
+        }
+        
+        // Save to localStorage
+        saveState();
+    });
+    
+    // Handle disconnection
+    const connectedRef = database.ref('.info/connected');
+    connectedRef.on('value', (snap) => {
+        if (snap.val() === true) {
+            // Client is connected
+            database.ref(`games/${sessionId}`).update({
+                active: true,
+                lastPing: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+    });
+}
+
+// Function to create a game lobby
+async function createGameLobby(gameName) {
+    try {
+        // Create new session
+        const sessionRef = database.ref('games').push();
+        gameState.sessionId = sessionRef.key;
+        gameState.gameName = gameName;
+        gameState.lobbyActive = true;
+        
+        // Save session info to localStorage
+        localStorage.setItem('activePokerSession', JSON.stringify({
+            sessionId: sessionRef.key,
+            gameName: gameName
+        }));
+        
+        // Set initial session data
+        await sessionRef.set({
+            name: gameName,
+            ratio: gameState.chipRatio,
+            active: true,
+            status: 'lobby',
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            state: {
+                players: gameState.players,
+                gameInProgress: gameState.gameInProgress,
+                chipRatio: gameState.chipRatio,
+                theme: gameState.theme,
+                timestamp: Date.now()
+            }
+        });
+        
+        // Set up real-time sync
+        setupStateSync(sessionRef.key);
+        
+        // Generate and display QR code
+        await generateQRCode();
+        
+        // Show success message
+        PokerApp.UI.showToast(`Game lobby "${gameName}" created successfully`, 'success');
+        
+        // Update UI to show lobby is active
+        updateLobbyUI(true);
+        
+    } catch (error) {
+        console.error('Error creating game lobby:', error);
+        PokerApp.UI.showToast(`Error creating game lobby: ${error.message}`, 'error');
+        
+        // Clean up if we failed
+        if (gameState.sessionId) {
+            try {
+                await database.ref(`games/${gameState.sessionId}`).remove();
+            } catch (cleanupError) {
+                console.error('Error cleaning up failed session:', cleanupError);
+            }
+        }
+        
+        // Reset state
+        gameState.sessionId = null;
+        gameState.gameName = null;
+        gameState.lobbyActive = false;
+        
+        // Update UI
+        updateLobbyUI(false);
+    }
+}
+
+// Function to update UI based on lobby state
+function updateLobbyUI(isActive) {
+    const lobbyForm = document.getElementById('lobby-form');
+    const qrContainer = document.getElementById('qr-code-container');
+    const gameName = document.getElementById('game-name');
+    
+    if (isActive) {
+        // Show QR code
+        qrContainer.style.display = 'block';
+        qrContainer.classList.add('fade-in');
+        
+        // Disable form
+        if (gameName) gameName.disabled = true;
+        if (lobbyForm) {
+            const submitBtn = lobbyForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.textContent = 'Lobby Active';
+                submitBtn.disabled = true;
+            }
+        }
+    } else {
+        // Hide QR code
+        if (qrContainer) {
+            qrContainer.classList.remove('fade-in');
+            qrContainer.classList.add('fade-out');
+            setTimeout(() => {
+                qrContainer.style.display = 'none';
+                qrContainer.classList.remove('fade-out');
+            }, 500);
+        }
+        
+        // Enable form
+        if (gameName) {
+            gameName.disabled = false;
+            gameName.value = '';
+        }
+        if (lobbyForm) {
+            const submitBtn = lobbyForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.textContent = 'Create Game Lobby';
+                submitBtn.disabled = false;
+            }
+        }
+    }
+}
+
+// Function to generate QR code
+async function generateQRCode() {
+    // Check if we have a valid session
+    if (!gameState.sessionId || !gameState.gameName) {
+        console.error('No active game session');
+        PokerApp.UI.showToast('Error: No active game session', 'error');
         return;
     }
+
+    // Get QR wrapper
+    const qrWrapper = document.querySelector('.qr-wrapper');
+    if (!qrWrapper) {
+        console.error('QR wrapper element not found');
+        return;
+    }
+
+    // Clear any existing QR code
+    qrWrapper.innerHTML = '';
+
+    // Create the URL for joining the game
+    // Handle both localhost and production URLs correctly
+    const baseUrl = window.location.href.split('/').slice(0, -1).join('/');
+    const joinUrl = `${baseUrl}/buy-in.html?gameId=${encodeURIComponent(gameState.sessionId)}`;
+
+    try {
+        // Create new QR code
+        new QRCode(qrWrapper, {
+            text: joinUrl,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff"
+        });
+
+        // Add click-to-copy functionality with the URL display
+        const clickToCopy = document.createElement('div');
+        clickToCopy.className = 'click-to-copy';
+        
+        // Add URL display
+        const urlDisplay = document.createElement('div');
+        urlDisplay.className = 'join-url';
+        urlDisplay.textContent = joinUrl;
+        
+        clickToCopy.textContent = 'Click to copy join link';
+        qrWrapper.appendChild(clickToCopy);
+        qrWrapper.appendChild(urlDisplay);
+
+        // Add click handler to both elements
+        [clickToCopy, urlDisplay].forEach(element => {
+            element.addEventListener('click', () => {
+                navigator.clipboard.writeText(joinUrl)
+                    .then(() => {
+                        PokerApp.UI.showToast('Join link copied to clipboard!', 'success');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy:', err);
+                        PokerApp.UI.showToast('Failed to copy link', 'error');
+                    });
+            });
+        });
+
+        // Show the QR code container
+        const qrContainer = document.getElementById('qr-code-container');
+        if (qrContainer) {
+            qrContainer.style.display = 'block';
+            qrContainer.classList.add('fade-in');
+        }
+
+    } catch (error) {
+        console.error('Error generating QR code:', error);
+        PokerApp.UI.showToast('Error generating QR code', 'error');
+    }
+}
+
+function resetGame() {
+    // Store current theme before reset
+    const currentTheme = gameState.theme;
     
-    if (themeName === 'rizzler' || themeName === 'doginme') {
-        // Use the icon image for both themes
-        leftIcon.innerHTML = `<img src="${theme.icon}" alt="${themeName} Icon" class="title-icon-img">`;
-        rightIcon.innerHTML = `<img src="${theme.icon}" alt="${themeName} Icon" class="title-icon-img">`;
-    } else {
-        // Use the theme's icon if available, otherwise default to poker suits
-        if (theme.icon) {
-            leftIcon.innerHTML = theme.icon;
-            rightIcon.innerHTML = theme.icon;
-        } else {
-            leftIcon.innerHTML = '♠️';
-            rightIcon.innerHTML = '♥️';
+    // End current game if in progress
+    if (gameState.gameInProgress) {
+        endGame();
+    }
+    
+    // Clean up Firebase session if exists
+    if (gameState.sessionId) {
+        try {
+            // Remove Firebase listeners first
+            database.ref(`games/${gameState.sessionId}`).off();
+            
+            // Attempt to remove the session, but don't block on it
+            database.ref(`games/${gameState.sessionId}`).remove()
+                .catch(error => {
+                    // Log but don't throw - this is expected if we don't have permission
+                    console.log('Note: Could not remove Firebase session (expected if not owner)');
+                });
+        } catch (error) {
+            // Log but continue - we don't want Firebase errors to block the reset
+            console.log('Note: Firebase cleanup skipped');
         }
     }
+    
+    // Clear ALL related data from localStorage except theme
+    const savedTheme = localStorage.getItem('pokerTheme'); // Preserve theme setting
+    localStorage.removeItem('activePokerSession');
+    localStorage.removeItem('pokerGameState');
+    if (savedTheme) {
+        localStorage.setItem('pokerTheme', savedTheme); // Restore theme setting
+    }
+    
+    // Set a flag to prevent reloading the old state on initialize
+    sessionStorage.setItem('gameWasReset', 'true');
+    
+    // Reset game state completely while preserving theme
+    gameState = {
+        players: [],
+        gameInProgress: false,
+        dealerId: null,
+        nextPlayerId: 1,
+        chipRatio: 1.0,
+        theme: currentTheme, // Keep the current theme
+        sessionId: null,
+        gameName: null,
+        lobbyActive: false
+    };
+    
+    // Update UI
+    updatePlayerList();
+    updateEmptyState();
+    updateLobbyUI(false);
+    
+    // Reset the game name input and enable it
+    const gameNameInput = document.getElementById('game-name');
+    if (gameNameInput) {
+        gameNameInput.value = '';
+        gameNameInput.disabled = false;
+    }
+    
+    // Reset the create lobby button
+    const lobbyForm = document.getElementById('lobby-form');
+    if (lobbyForm) {
+        const submitBtn = lobbyForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Create Game Lobby';
+            submitBtn.disabled = false;
+        }
+    }
+    
+    // Hide QR code section
+    const qrContainer = document.getElementById('qr-code-container');
+    if (qrContainer) {
+        qrContainer.style.display = 'none';
+        qrContainer.classList.remove('fade-in');
+    }
+    
+    // Save clean state
+    saveState();
+    
+    PokerApp.UI.showToast('Game reset successfully', 'success');
 }

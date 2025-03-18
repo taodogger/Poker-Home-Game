@@ -1,7 +1,13 @@
 // Firebase configuration
 const firebaseConfig = {
-    // Your Firebase config here
-    // You'll need to create a Firebase project and add the config
+    apiKey: "AIzaSyBOrgiU5qkneWp8Flgbrx2eTPYLoTi7Uhc",
+    authDomain: "poker-home-game-699e7.firebaseapp.com",
+    databaseURL: "https://poker-home-game-699e7-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "poker-home-game-699e7",
+    storageBucket: "poker-home-game-699e7.firebasestorage.app",
+    messagingSenderId: "192105659517",
+    appId: "1:192105659517:web:cc9da7339c2098dd09c514",
+    measurementId: "G-6WT21VPL0S"
 };
 
 // Initialize Firebase

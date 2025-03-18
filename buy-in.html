@@ -2,71 +2,451 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buy-in to Poker Game</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Firebase App (the core Firebase SDK) -->
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
-    <!-- Firebase Realtime Database -->
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script>
+    <style>
+        :root {
+            --main-color: #2E8B57;
+            --secondary-color: #3CB371;
+            --text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            margin: 0 0 1.5rem;
+            font-size: 3rem;
+            font-weight: 800;
+            text-align: center;
+            background: linear-gradient(45deg, var(--main-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: var(--text-shadow);
+            position: relative;
+        }
+
+        h1::after {
+            content: attr(data-text);
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: -1;
+            background: none;
+            -webkit-text-fill-color: transparent;
+            -webkit-text-stroke: 2px rgba(0, 0, 0, 0.3);
+            width: 100%;
+        }
+
+        .game-info {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .game-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--main-color);
+            text-shadow: var(--text-shadow);
+        }
+
+        .chip-ratio {
+            font-size: 1.2rem;
+            color: var(--secondary-color);
+            text-shadow: var(--text-shadow);
+        }
+
+        input {
+            width: 100%;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--main-color);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(var(--main-color-rgb), 0.3);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            margin-top: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(45deg, var(--main-color), var(--secondary-color));
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #chip-preview {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status.pending {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            text-shadow: var(--text-shadow);
+        }
+
+        .status.success {
+            background: rgba(var(--main-color-rgb), 0.1);
+            color: var(--main-color);
+            text-shadow: var(--text-shadow);
+        }
+
+        .status.error {
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+            text-shadow: var(--text-shadow);
+        }
+
+        .success-message {
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+            margin-top: 2rem;
+        }
+
+        .success-message h2 {
+            color: var(--main-color);
+            margin-bottom: 1rem;
+            text-shadow: var(--text-shadow);
+        }
+
+        .success-message p {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            margin: 0.5rem 0;
+            text-shadow: var(--text-shadow);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            input, button {
+                font-size: 1rem;
+                padding: 0.8rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>
-            <span id="left-icon" class="title-icon">♠️</span>
-            Poker Buy-in
-            <span id="right-icon" class="title-icon">♥️</span>
-        </h1>
-    </header>
-    
-    <main>
-        <section id="buy-in-form">
-            <h2>Join the Game</h2>
-            <form id="player-buy-in-form" class="setup-form">
-                <div class="form-group">
-                    <label for="player-name">Your Name:</label>
-                    <input 
-                        type="text" 
-                        id="player-name" 
-                        name="player-name" 
-                        autocomplete="name"
-                        placeholder="Enter your name"
-                        required
-                    >
-                </div>
-                <div class="form-group">
-                    <label for="buy-in-amount">Buy-in Amount ($):</label>
-                    <input 
-                        type="number" 
-                        id="buy-in-amount" 
-                        name="buy-in-amount"
-                        autocomplete="off"
-                        placeholder="Enter amount in dollars"
-                        min="0"
-                        step="0.01"
-                        required
-                    >
-                </div>
-                <div class="chip-preview">
-                    <p>You will receive: <span id="chip-amount">0</span> chips</p>
-                    <p class="ratio-info">Each chip is worth $<span id="chip-ratio">1.00</span></p>
-                </div>
-                <button type="submit" class="primary">Request Buy-in</button>
-            </form>
-        </section>
+    <div class="container">
+        <h1 data-text="Join Game">Join Game</h1>
+        <div id="game-info" class="game-info"></div>
         
-        <section id="request-status" style="display: none;">
-            <h2>Buy-in Request Status</h2>
-            <div class="status-content">
-                <div class="status-message">
-                    <p>Your buy-in request has been sent to the game admin.</p>
-                    <p>Please wait while they process your request...</p>
-                </div>
-                <div class="loading-spinner"></div>
+        <form id="buy-in-form">
+            <input 
+                type="text" 
+                id="player-name" 
+                placeholder="Your Name"
+                required
+            >
+            <input 
+                type="number" 
+                id="buy-in-amount" 
+                placeholder="Buy-in Amount ($)"
+                required
+                min="0"
+                step="0.01"
+            >
+            <div id="chip-preview">
+                You will receive <span>0</span> chips
             </div>
-        </section>
-    </main>
+            <button type="submit">Buy In</button>
+        </form>
+        
+        <div id="status"></div>
+    </div>
 
-    <script src="buy-in.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        // Initialize Firebase with the same config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBOrgiU5qkneWp8Flgbrx2eTPYLoTi7Uhc",
+            authDomain: "poker-home-game-699e7.firebaseapp.com",
+            databaseURL: "https://poker-home-game-699e7-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "poker-home-game-699e7",
+            storageBucket: "poker-home-game-699e7.firebasestorage.app",
+            messagingSenderId: "192105659517",
+            appId: "1:192105659517:web:cc9da7339c2098dd09c514"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Get game ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('gameId');
+        let game = null;
+
+        // Update status display
+        function updateStatus(message, type = 'pending') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        // Show error page
+        function showError(message) {
+            document.querySelector('.container').innerHTML = `
+                <div class="error-container">
+                    <h1 data-text="Error">Error</h1>
+                    <div class="error-message">${message}</div>
+                    <button onclick="window.location.reload()" class="retry-button">
+                        Try Again
+                    </button>
+                </div>
+            `;
+        }
+
+        if (gameId) {
+            // Load game data
+            database.ref(`games/${gameId}`)
+                .once('value')
+                .then((snapshot) => {
+                    game = snapshot.val();
+                    
+                    if (!game || !game.active) {
+                        throw new Error('Game not found or no longer active');
+                    }
+
+                    // Update theme colors from game state
+                    if (game.state && game.state.theme) {
+                        const mainColor = getThemeColor(game.state.theme, '--main-color');
+                        const secondaryColor = getThemeColor(game.state.theme, '--secondary-color');
+                        document.documentElement.style.setProperty('--main-color', mainColor);
+                        document.documentElement.style.setProperty('--secondary-color', secondaryColor);
+                        // Convert main color to RGB for rgba usage
+                        const rgb = hexToRgb(mainColor.replace('#', ''));
+                        document.documentElement.style.setProperty('--main-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+                    }
+
+                    // Show game info
+                    const gameInfo = document.getElementById('game-info');
+                    gameInfo.innerHTML = `
+                        <div class="game-name">${game.name}</div>
+                        <div class="chip-ratio">$${game.ratio} per chip</div>
+                    `;
+
+                    // Set up buy-in amount listener for chip preview
+                    const buyInInput = document.getElementById('buy-in-amount');
+                    const chipPreview = document.getElementById('chip-preview').querySelector('span');
+                    
+                    buyInInput.addEventListener('input', () => {
+                        const amount = parseFloat(buyInInput.value) || 0;
+                        const chips = Math.floor(amount / game.ratio);
+                        chipPreview.textContent = chips;
+                        
+                        // Add animation class if chips > 0
+                        const previewElement = document.getElementById('chip-preview');
+                        if (chips > 0) {
+                            previewElement.style.background = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
+                        } else {
+                            previewElement.style.background = 'rgba(255, 255, 255, 0.05)';
+                        }
+                    });
+
+                    // Handle form submission
+                    document.getElementById('buy-in-form').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        
+                        updateStatus('Processing...');
+                        
+                        const form = e.target;
+                        form.querySelector('button').disabled = true;
+                        
+                        const playerName = document.getElementById('player-name').value.trim();
+                        const buyInAmount = parseFloat(buyInInput.value);
+                        const chips = Math.floor(buyInAmount / game.ratio);
+                        
+                        try {
+                            // Verify game is still active
+                            const currentGame = await database.ref(`games/${gameId}`).once('value');
+                            if (!currentGame.val()?.active) {
+                                throw new Error('Game is no longer active');
+                            }
+
+                            // Add player directly to the game's player list
+                            const playersRef = database.ref(`games/${gameId}/state/players`);
+                            const newPlayer = {
+                                id: Date.now(),
+                                name: playerName,
+                                initial_chips: chips,
+                                current_chips: chips
+                            };
+                            
+                            await playersRef.transaction((players) => {
+                                if (!players) players = [];
+                                // Check for duplicate names
+                                if (players.some(p => p.name.toLowerCase() === playerName.toLowerCase())) {
+                                    throw new Error('A player with this name already exists');
+                                }
+                                players.push(newPlayer);
+                                return players;
+                            });
+
+                            updateStatus('Successfully joined the game!', 'success');
+                            form.style.display = 'none';
+                            
+                            // Show success message with chip amount
+                            const successMessage = document.createElement('div');
+                            successMessage.className = 'success-message';
+                            successMessage.innerHTML = `
+                                <h2>Welcome to the game!</h2>
+                                <p>You have been added with ${chips} chips.</p>
+                                <p>You can close this window now.</p>
+                            `;
+                            document.querySelector('.container').appendChild(successMessage);
+
+                        } catch (error) {
+                            console.error('Error:', error);
+                            updateStatus(`Error: ${error.message}`, 'error');
+                            form.querySelector('button').disabled = false;
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading game:', error);
+                    showError(error.message);
+                });
+        }
+
+        // Helper function to get theme colors
+        function getThemeColor(themeName, colorVar) {
+            const themes = {
+                'classic-green': {
+                    '--main-color': '#2E8B57',
+                    '--secondary-color': '#3CB371'
+                },
+                'royal-blue': {
+                    '--main-color': '#4169E1',
+                    '--secondary-color': '#1E90FF'
+                },
+                'crimson-red': {
+                    '--main-color': '#DC143C',
+                    '--secondary-color': '#FF4500'
+                },
+                'midnight-black': {
+                    '--main-color': '#2F4F4F',
+                    '--secondary-color': '#696969'
+                },
+                'ocean-breeze': {
+                    '--main-color': '#20B2AA',
+                    '--secondary-color': '#5F9EA0'
+                },
+                'firestorm': {
+                    '--main-color': '#FF6347',
+                    '--secondary-color': '#FF4500'
+                },
+                'purple-haze': {
+                    '--main-color': '#9370DB',
+                    '--secondary-color': '#8A2BE2'
+                },
+                'neon-nights': {
+                    '--main-color': '#00FFFF',
+                    '--secondary-color': '#00CED1'
+                },
+                'rizzler': {
+                    '--main-color': '#ff00ff',
+                    '--secondary-color': '#bf00ff'
+                },
+                'doginme': {
+                    '--main-color': '#1e90ff',
+                    '--secondary-color': '#4169e1'
+                }
+            };
+            
+            return themes[themeName]?.[colorVar] || themes['classic-green'][colorVar];
+        }
+
+        // Helper function to convert hex to RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+    </script>
 </body>
 </html> 

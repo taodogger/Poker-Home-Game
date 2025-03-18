@@ -6,6 +6,7 @@
     <title>Poker Home Game Manager</title>
     <meta name="description" content="A modern poker home game manager to track chips, select dealers, and calculate payouts">
     <meta name="theme-color" content="#2E8B57">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -77,8 +78,40 @@
             </div>
         </section>
         
+        <section id="game-lobby">
+            <h2>Game Lobby</h2>
+            <div class="lobby-setup">
+                <form id="lobby-form" class="setup-form">
+                    <div class="form-group">
+                        <label for="game-name">Game Name:</label>
+                        <input 
+                            type="text" 
+                            id="game-name" 
+                            name="game-name" 
+                            placeholder="Enter a name for your game"
+                            required
+                        >
+                    </div>
+                    <button type="submit" class="create-lobby-btn">Create Game Lobby</button>
+                </form>
+            </div>
+            <div id="qr-code-container" class="qr-code-section">
+                <h3>Join Game QR Code</h3>
+                <div class="qr-wrapper"></div>
+                <p>Players can scan this QR code to join the game</p>
+            </div>
+        </section>
+        
+        <section id="payouts">
+            <h2>Payout Instructions</h2>
+            <p id="payout-instructions">Update the current chip counts and click 'Calculate Payouts' to see the settlement.</p>
+            <button id="calculate-payouts" class="primary">Calculate Payouts</button>
+            <div id="payout-list" class="payout-results"></div>
+        </section>
+
         <section id="add-player">
-            <h2>Add Player</h2>
+            <h2>Manual Player Entry</h2>
+            <p class="manual-entry-note">Note: Players can join automatically by scanning the QR code during the game. Use this form only if manual entry is needed.</p>
             <form id="player-form" class="setup-form">
                 <div class="form-group">
                     <label for="player-name">Player Name:</label>
@@ -153,24 +186,19 @@
             <h2>Dealer Selection</h2>
             <div id="dealer-wheel" class="poker-table"></div>
         </section>
-        
-        <section id="payouts">
-            <h2>Payout Instructions</h2>
-            <p id="payout-instructions">Update the current chip counts and click 'Calculate Payouts' to see the settlement.</p>
-            <button id="calculate-payouts" class="primary">Calculate Payouts</button>
-            <div id="payout-list" class="payout-results"></div>
-        </section>
     </main>
 
+    <!-- Core Dependencies -->
     <script src="hand-animation.js"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 
-    <!-- Firebase Config and App -->
+    <!-- Firebase Config -->
     <script>
         // Initialize Firebase with config
         const firebaseConfig = {
@@ -191,30 +219,68 @@
     </script>
 
     <!-- Application Code -->
+    <script src="game-core.js"></script>
     <script src="app.js"></script>
 
-    <!-- Test Script -->
+    <!-- Initialization Script -->
     <script>
-        // Test database connection
-        function testFirebase() {
-            const testRef = database.ref('test');
-            testRef.set({
-                timestamp: Date.now(),
-                message: 'Test connection successful'
-            })
-            .then(() => {
-                console.log('Firebase test write successful');
-                showToast('Firebase connection test successful!', 'success');
-            })
-            .catch((error) => {
-                console.error('Firebase test error:', error);
-                showToast('Firebase test failed: ' + error.message, 'error');
-            });
-        }
+        // Initialize as soon as DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded, starting initialization...');
+            
+            // Check if dependencies are loaded
+            function checkDependencies() {
+                const dependencies = {
+                    firebase: typeof firebase !== 'undefined',
+                    database: typeof firebase !== 'undefined' && typeof firebase.database === 'function',
+                    qrcode: typeof QRCode !== 'undefined',
+                    pokerApp: typeof window.PokerApp !== 'undefined'
+                };
 
-        // Run test when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(testFirebase, 1000); // Wait 1 second after page load
+                console.log('Checking dependencies:', dependencies);
+                return Object.values(dependencies).every(dep => dep);
+            }
+
+            function initializeApp() {
+                if (!checkDependencies()) {
+                    console.warn('Dependencies not loaded yet, retrying in 100ms...');
+                    setTimeout(initializeApp, 100);
+                    return;
+                }
+
+                try {
+                    console.log('All dependencies loaded, initializing PokerApp...');
+                    window.PokerApp.initialize();
+                    
+                    // Test Firebase connection
+                    testFirebase();
+                } catch (error) {
+                    console.error('Error during initialization:', error);
+                    if (window.PokerApp?.UI?.showToast) {
+                        window.PokerApp.UI.showToast('Error initializing application. Please refresh the page.', 'error');
+                    }
+                }
+            }
+
+            // Test database connection
+            function testFirebase() {
+                const testRef = database.ref('test');
+                testRef.set({
+                    timestamp: Date.now(),
+                    message: 'Test connection successful'
+                })
+                .then(() => {
+                    console.log('Firebase test write successful');
+                    window.PokerApp.UI.showToast('Firebase connection test successful!', 'success');
+                })
+                .catch((error) => {
+                    console.error('Firebase test error:', error);
+                    window.PokerApp.UI.showToast('Firebase test failed: ' + error.message, 'error');
+                });
+            }
+
+            // Start initialization
+            initializeApp();
         });
     </script>
 </body>
