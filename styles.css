@@ -144,27 +144,15 @@ h1::after {
 }
 
 .title-icon {
-    font-size: 1.2rem;
-    color: var(--main-color);
-    opacity: 1;
-    font-weight: bold;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     width: 1.2rem;
     height: 1.2rem;
-    text-shadow: 0 0 10px rgba(var(--main-color-rgb), 0.5);
+    object-fit: contain;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
 }
 
-.title-icon::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: inherit;
-    filter: blur(20px);
-    opacity: 0.5;
-    z-index: -1;
+.title-icon:hover {
+    opacity: 1;
 }
 
 @keyframes float {
@@ -852,7 +840,6 @@ label {
     }
 
     .title-icon {
-        font-size: 1rem;
         width: 1rem;
         height: 1rem;
     }
