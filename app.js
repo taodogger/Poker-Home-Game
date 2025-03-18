@@ -289,12 +289,22 @@ function updatePlayerList() {
     // Clear current list
     tableBody.innerHTML = '';
     
-    // Add players to table
-    PokerApp.state.players.forEach(player => {
+    // Add players to table with modern UI
+    PokerApp.state.players.forEach((player, index) => {
         const row = document.createElement('tr');
+        row.style.animationDelay = `${index * 0.1}s`; // Staggered animation
+        
+        // Get initial for avatar
+        const initial = player.name.charAt(0).toUpperCase();
+        
         row.innerHTML = `
-            <td>${player.name}</td>
-            <td>${player.initial_chips}</td>
+            <td>
+                <div style="display: flex; align-items: center;">
+                    <div class="player-avatar">${initial}</div>
+                    ${player.name}
+                </div>
+            </td>
+            <td><strong>${player.initial_chips}</strong></td>
             <td>
                 <input 
                     type="number" 
@@ -306,8 +316,9 @@ function updatePlayerList() {
             </td>
             <td>
                 <button 
-                    class="remove-player" 
+                    class="kahoot-button remove-player" 
                     data-player-id="${player.id}"
+                    style="margin: 0; padding: 8px 16px; font-size: 0.85rem;"
                     ${PokerApp.state.gameInProgress ? 'disabled' : ''}
                 >
                     Remove
@@ -397,11 +408,19 @@ function updateTotalsRow() {
     const totalInitial = PokerApp.state.players.reduce((total, player) => total + player.initial_chips, 0);
     const totalCurrent = PokerApp.state.players.reduce((total, player) => total + player.current_chips, 0);
     
-    // Create totals row
+    // Create totals row with modern style
     const totalsRow = document.createElement('tr');
     totalsRow.className = 'totals-row';
+    totalsRow.style.background = 'linear-gradient(135deg, rgba(var(--main-color-rgb), 0.2), rgba(var(--secondary-color-rgb), 0.2))';
+    totalsRow.style.fontWeight = 'bold';
+    
     totalsRow.innerHTML = `
-        <td><strong>Totals</strong></td>
+        <td>
+            <div style="display: flex; align-items: center;">
+                <div class="player-avatar" style="background: rgba(255,255,255,0.2);">Σ</div>
+                <strong>Totals</strong>
+            </div>
+        </td>
         <td><strong>${totalInitial}</strong></td>
         <td><strong>${totalCurrent}</strong></td>
         <td></td>
@@ -1150,9 +1169,18 @@ function handleURLParameters() {
                         PokerApp.state = {...PokerApp.state, ...gameData.state};
                     }
                     
+                    // Ensure the sessionId is set for Firebase listeners
+                    PokerApp.state.sessionId = gameId;
+                    PokerApp.state.gameName = gameData.name || gameName;
+                    PokerApp.state.lobbyActive = true;
+                    
+                    // Set up Firebase listeners after we have confirmed the game exists
+                    setupFirebaseListeners(gameId);
+                    
                     // Update the UI
                     updatePlayerList();
                     updateEmptyState();
+                    updateLobbyUI(true);
                     
                     showToast(`Connected to game: ${gameData.name || gameName}`, 'success');
                 })
@@ -1217,6 +1245,8 @@ function updateLobbyUI(isActive) {
     const qrCodeContainer = document.getElementById('qr-code-container');
     const submitButton = lobbyForm ? lobbyForm.querySelector('button[type="submit"]') : null;
     const gameNameInput = document.getElementById('game-name');
+    const lobbyStatusBadge = document.querySelector('#game-lobby .game-status-badge');
+    const lobbyStatusText = document.getElementById('lobby-status');
     
     if (isActive) {
         // Show QR code and update form
@@ -1227,12 +1257,19 @@ function updateLobbyUI(isActive) {
             gameNameInput.disabled = false;
         }
         
-        // Display game status
-        const gameStatus = document.getElementById('game-status');
-        if (gameStatus) {
-            gameStatus.textContent = 'Lobby Active';
-            gameStatus.classList.add('lobby-active');
+        // Update lobby status badge
+        if (lobbyStatusBadge) {
+            lobbyStatusBadge.classList.remove('inactive');
+            lobbyStatusBadge.classList.add('active');
         }
+        
+        // Update lobby status text
+        if (lobbyStatusText) {
+            lobbyStatusText.textContent = 'Lobby Active';
+        }
+        
+        // Display game status
+        updateGameStatus('Lobby Active', true);
     } else {
         // Hide QR code and reset form
         if (qrCodeContainer) qrCodeContainer.style.display = 'none';
@@ -1245,17 +1282,44 @@ function updateLobbyUI(isActive) {
             gameNameInput.disabled = false;
         }
         
-        // Reset game status
-        const gameStatus = document.getElementById('game-status');
-        if (gameStatus) {
-            gameStatus.textContent = PokerApp.state.gameInProgress ? 'Game in progress' : 'No active game';
-            gameStatus.classList.remove('lobby-active');
+        // Update lobby status badge
+        if (lobbyStatusBadge) {
+            lobbyStatusBadge.classList.remove('active');
+            lobbyStatusBadge.classList.add('inactive');
         }
+        
+        // Update lobby status text
+        if (lobbyStatusText) {
+            lobbyStatusText.textContent = 'No active game';
+        }
+        
+        // Reset game status
+        updateGameStatus(PokerApp.state.gameInProgress ? 'Game in progress' : 'No active game', PokerApp.state.gameInProgress);
         
         // Reset state
         PokerApp.state.sessionId = null;
         PokerApp.state.gameName = null;
         PokerApp.state.lobbyActive = false;
+    }
+}
+
+// Update game status badge and text
+function updateGameStatus(statusText, isActive = false) {
+    const gameStatusBadge = document.querySelector('#game-controls .game-status-badge');
+    const gameStatusText = document.getElementById('game-status');
+    
+    if (gameStatusBadge) {
+        if (isActive) {
+            gameStatusBadge.classList.remove('inactive');
+            gameStatusBadge.classList.add('active');
+        } else {
+            gameStatusBadge.classList.remove('active');
+            gameStatusBadge.classList.add('inactive');
+        }
+    }
+    
+    if (gameStatusText) {
+        gameStatusText.textContent = statusText;
     }
 }
 
@@ -1345,47 +1409,88 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Setup Firebase listeners for real-time player updates
-function setupFirebaseListeners() {
-    if (PokerApp.state.sessionId && typeof firebase !== 'undefined' && firebase.database) {
+function setupFirebaseListeners(gameIdOverride) {
+    // Use the override if provided, otherwise use the state
+    const gameId = gameIdOverride || PokerApp.state.sessionId;
+    
+    if (gameId && typeof firebase !== 'undefined' && firebase.database) {
+        console.log(`Setting up Firebase listeners for game: ${gameId}`);
+        
         // Listen for player list changes
-        const playersRef = firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`);
+        const playersRef = firebase.database().ref(`games/${gameId}/state/players`);
+        
+        // Remove any existing listeners first to avoid duplicates
+        playersRef.off('value');
         
         playersRef.on('value', (snapshot) => {
             const playersData = snapshot.val();
+            console.log('Received players data:', playersData);
             
             // Only update if we have valid player data
-            if (playersData && Array.isArray(playersData)) {
-                console.log('Received player update from Firebase:', playersData);
+            if (playersData) {
+                // Handle both array and object formats from Firebase
+                let playersList = [];
                 
-                // Update the local state with the new player data
-                PokerApp.state.players = playersData.map(player => ({
-                    id: parseInt(player.id),
-                    name: player.name,
-                    initial_chips: parseInt(player.initial_chips),
-                    current_chips: parseInt(player.current_chips)
-                }));
+                if (Array.isArray(playersData)) {
+                    playersList = playersData;
+                } else if (typeof playersData === 'object') {
+                    // Convert object to array
+                    playersList = Object.values(playersData);
+                }
                 
-                // Update UI
-                updatePlayerList();
-                updateEmptyState();
-                
-                // Update hand animation if it exists
-                if (window.handAnimation) {
-                    window.handAnimation.setPlayers(PokerApp.state.players);
+                if (playersList.length > 0) {
+                    console.log('Updating players list with:', playersList);
+                    
+                    // Update the local state with the new player data
+                    PokerApp.state.players = playersList.map(player => ({
+                        id: parseInt(player.id),
+                        name: player.name,
+                        initial_chips: parseInt(player.initial_chips || 0),
+                        current_chips: parseInt(player.current_chips || 0)
+                    }));
+                    
+                    // Update UI
+                    updatePlayerList();
+                    updateEmptyState();
+                    
+                    // Update hand animation if it exists
+                    if (window.handAnimation) {
+                        window.handAnimation.setPlayers(PokerApp.state.players);
+                    }
+                    
+                    showToast(`Player list updated: ${playersList.length} players`, 'info');
                 }
             }
         });
         
         // Listen for game state changes
-        firebase.database().ref(`games/${PokerApp.state.sessionId}`).on('value', (snapshot) => {
+        const gameRef = firebase.database().ref(`games/${gameId}`);
+        
+        // Remove any existing listeners first to avoid duplicates
+        gameRef.off('value');
+        
+        gameRef.on('value', (snapshot) => {
             const gameData = snapshot.val();
-            if (gameData && gameData.ratio) {
-                PokerApp.state.chipRatio = parseFloat(gameData.ratio);
+            if (gameData) {
+                console.log('Received game data:', gameData);
                 
-                // Update ratio display
-                const ratioDisplay = document.getElementById('ratio-display');
-                if (ratioDisplay) {
-                    ratioDisplay.textContent = `Each chip is worth $${PokerApp.state.chipRatio.toFixed(2)}`;
+                if (gameData.ratio) {
+                    PokerApp.state.chipRatio = parseFloat(gameData.ratio);
+                    
+                    // Update ratio display
+                    const ratioDisplay = document.getElementById('ratio-display');
+                    if (ratioDisplay) {
+                        ratioDisplay.textContent = `Each chip is worth $${PokerApp.state.chipRatio.toFixed(2)}`;
+                    }
+                }
+                
+                // Update game status
+                if (gameData.active === false) {
+                    showToast('Game is no longer active', 'error');
+                    // Clean up and reset if the game is no longer active
+                    firebase.database().ref(`games/${gameId}`).off();
+                    firebase.database().ref(`games/${gameId}/state/players`).off();
+                    updateLobbyUI(false);
                 }
             }
         });
