@@ -1141,6 +1141,17 @@ function setupEventListeners() {
                 });
         });
     }
+    
+    // Fix reset button
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            // Make reset require confirmation
+            if (confirm('Are you sure you want to reset the game? This will clear all players and settings.')) {
+                PokerApp.Game.reset();
+            }
+        });
+    }
 }
 
 // Touch event handlers for mobile
