@@ -2293,13 +2293,35 @@ button:active {
 /* Theme-specific backgrounds */
 [data-theme="doginme"] {
     --main-color: #1e90ff;
+    --main-color-rgb: 30, 144, 255;
     --secondary-color: #4169e1;
+    --secondary-color-rgb: 65, 105, 225;
+    --accent-color: #1e90ff;
+    --accent-color-rgb: 30, 144, 255;
     --body-background: url("./images/doginme-background.jpg");
+    color-scheme: dark;
 }
 
 [data-theme="rizzler"] {
     --main-color: #ff00ff;
     --secondary-color: #bf00ff;
     --body-background: url("./images/rizzler-background.jpg");
+}
+
+[data-theme="doginme"] .kahoot-card h2::after {
+    background: linear-gradient(to right, #1e90ff, #4169e1);
+}
+
+[data-theme="doginme"] .kahoot-button {
+    background: linear-gradient(135deg, #1e90ff, #4169e1);
+}
+
+[data-theme="doginme"] .player-avatar {
+    background: linear-gradient(135deg, #1e90ff, #4169e1);
+}
+
+[data-theme="doginme"] .game-status-badge.active span {
+    background: #1e90ff;
+    box-shadow: 0 0 10px rgba(30, 144, 255, 0.5);
 }
 

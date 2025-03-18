@@ -60,7 +60,8 @@ const themes = {
         '--secondary-color': '#4169e1', // Royal blue
         '--body-background': 'url("./images/doginme-background.jpg")',
         'tableImage': './images/doginme-board.jpg',
-        'icon': './images/doginme-icon.png'
+        'icon': './images/doginme-icon.png',
+        '--accent-color': '#1e90ff' // Blue accent color
     }
 };
 
@@ -1224,6 +1225,10 @@ async function createGameLobby(gameName) {
         
         // Update UI to show game is active
         updateLobbyUI(true);
+        
+        // Force a refresh of player data when a lobby is created
+        console.log('[FIREBASE] Automatically setting up Firebase listeners after lobby creation');
+        setupFirebaseListeners(sessionId, true);
         
         showToast(`Game lobby "${gameName}" created successfully!`, 'success');
         return sessionId;
