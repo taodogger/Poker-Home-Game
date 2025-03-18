@@ -900,10 +900,8 @@ function setupEventListeners() {
             const playerName = document.getElementById('player-name').value.trim();
             const initialChips = parseInt(document.getElementById('initial-chips').value);
             
-            if (!playerName) {
-                showToast('Please enter a player name', 'error');
-                return;
-            }
+            // Don't validate the player name - form required attribute will handle this
+            // and prevents redundant toast messages
             
             if (isNaN(initialChips) || initialChips <= 0) {
                 showToast('Please enter a valid chip amount', 'error');
@@ -2158,3 +2156,32 @@ function updateThemeElements(themeName) {
     
     // Update any other theme-specific elements here
 }
+
+// Update the add player form validation to prevent redundant toast notifications
+document.getElementById('add-player-form')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const playerName = document.getElementById('player-name').value.trim();
+    const initialChips = parseInt(document.getElementById('initial-chips').value);
+    
+    // Remove this validation since the HTML 'required' attribute will handle it
+    // and it's causing unnecessary error messages
+    /*
+    if (!playerName) {
+        showToast('Please enter a player name', 'error');
+        return;
+    }
+    */
+    
+    if (isNaN(initialChips) || initialChips <= 0) {
+        showToast('Please enter a valid chip amount', 'error');
+        return;
+    }
+    
+    // Add the player directly using our addPlayer function
+    addPlayer(playerName, initialChips);
+    
+    // Reset the form
+    this.reset();
+    document.getElementById('player-name').focus();
+});
