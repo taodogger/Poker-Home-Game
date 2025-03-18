@@ -267,6 +267,10 @@ let handAnimation = null;
 
 // Global initialize function for backward compatibility
 function initialize() {
+    // Handle URL parameters before initializing the app
+    handleURLParameters();
+    
+    // Then initialize the main app
     PokerApp.initialize();
 }
 
@@ -843,7 +847,8 @@ async function createGameLobby(gameName) {
             name: gameName,
             createdAt: Date.now(),
             state: PokerApp.state,
-            active: true
+            active: true,
+            ratio: PokerApp.state.chipRatio || 1.0
         };
         
         // If Firebase is initialized, save to Firebase
@@ -864,6 +869,45 @@ async function createGameLobby(gameName) {
         showToast('Failed to create game lobby', 'error');
         updateLobbyUI(false);
         throw error;
+    }
+}
+
+// Handle URL parameters for joining games
+function handleURLParameters() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameName = urlParams.get('game-name');
+    const gameId = urlParams.get('gameId') || urlParams.get('game-id');
+    
+    if (gameName || gameId) {
+        // We're in a game - make sure we're connecting to the correct game
+        console.log(`Loading game: ${gameName || 'Unknown'} (ID: ${gameId || 'Unknown'})`);
+        
+        // If we have a game ID, try to load it from Firebase
+        if (gameId && typeof firebase !== 'undefined' && firebase.database) {
+            firebase.database().ref(`games/${gameId}`).once('value')
+                .then(snapshot => {
+                    const gameData = snapshot.val();
+                    if (!gameData) {
+                        showToast('Game not found or no longer active', 'error');
+                        return;
+                    }
+                    
+                    // Update our state with the game data
+                    if (gameData.state) {
+                        PokerApp.state = {...PokerApp.state, ...gameData.state};
+                    }
+                    
+                    // Update the UI
+                    updatePlayerList();
+                    updateEmptyState();
+                    
+                    showToast(`Connected to game: ${gameData.name || gameName}`, 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading game:', error);
+                    showToast('Error loading game. Please try again.', 'error');
+                });
+        }
     }
 }
 
@@ -897,6 +941,12 @@ function generateQRCode(sessionId, gameName) {
         linkElement.textContent = 'Open Join Link';
         linkElement.className = 'join-link';
         qrWrapper.appendChild(linkElement);
+
+        // Show the QR code container
+        const qrCodeContainer = document.getElementById('qr-code-container');
+        if (qrCodeContainer) {
+            qrCodeContainer.style.display = 'block';
+        }
     } else {
         // Fallback if QR library not loaded
         qrWrapper.innerHTML = `

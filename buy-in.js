@@ -16,7 +16,9 @@ const database = firebase.database();
 
 // Get game session ID from URL parameters
 const urlParams = new URLSearchParams(window.location.search);
-const gameId = urlParams.get('gameId');
+// Support both gameId and game-id formats for compatibility
+const gameId = urlParams.get('gameId') || urlParams.get('game-id');
+const gameName = urlParams.get('game-name');
 
 if (!gameId) {
     showError('Invalid game link. Please scan the QR code again.');
@@ -31,6 +33,14 @@ database.ref(`games/${gameId}/ratio`).on('value', (snapshot) => {
         updateChipPreview();
     }
 });
+
+// Show game name if available
+if (gameName) {
+    const gameNameElem = document.querySelector('h1');
+    if (gameNameElem) {
+        gameNameElem.textContent = `Join ${gameName}`;
+    }
+}
 
 // Update chip preview when buy-in amount changes
 document.getElementById('buy-in-amount').addEventListener('input', updateChipPreview);

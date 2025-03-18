@@ -209,7 +209,7 @@
 
         // Get game ID from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('gameId');
+        const gameId = urlParams.get('gameId') || urlParams.get('game-id');
         let game = null;
 
         // Update status display
