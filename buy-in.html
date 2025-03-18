@@ -327,20 +327,26 @@
                             } else {
                                 // Otherwise update existing player list as a transaction
                                 await playersRef.transaction((players) => {
+                                    console.log('Current players in transaction:', players);
+                                    
                                     if (!players) players = [];
                                     
                                     // Ensure players is an array (important!)
                                     if (!Array.isArray(players)) {
-                                        players = [];
+                                        console.log('Converting object to array in transaction');
+                                        // Convert object to array if Firebase has converted it
+                                        players = Object.values(players).filter(p => p !== null);
                                     }
                                     
                                     // Check for duplicate names
                                     if (players.some(p => p && p.name && p.name.toLowerCase() === playerName.toLowerCase())) {
+                                        console.error('Player name already exists');
                                         throw new Error('A player with this name already exists');
                                     }
                                     
                                     // Add the new player
                                     players.push(newPlayer);
+                                    console.log('Players after adding new player:', players);
                                     return players;
                                 });
                             }
