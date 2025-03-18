@@ -127,9 +127,31 @@ header {
 }
 
 .header-controls select,
-.header-controls option {
+.header-controls option,
+.header-controls * {
     color: white !important;
-    background: #1a1a1a !important;
+    background-color: #1a1a1a !important;
+}
+
+.header-controls #theme-selector {
+    color: white !important;
+    background-color: #1a1a1a !important;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.header-controls #theme-selector option {
+    color: white !important;
+    background-color: #1a1a1a !important;
+}
+
+/* Make sure text in the theme selector is white on all states */
+#theme-selector,
+#theme-selector option,
+#theme-selector:focus,
+#theme-selector:active,
+#theme-selector:hover {
+    color: white !important;
+    background-color: #1a1a1a !important;
 }
 
 h1 {
