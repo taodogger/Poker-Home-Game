@@ -265,6 +265,11 @@ window.PokerApp = {
 let gameState = window.PokerApp.state;
 let handAnimation = null;
 
+// Global initialize function for backward compatibility
+function initialize() {
+    PokerApp.initialize();
+}
+
 // Initialize when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     initialize();
@@ -749,6 +754,52 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.style.background = getComputedStyle(document.body).getPropertyValue('--body-background');
     }
 });
+
+// Function to update empty state messages and UI based on game state
+function updateEmptyState() {
+    const playerList = document.getElementById('player-list');
+    const emptyState = document.getElementById('empty-state');
+    const payoutInstructions = document.getElementById('payout-instructions');
+    
+    // If no player list is found, can't update anything
+    if (!playerList) return;
+    
+    // Handle empty player list
+    if (PokerApp.state.players.length === 0) {
+        if (emptyState) {
+            emptyState.style.display = 'block';
+            emptyState.innerHTML = '<p>No players added yet. Add players to get started!</p>';
+        }
+        
+        if (payoutInstructions) {
+            payoutInstructions.innerHTML = '';
+        }
+        
+        return;
+    }
+    
+    // Hide empty state message when we have players
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+    
+    // Update payout instructions
+    if (payoutInstructions) {
+        const totalChips = PokerApp.state.players.reduce((sum, p) => sum + p.current_chips, 0);
+        const totalBuyIn = PokerApp.state.players.reduce((sum, p) => sum + p.initial_chips, 0);
+        
+        let html = '<h3>Game Information</h3>';
+        html += `<p>Total buy-in: ${totalBuyIn} chips</p>`;
+        html += `<p>Current chips in play: ${totalChips} chips</p>`;
+        
+        if (PokerApp.state.chipRatio > 0) {
+            const moneyPool = (totalBuyIn * PokerApp.state.chipRatio).toFixed(2);
+            html += `<p>Prize pool: $${moneyPool}</p>`;
+        }
+        
+        payoutInstructions.innerHTML = html;
+    }
+}
 
 // Toast notification system
 function showToast(message, type = 'success') {
