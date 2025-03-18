@@ -12,12 +12,14 @@
         :root {
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
             --container-padding: max(1rem, env(safe-area-inset-left));
-            --main-color: #2E8B57;
-            --secondary-color: #3CB371;
-            --main-color-rgb: 46, 139, 87;
-            --secondary-color-rgb: 60, 179, 113;
+            --main-color: #1e90ff;
+            --secondary-color: #4169e1;
+            --main-color-rgb: 30, 144, 255;
+            --secondary-color-rgb: 65, 105, 225;
             --vibrant-gradient: linear-gradient(135deg, var(--main-color), var(--secondary-color));
-            --glow-effect: 0 0 15px rgba(var(--main-color-rgb), 0.5);
+            --glow-effect: 0 0 20px rgba(var(--main-color-rgb), 0.5);
+            --card-bg: rgba(20, 20, 40, 0.5);
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         body {
@@ -25,8 +27,8 @@
             padding: 0;
             min-height: 100vh;
             min-height: -webkit-fill-available;
-            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f1824, #1c2331);
+            font-family: var(--font-family);
             color: white;
             display: flex;
             justify-content: center;
@@ -35,7 +37,7 @@
             position: relative;
         }
 
-        /* Add background glow that matches theme */
+        /* Add enhanced background glow that matches theme */
         body::before {
             content: '';
             position: fixed;
@@ -44,10 +46,10 @@
             width: 50%;
             height: 45%;
             background: radial-gradient(circle, 
-                rgba(var(--main-color-rgb), 0.12) 0%, 
-                rgba(var(--main-color-rgb), 0.03) 50%, 
+                rgba(var(--main-color-rgb), 0.15) 0%, 
+                rgba(var(--main-color-rgb), 0.05) 50%, 
                 rgba(0, 0, 0, 0) 70%);
-            filter: blur(50px);
+            filter: blur(60px);
             z-index: -1;
             pointer-events: none;
         }
@@ -66,51 +68,41 @@
         }
 
         .buy-in-form {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: clamp(1.5rem, 5vw, 2.5rem);
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: clamp(1.75rem, 5vw, 2.5rem);
             width: 100%;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             position: relative;
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        /* Add accent on top to match theme */
+        /* Enhanced accent on top to match theme */
         .buy-in-form::before {
             content: '';
             position: absolute;
             top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60%;
-            height: 5px;
+            left: 0;
+            width: 100%;
+            height: 4px;
             background: var(--vibrant-gradient);
-            border-radius: 0 0 5px 5px;
-            opacity: 0.85;
+            opacity: 1;
             z-index: 2;
         }
 
         h1 {
-            font-size: clamp(2rem, 8vw, 3rem);
-            margin-bottom: clamp(1rem, 4vw, 2rem);
+            font-size: clamp(2rem, 8vw, 2.5rem);
+            margin-bottom: clamp(1.25rem, 4vw, 2rem);
             line-height: 1.1;
             background: linear-gradient(to right, white, rgba(255,255,255,0.8));
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
             position: relative;
-        }
-
-        h1::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -10px;
-            width: 60px;
-            height: 4px;
-            background: var(--vibrant-gradient);
-            border-radius: 2px;
+            letter-spacing: -0.5px;
         }
 
         .game-info {
@@ -126,25 +118,42 @@
         }
 
         .form-group {
-            margin-bottom: clamp(1rem, 4vw, 1.5rem);
+            margin-bottom: clamp(1.25rem, 4vw, 1.75rem);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
         }
 
         input {
             width: 100%;
-            height: clamp(2.5rem, 8vw, 3rem);
-            padding: 0 1rem;
-            font-size: clamp(1rem, 3.5vw, 1.2rem);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            height: clamp(3rem, 8vw, 3.25rem);
+            padding: 0 1.25rem;
+            font-size: clamp(1rem, 3.5vw, 1.1rem);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             color: white;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--main-color);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.2);
         }
 
         button {
             width: 100%;
-            height: clamp(2.75rem, 9vw, 3.5rem);
-            font-size: clamp(1rem, 3.5vw, 1.2rem);
-            margin-top: clamp(1rem, 4vw, 1.5rem);
+            height: clamp(3.25rem, 9vw, 3.75rem);
+            font-size: clamp(1.1rem, 3.5vw, 1.2rem);
+            margin-top: clamp(1.5rem, 4vw, 2rem);
             background: var(--vibrant-gradient);
             color: white;
             border: none;
@@ -153,21 +162,22 @@
             font-weight: 600;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 20px rgba(var(--main-color-rgb), 0.25);
             transition: all 0.3s ease;
+            letter-spacing: 0.5px;
         }
 
         button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 30px rgba(var(--main-color-rgb), 0.3);
         }
 
         .chip-preview {
-            padding: clamp(1rem, 4vw, 1.5rem);
+            padding: clamp(1.25rem, 4vw, 1.75rem);
             margin: clamp(1.5rem, 5vw, 2rem) 0;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(var(--main-color-rgb), 0.08);
+            border-radius: 14px;
+            border: 1px solid rgba(var(--main-color-rgb), 0.15);
             transition: all 0.3s ease;
         }
 
@@ -205,17 +215,18 @@
             border-color: rgba(255, 193, 7, 0.3);
         }
 
-        /* Horizontal welcome message styles */
+        /* Enhanced welcome container styles */
         .welcome-container {
-            background: var(--vibrant-gradient);
-            border-radius: 16px;
-            padding: 1.75rem;
+            background: linear-gradient(135deg, rgba(30, 144, 255, 0.9), rgba(65, 105, 225, 0.9));
+            border-radius: 20px;
+            padding: 2rem;
             color: white;
-            box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 0 30px rgba(30, 144, 255, 0.3);
             margin: 0 auto;
             position: relative;
             overflow: hidden;
             animation: slide-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         @keyframes slide-up {
@@ -238,14 +249,12 @@
         }
         
         .welcome-header h2 {
-            font-size: 1.8rem;
+            font-size: 2rem;
             font-weight: 800;
             margin: 0 0 1.5rem 0;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0.8));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            color: white;
+            -webkit-text-fill-color: white;
             letter-spacing: 0.5px;
             display: flex;
             align-items: center;
@@ -272,14 +281,16 @@
         .player-name-display {
             font-size: 1.75rem;
             font-weight: bold;
-            padding: 0.5rem 1rem;
-            background: rgba(255,255,255,0.15);
-            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
             display: inline-block;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            border: 1px solid rgba(255,255,255,0.2);
-            margin-bottom: 0.5rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 0.75rem;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
         
         .chips-display {
@@ -289,19 +300,20 @@
         
         .chip-badge {
             background: white;
-            color: var(--main-color);
+            color: #1e90ff;
             font-size: 2.2rem;
             font-weight: bold;
-            width: 90px;
-            height: 90px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
             animation: pulse 2s ease-in-out infinite;
-            margin-left: 1rem;
+            margin-left: 1.5rem;
+            border: 4px solid rgba(255, 255, 255, 0.5);
         }
         
         .chip-badge small {
@@ -366,6 +378,21 @@
         @keyframes confetti-fall {
             0% { top: -10%; transform: rotate(0deg) translateX(0); }
             100% { top: 100%; transform: rotate(360deg) translateX(20px); }
+        }
+
+        /* Add a subtle pattern to the welcome container for more texture */
+        .welcome-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 12%),
+                radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.15) 0%, transparent 15%);
+            opacity: 0.6;
+            z-index: 0;
         }
 
         @media (max-width: 480px) {
@@ -628,10 +655,11 @@
                                         }
                                     }
                                     
-                                    // Check for duplicate names
+                                    // Check for duplicate names but DON'T throw error
+                                    // Just log the issue but still allow the player to be added
                                     if (players.some(p => p && p.name && p.name.toLowerCase() === playerName.toLowerCase())) {
-                                        console.error('[FIREBASE] Player name already exists');
-                                        throw new Error('A player with this name already exists');
+                                        console.warn('[FIREBASE] Note: Player name already exists, but allowing addition anyway');
+                                        // No error thrown, continue with adding player
                                     }
                                     
                                     console.log('[FIREBASE] Adding new player:', updatedPlayer);
