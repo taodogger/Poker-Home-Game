@@ -80,7 +80,7 @@ body::before {
 header {
     position: static;
     width: 100%;
-    padding: 1rem;
+    padding: 8px;
     background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9));
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
@@ -88,19 +88,24 @@ header {
     align-items: center;
     box-sizing: border-box;
     z-index: 10;
+    height: auto;
+    min-height: 50px;
 }
 
 .header-title {
-    font-size: clamp(1.5rem, 5vw, 2.25rem);
+    font-size: clamp(1rem, 4vw, 1.5rem);
     font-weight: 600;
     margin: 0;
     color: white;
     text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .header-controls {
     display: flex;
-    gap: 1rem;
+    gap: 8px;
     align-items: center;
 }
 
@@ -151,7 +156,7 @@ h1::after {
 
 /* Main Content Container */
 main {
-    padding-top: 1rem;
+    padding-top: 8px;
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
@@ -679,25 +684,21 @@ label {
 /* Responsive Design */
 @media (max-width: 768px) {
     header {
-        padding: 0.75rem;
-        flex-direction: column;
-        gap: 0.5rem;
+        padding: 6px;
+        min-height: 40px;
     }
 
     .header-title {
-        text-align: center;
-        width: 100%;
+        font-size: 1rem;
+        max-width: 40%;
     }
 
     .header-controls {
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 6px;
     }
 
     main {
-        padding-top: 0.5rem;
+        padding-top: 4px;
         grid-template-columns: 1fr;
         gap: var(--spacing-lg);
     }
@@ -730,8 +731,13 @@ label {
     }
 
     #theme-selector {
-        width: 100%;
-        max-width: none;
+        max-width: 100px;
+        font-size: 12px;
+    }
+
+    .action-button {
+        padding: 4px 6px;
+        font-size: 12px;
     }
 
     .qr-wrapper {
@@ -759,7 +765,7 @@ label {
     }
 
     header {
-        padding: 0.5rem;
+        padding: 4px;
     }
 
     .header-title {
@@ -767,7 +773,7 @@ label {
     }
 
     main {
-        padding-top: 0.5rem;
+        padding-top: 4px;
     }
 
     section {
@@ -827,6 +833,12 @@ label {
 
     input, select, textarea {
         font-size: 16px !important; /* Prevent iOS zoom */
+    }
+
+    header {
+        padding-top: max(6px, env(safe-area-inset-top));
+        padding-right: max(6px, env(safe-area-inset-right));
+        padding-left: max(6px, env(safe-area-inset-left));
     }
 }
 
