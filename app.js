@@ -1550,82 +1550,43 @@ function setupFirebaseListeners(gameIdOverride, forceRefresh = false) {
             
             console.log(`[FIREBASE] Game data exists:`, snapshot.val());
             
+            // Immediately check if there are players
+            const gameData = snapshot.val();
+            if (gameData && gameData.state) {
+                // Process lastPlayer if it exists
+                if (gameData.state.lastPlayer) {
+                    console.log('[FIREBASE] Found lastPlayer in initial game data, processing immediately');
+                    handleLastPlayerUpdate(gameData.state.lastPlayer);
+                }
+                
+                // Also process any players in the players array
+                if (gameData.state.players && gameData.state.players.length > 0) {
+                    console.log('[FIREBASE] Found existing players in state, processing immediately');
+                    handlePlayerDataUpdate(gameData.state.players);
+                }
+            }
+            
             // Game exists, so set up listeners
             setupPlayerListener(gameId, forceRefresh);
             setupGameListener(gameId, forceRefresh);
             
-            // NEW: Set up notification listener for real-time player joins
+            // Set up notification listener for real-time player joins
             setupNotificationListener(gameId);
+            
+            // Force an immediate refresh of player data
+            console.log('[FIREBASE] Forcing immediate player data refresh');
+            firebase.database().ref(`games/${gameId}/state/players`).once('value')
+                .then(playersSnapshot => {
+                    console.log('[FIREBASE] Immediate player data refresh:', playersSnapshot.val());
+                    handlePlayerDataUpdate(playersSnapshot.val());
+                })
+                .catch(error => {
+                    console.error('[FIREBASE] Error in immediate player refresh:', error);
+                });
         })
         .catch(error => {
             console.error(`[FIREBASE] Error checking game existence:`, error);
         });
-}
-
-// NEW: Set up notification listener for real-time player joins
-function setupNotificationListener(gameId) {
-    // Instead of using playerNotifications, we'll listen for changes to lastPlayer
-    const lastPlayerRef = firebase.database().ref(`games/${gameId}/state/lastPlayer`);
-    
-    // Remove any existing listeners
-    lastPlayerRef.off('value');
-    
-    console.log(`[FIREBASE] Setting up lastPlayer listener for game: ${gameId}`);
-    
-    // Set up a listener for lastPlayer changes
-    lastPlayerRef.on('value', 
-        (snapshot) => {
-            const lastPlayer = snapshot.val();
-            console.log(`[FIREBASE] Received lastPlayer update:`, lastPlayer);
-            
-            if (!lastPlayer) {
-                console.log(`[FIREBASE] No lastPlayer data`);
-                return;
-            }
-            
-            // Check if this player already exists in our state
-            const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
-                (p.id && p.id === parseInt(lastPlayer.id)) || 
-                (p.name && lastPlayer.name && 
-                    p.name.toLowerCase() === lastPlayer.name.toLowerCase())
-            );
-            
-            if (existingPlayerIndex === -1) {
-                // New player - add them
-                const playerData = {
-                    id: parseInt(lastPlayer.id),
-                    name: lastPlayer.name,
-                    initial_chips: parseInt(lastPlayer.initial_chips),
-                    current_chips: parseInt(lastPlayer.current_chips)
-                };
-                
-                console.log(`[FIREBASE] Adding new player to state:`, playerData);
-                PokerApp.state.players.push(playerData);
-                
-                // Update UI
-                updatePlayerList();
-                updateEmptyState();
-                
-                // Update hand animation if it exists
-                if (window.handAnimation) {
-                    window.handAnimation.setPlayers(PokerApp.state.players);
-                }
-                
-                // Show toast notification
-                showToast(`New player joined: ${lastPlayer.name}`, 'success');
-                
-                // Save state to localStorage
-                saveState();
-            } else {
-                console.log(`[FIREBASE] Player already exists in state, skipping:`, lastPlayer.name);
-            }
-        },
-        (error) => {
-            console.error('[FIREBASE] Error in lastPlayer listener:', error);
-        }
-    );
-    
-    console.log(`[FIREBASE] lastPlayer listener set up`);
 }
 
 // Set up the player list listener separately
@@ -1641,19 +1602,44 @@ function setupPlayerListener(gameId, forceRefresh = false) {
     
     console.log(`[FIREBASE] Setting up player listener for path: games/${gameId}/state/players`);
     
-    // Set up the listener with error handling
-    playersRef.on('value', 
-        // Success callback
-        (snapshot) => {
-            console.log(`[FIREBASE] Received player data update for game ${gameId}:`, snapshot.val());
-            handlePlayerDataUpdate(snapshot.val());
-        }, 
-        // Error callback
-        (error) => {
-            console.error(`[FIREBASE] Error in player listener:`, error);
-            showToast(`Error syncing player data: ${error.message}`, 'error');
-        }
-    );
+    // First, get the current players to handle any players that were added before we set up the listener
+    playersRef.once('value')
+        .then(snapshot => {
+            const currentPlayers = snapshot.val();
+            if (currentPlayers) {
+                console.log('[FIREBASE] Found existing players, processing...');
+                handlePlayerDataUpdate(currentPlayers);
+            }
+            
+            // Set up the ongoing listener with error handling
+            playersRef.on('value', 
+                // Success callback
+                (snapshot) => {
+                    console.log(`[FIREBASE] Received player data update for game ${gameId}:`, snapshot.val());
+                    handlePlayerDataUpdate(snapshot.val());
+                }, 
+                // Error callback
+                (error) => {
+                    console.error(`[FIREBASE] Error in player listener:`, error);
+                    showToast(`Error syncing player data: ${error.message}`, 'error');
+                }
+            );
+        })
+        .catch(error => {
+            console.error('[FIREBASE] Error getting current players:', error);
+            
+            // Still try to set up the listener for future changes
+            playersRef.on('value', 
+                (snapshot) => {
+                    console.log(`[FIREBASE] Received player data update for game ${gameId}:`, snapshot.val());
+                    handlePlayerDataUpdate(snapshot.val());
+                }, 
+                (error) => {
+                    console.error(`[FIREBASE] Error in player listener:`, error);
+                    showToast(`Error syncing player data: ${error.message}`, 'error');
+                }
+            );
+        });
     
     // Also listen for lastUpdate changes which can trigger a refresh
     const lastUpdateRef = firebase.database().ref(`games/${gameId}/state/lastUpdate`);
@@ -1664,7 +1650,7 @@ function setupPlayerListener(gameId, forceRefresh = false) {
             
             // Refresh player data explicitly
             playersRef.once('value').then(snapshot => {
-                console.log(`[FIREBASE] Explicitly refreshing player data:`, snapshot.val());
+                console.log(`[FIREBASE] Explicitly refreshing player data after lastUpdate:`, snapshot.val());
                 handlePlayerDataUpdate(snapshot.val());
             }).catch(error => {
                 console.error(`[FIREBASE] Error refreshing player data:`, error);
@@ -1957,4 +1943,102 @@ function endGame() {
     
     // Save state
     saveState();
+}
+
+// Helper function to handle lastPlayer updates
+function handleLastPlayerUpdate(lastPlayer) {
+    if (!lastPlayer) {
+        console.log(`[FIREBASE] No lastPlayer data to process`);
+        return;
+    }
+    
+    console.log(`[FIREBASE] Processing lastPlayer:`, lastPlayer);
+    
+    // Check if this player already exists in our state
+    const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
+        (p.id && p.id === parseInt(lastPlayer.id)) || 
+        (p.name && lastPlayer.name && 
+            p.name.toLowerCase() === lastPlayer.name.toLowerCase())
+    );
+    
+    if (existingPlayerIndex === -1) {
+        // New player - add them
+        const playerData = {
+            id: parseInt(lastPlayer.id),
+            name: lastPlayer.name,
+            initial_chips: parseInt(lastPlayer.initial_chips),
+            current_chips: parseInt(lastPlayer.current_chips)
+        };
+        
+        console.log(`[FIREBASE] Adding new player to state:`, playerData);
+        PokerApp.state.players.push(playerData);
+        
+        // Update UI
+        updatePlayerList();
+        updateEmptyState();
+        
+        // Update hand animation if it exists
+        if (window.handAnimation) {
+            window.handAnimation.setPlayers(PokerApp.state.players);
+        }
+        
+        // Show toast notification
+        showToast(`New player joined: ${lastPlayer.name}`, 'success');
+        
+        // Save state to localStorage
+        saveState();
+        
+        return true;
+    } else {
+        console.log(`[FIREBASE] Player already exists in state, skipping:`, lastPlayer.name);
+        return false;
+    }
+}
+
+// Set up notification listener for real-time player joins
+function setupNotificationListener(gameId) {
+    // Instead of using playerNotifications, we'll listen for changes to lastPlayer
+    const lastPlayerRef = firebase.database().ref(`games/${gameId}/state/lastPlayer`);
+    
+    // Remove any existing listeners
+    lastPlayerRef.off('value');
+    
+    console.log(`[FIREBASE] Setting up lastPlayer listener for game: ${gameId}`);
+    
+    // First, get the current lastPlayer value to handle any player that joined before we set up the listener
+    lastPlayerRef.once('value')
+        .then(snapshot => {
+            const currentLastPlayer = snapshot.val();
+            if (currentLastPlayer) {
+                console.log('[FIREBASE] Found existing lastPlayer, processing...');
+                handleLastPlayerUpdate(currentLastPlayer);
+            }
+            
+            // Now set up the listener for future changes
+            setupLastPlayerListener(lastPlayerRef);
+        })
+        .catch(error => {
+            console.error('[FIREBASE] Error getting current lastPlayer:', error);
+            // Still try to set up the listener for future changes
+            setupLastPlayerListener(lastPlayerRef);
+        });
+}
+
+// Helper function to set up the lastPlayer listener
+function setupLastPlayerListener(lastPlayerRef) {
+    // Set up a listener for lastPlayer changes
+    lastPlayerRef.on('value', 
+        (snapshot) => {
+            const lastPlayer = snapshot.val();
+            console.log(`[FIREBASE] Received lastPlayer update:`, lastPlayer);
+            
+            // Use the common handler function
+            handleLastPlayerUpdate(lastPlayer);
+        },
+        (error) => {
+            console.error('[FIREBASE] Error in lastPlayer listener:', error);
+        }
+    );
+    
+    console.log(`[FIREBASE] lastPlayer listener set up`);
 }
