@@ -250,8 +250,11 @@
                         document.documentElement.style.setProperty('--main-color', mainColor);
                         document.documentElement.style.setProperty('--secondary-color', secondaryColor);
                         // Convert main color to RGB for rgba usage
-                        const rgb = hexToRgb(mainColor.replace('#', ''));
+                        const rgb = hexToRgb(mainColor.replace('#', '')) || {r: 0, g: 153, b: 255}; // Default blue fallback
                         document.documentElement.style.setProperty('--main-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+
+                        // Store rgb globally for use in input handler
+                        window.themeRgb = rgb;
                     }
 
                     // Show game info
@@ -273,6 +276,8 @@
                         
                         // Add animation class if chips > 0
                         if (chips > 0) {
+                            // Use the safely stored RGB variable or a fallback
+                            const rgb = window.themeRgb || {r: 0, g: 153, b: 255};
                             chipPreview.style.background = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
                         } else {
                             chipPreview.style.background = 'rgba(255, 255, 255, 0.05)';
@@ -301,21 +306,53 @@
 
                             // Add player directly to the game's player list
                             const playersRef = database.ref(`games/${gameId}/state/players`);
+                            const playerId = parseInt(Date.now()); // Ensure ID is numeric
                             const newPlayer = {
-                                id: Date.now(),
+                                id: playerId,
                                 name: playerName,
-                                initial_chips: chips,
-                                current_chips: chips
+                                initial_chips: parseInt(chips),
+                                current_chips: parseInt(chips)
                             };
                             
-                            await playersRef.transaction((players) => {
-                                if (!players) players = [];
-                                // Check for duplicate names
-                                if (players.some(p => p.name.toLowerCase() === playerName.toLowerCase())) {
-                                    throw new Error('A player with this name already exists');
-                                }
-                                players.push(newPlayer);
-                                return players;
+                            // First, check if game exists and has a state
+                            const gameStateRef = database.ref(`games/${gameId}/state`);
+                            const gameState = await gameStateRef.once('value');
+                            
+                            // If state doesn't exist, create it
+                            if (!gameState.exists()) {
+                                await gameStateRef.set({
+                                    players: [newPlayer],
+                                    lastUpdate: Date.now()
+                                });
+                            } else {
+                                // Otherwise update existing player list as a transaction
+                                await playersRef.transaction((players) => {
+                                    if (!players) players = [];
+                                    
+                                    // Ensure players is an array (important!)
+                                    if (!Array.isArray(players)) {
+                                        players = [];
+                                    }
+                                    
+                                    // Check for duplicate names
+                                    if (players.some(p => p && p.name && p.name.toLowerCase() === playerName.toLowerCase())) {
+                                        throw new Error('A player with this name already exists');
+                                    }
+                                    
+                                    // Add the new player
+                                    players.push(newPlayer);
+                                    return players;
+                                });
+                            }
+
+                            // Update the game ratio if it doesn't match
+                            const ratio = parseFloat(buyInAmount) / parseInt(chips);
+                            await database.ref(`games/${gameId}/ratio`).set(ratio);
+                            
+                            // Update the state in Firebase
+                            await database.ref(`games/${gameId}`).update({
+                                updatedAt: Date.now(),
+                                active: true
                             });
 
                             updateStatus('Successfully joined the game!', 'success');
@@ -325,11 +362,196 @@
                             const successMessage = document.createElement('div');
                             successMessage.className = 'success-message';
                             successMessage.innerHTML = `
-                                <h2>Welcome to the game!</h2>
-                                <p>You have been added with ${chips} chips.</p>
-                                <p>You can close this window now.</p>
+                                <div class="welcome-container">
+                                    <div class="welcome-header">
+                                        <div class="confetti-container">
+                                            <div class="confetti"></div>
+                                            <div class="confetti"></div>
+                                            <div class="confetti"></div>
+                                            <div class="confetti"></div>
+                                            <div class="confetti"></div>
+                                            <div class="confetti"></div>
+                                            <div class="confetti"></div>
+                                            <div class="confetti"></div>
+                                            <div class="confetti"></div>
+                                        </div>
+                                        <h2>🎉 Welcome to the game!</h2>
+                                        <div class="chip-badge">${chips}</div>
+                                    </div>
+                                    <div class="welcome-message">
+                                        <p>You've been added as:</p>
+                                        <p class="player-name-display">${playerName}</p>
+                                        <p class="chips-display">with <strong>${chips} chips</strong></p>
+                                        <div class="close-instruction">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                            You can close this window now
+                                        </div>
+                                    </div>
+                                </div>
                             `;
                             document.querySelector('.container').appendChild(successMessage);
+
+                            // Add styles for the welcome screen
+                            const welcomeStyle = document.createElement('style');
+                            welcomeStyle.textContent = `
+                                .welcome-container {
+                                    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+                                    border-radius: 20px;
+                                    padding: 2.5rem 2rem;
+                                    color: white;
+                                    text-align: center;
+                                    box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+                                    max-width: 90%;
+                                    margin: 0 auto;
+                                    overflow: hidden;
+                                    position: relative;
+                                    animation: slide-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+                                }
+                                
+                                @keyframes slide-up {
+                                    0% { transform: translateY(40px); opacity: 0; }
+                                    100% { transform: translateY(0); opacity: 1; }
+                                }
+                                
+                                .welcome-header {
+                                    display: flex;
+                                    flex-direction: column;
+                                    align-items: center;
+                                    margin-bottom: 2rem;
+                                    position: relative;
+                                }
+                                
+                                .welcome-header h2 {
+                                    font-size: 2.2rem;
+                                    font-weight: 800;
+                                    margin: 0 0 1.5rem 0;
+                                    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                                    background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0.8));
+                                    -webkit-background-clip: text;
+                                    background-clip: text;
+                                    -webkit-text-fill-color: transparent;
+                                    letter-spacing: 0.5px;
+                                }
+                                
+                                .chip-badge {
+                                    background: white;
+                                    color: var(--main-color);
+                                    font-size: 2.8rem;
+                                    font-weight: bold;
+                                    width: 120px;
+                                    height: 120px;
+                                    border-radius: 50%;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    margin: 0 auto;
+                                    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                                    position: relative;
+                                    animation: pulse 2s ease-in-out infinite;
+                                }
+                                
+                                @keyframes pulse {
+                                    0% { transform: scale(1); }
+                                    50% { transform: scale(1.05); }
+                                    100% { transform: scale(1); }
+                                }
+                                
+                                .chip-badge::before {
+                                    content: 'CHIPS';
+                                    position: absolute;
+                                    bottom: -25px;
+                                    font-size: 0.9rem;
+                                    font-weight: 600;
+                                    letter-spacing: 2px;
+                                    color: rgba(255,255,255,0.9);
+                                    text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                                }
+                                
+                                .welcome-message {
+                                    font-size: 1.2rem;
+                                    margin-top: 2.5rem;
+                                    animation-delay: 0.2s;
+                                    animation: fade-in 0.6s forwards;
+                                    animation-delay: 0.3s;
+                                    opacity: 0;
+                                }
+                                
+                                @keyframes fade-in {
+                                    0% { opacity: 0; }
+                                    100% { opacity: 1; }
+                                }
+                                
+                                .player-name-display {
+                                    font-size: 2.2rem;
+                                    font-weight: bold;
+                                    margin: 1rem 0;
+                                    padding: 0.8rem 1.5rem;
+                                    background: rgba(255,255,255,0.15);
+                                    border-radius: 12px;
+                                    display: inline-block;
+                                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                                    text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                                    border: 1px solid rgba(255,255,255,0.2);
+                                }
+                                
+                                .chips-display {
+                                    font-size: 1.3rem;
+                                    margin: 1rem 0 2rem;
+                                }
+                                
+                                .close-instruction {
+                                    font-size: 1rem;
+                                    opacity: 0.8;
+                                    margin-top: 2.5rem;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    gap: 8px;
+                                    animation: bounce 2s infinite;
+                                    animation-delay: 2s;
+                                }
+                                
+                                @keyframes bounce {
+                                    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                                    40% { transform: translateY(-5px); }
+                                    60% { transform: translateY(-3px); }
+                                }
+                                
+                                .confetti-container {
+                                    position: absolute;
+                                    width: 100%;
+                                    height: 100%;
+                                    top: 0;
+                                    left: 0;
+                                    overflow: hidden;
+                                    z-index: 0;
+                                }
+                                
+                                .confetti {
+                                    position: absolute;
+                                    width: 10px;
+                                    height: 20px;
+                                    background-color: #fff;
+                                    opacity: 0.7;
+                                    animation: confetti-fall 3s linear infinite;
+                                }
+                                
+                                .confetti:nth-child(1) { left: 10%; animation-delay: 0s; background: #ffcc00; }
+                                .confetti:nth-child(2) { left: 20%; animation-delay: 0.5s; background: #ff6699; }
+                                .confetti:nth-child(3) { left: 30%; animation-delay: 1s; background: #33ccff; }
+                                .confetti:nth-child(4) { left: 40%; animation-delay: 1.5s; background: #99ff66; }
+                                .confetti:nth-child(5) { left: 50%; animation-delay: 2s; background: #ff9933; }
+                                .confetti:nth-child(6) { left: 60%; animation-delay: 2.5s; background: #cc99ff; }
+                                .confetti:nth-child(7) { left: 70%; animation-delay: 1s; background: #66ffcc; }
+                                .confetti:nth-child(8) { left: 80%; animation-delay: 1.5s; background: #ff99cc; }
+                                .confetti:nth-child(9) { left: 90%; animation-delay: 0.5s; background: #ffff99; }
+                                
+                                @keyframes confetti-fall {
+                                    0% { top: -10%; transform: rotate(0deg) translateX(0); }
+                                    100% { top: 100%; transform: rotate(360deg) translateX(20px); }
+                                }
+                            `;
+                            document.head.appendChild(welcomeStyle);
 
                         } catch (error) {
                             console.error('Error:', error);
