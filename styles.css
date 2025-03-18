@@ -681,12 +681,12 @@ label {
 /* Theme-specific icon styles */
 [data-theme="doginme"] .title-icon.left-icon,
 [data-theme="doginme"] .title-icon.right-icon {
-    content: url('images/doginme-icon.png');
+    content: url('images/doginme-icon.png') !important;
 }
 
 [data-theme="rizzler"] .title-icon.left-icon,
 [data-theme="rizzler"] .title-icon.right-icon {
-    content: url('images/rizzler-icon.png');
+    content: url('images/rizzler-icon.png') !important;
 }
 
 [data-theme="neon-nights"] .theme-icon {
@@ -2145,12 +2145,12 @@ button:active {
 /* Theme-specific icon styles */
 [data-theme="doginme"] .title-icon.left-icon,
 [data-theme="doginme"] .title-icon.right-icon {
-    content: url('images/doginme-icon.png');
+    content: url('images/doginme-icon.png') !important;
 }
 
 [data-theme="rizzler"] .title-icon.left-icon,
 [data-theme="rizzler"] .title-icon.right-icon {
-    content: url('images/rizzler-icon.png');
+    content: url('images/rizzler-icon.png') !important;
 }
 
 @media (max-width: 480px) {
@@ -2162,5 +2162,18 @@ button:active {
         width: 1rem;
         height: 1rem;
     }
+}
+
+/* Theme-specific backgrounds */
+[data-theme="doginme"] {
+    --main-color: #1e90ff;
+    --secondary-color: #4169e1;
+    --body-background: url("./images/doginme-background.jpg");
+}
+
+[data-theme="rizzler"] {
+    --main-color: #ff00ff;
+    --secondary-color: #bf00ff;
+    --body-background: url("./images/rizzler-background.jpg");
 }
 

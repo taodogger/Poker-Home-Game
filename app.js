@@ -1523,19 +1523,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set initial theme
     const savedTheme = localStorage.getItem('theme') || 'doginme';
-    document.body.setAttribute('data-theme', savedTheme);
-    themeSelector.value = savedTheme;
-    updateHeaderIcons(savedTheme);
+    setTheme(savedTheme);
 
     // Handle theme changes
     themeSelector.addEventListener('change', function(e) {
         const theme = e.target.value;
-        document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        updateHeaderIcons(theme);
+        setTheme(theme);
     });
 
-    function updateHeaderIcons(theme) {
+    function setTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        themeSelector.value = theme;
+        
+        // Update icons
         if (theme === 'doginme') {
             leftIcon.src = 'images/doginme-icon.png';
             rightIcon.src = 'images/doginme-icon.png';
@@ -1543,5 +1544,8 @@ document.addEventListener('DOMContentLoaded', function() {
             leftIcon.src = 'images/rizzler-icon.png';
             rightIcon.src = 'images/rizzler-icon.png';
         }
+        
+        // Update background
+        document.body.style.background = getComputedStyle(document.body).getPropertyValue('--body-background');
     }
 });
