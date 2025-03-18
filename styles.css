@@ -78,19 +78,30 @@ body::before {
 
 /* Modern Header */
 header {
-    background: rgba(10, 10, 10, 0.8);
-    backdrop-filter: var(--blur-effect);
-    -webkit-backdrop-filter: var(--blur-effect);
-    border-bottom: 1px solid var(--surface-border);
-    padding: var(--spacing-lg) var(--spacing-xxl);
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    position: static;
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 100%;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+    z-index: 10;
+}
+
+.header-title {
+    font-size: clamp(1.5rem, 5vw, 2.25rem);
+    font-weight: 600;
+    margin: 0;
+    color: white;
+    text-align: left;
+}
+
+.header-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
 }
 
 h1 {
@@ -140,10 +151,11 @@ h1::after {
 
 /* Main Content Container */
 main {
+    padding-top: 1rem;
     width: 100%;
-    max-width: 1600px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: var(--spacing-xxl);
+    box-sizing: border-box;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: var(--spacing-xxl);
@@ -667,19 +679,25 @@ label {
 /* Responsive Design */
 @media (max-width: 768px) {
     header {
-        padding: var(--spacing-md);
+        padding: 0.75rem;
         flex-direction: column;
-        text-align: center;
-        gap: var(--spacing-md);
+        gap: 0.5rem;
     }
 
-    h1 {
-        font-size: clamp(2rem, 8vw, 2.5rem);
+    .header-title {
         text-align: center;
+        width: 100%;
+    }
+
+    .header-controls {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     main {
-        padding: var(--spacing-md);
+        padding-top: 0.5rem;
         grid-template-columns: 1fr;
         gap: var(--spacing-lg);
     }
@@ -741,11 +759,15 @@ label {
     }
 
     header {
-        padding: var(--spacing-sm);
+        padding: 0.5rem;
+    }
+
+    .header-title {
+        font-size: clamp(1.25rem, 4vw, 1.5rem);
     }
 
     main {
-        padding: var(--spacing-sm);
+        padding-top: 0.5rem;
     }
 
     section {
