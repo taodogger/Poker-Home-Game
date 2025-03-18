@@ -894,17 +894,11 @@ select#theme-selector,
     #theme-selector:not(:focus),
     #theme-selector:not(:active),
     html body header .header-controls #theme-selector {
-        min-width: 80px;
-        max-width: 100px;
-        padding: 4px 20px 4px 6px;
-        font-size: 0.75rem;
-        height: 28px;
-        background-position: right 4px center;
-        background-size: 14px;
         color: white !important;
         -webkit-text-fill-color: white !important;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-        font-weight: 500;
+        background-color: #1a1a1a !important;
+        text-shadow: none !important;
+        opacity: 1 !important;
     }
 
     #theme-selector option,
@@ -926,10 +920,13 @@ select#theme-selector,
     /* Firefox-specific mobile fixes */
     @-moz-document url-prefix() {
         #theme-selector,
-        #theme-selector:not(:focus) {
+        #theme-selector:not(:focus),
+        #theme-selector option,
+        #theme-selector option:checked {
             color: white !important;
             background-color: #1a1a1a !important;
-            text-shadow: none;
+            text-shadow: none !important;
+            opacity: 1 !important;
         }
     }
 
@@ -2275,6 +2272,8 @@ button:active {
         color: white !important;
         -webkit-text-fill-color: white !important;
         background-color: #1a1a1a !important;
+        text-shadow: none !important;
+        opacity: 1 !important;
     }
 
     /* Ensure dropdown arrow remains visible */
@@ -2283,15 +2282,37 @@ button:active {
         background-repeat: no-repeat !important;
         background-position: right 4px center !important;
         background-size: 14px !important;
+        min-width: 80px;
+        max-width: 100px;
+        padding: 4px 20px 4px 6px;
+        font-size: 0.75rem;
+        height: 28px;
+        font-weight: 500;
     }
 
     /* Ensure text remains visible during selection */
     #theme-selector option:hover,
     #theme-selector option:focus,
-    #theme-selector option:active {
+    #theme-selector option:active,
+    #theme-selector option:checked {
         color: white !important;
         background-color: #333 !important;
         -webkit-text-fill-color: white !important;
+        text-shadow: none !important;
+        opacity: 1 !important;
+    }
+
+    /* Firefox-specific mobile fixes */
+    @-moz-document url-prefix() {
+        #theme-selector,
+        #theme-selector:not(:focus),
+        #theme-selector option,
+        #theme-selector option:checked {
+            color: white !important;
+            background-color: #1a1a1a !important;
+            text-shadow: none !important;
+            opacity: 1 !important;
+        }
     }
 }
 
