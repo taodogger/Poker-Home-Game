@@ -78,16 +78,21 @@ body::before {
 
 /* Modern Header */
 header {
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     padding: 0.5rem 1rem;
-    background: transparent;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
     height: 48px;
+    z-index: 1000;
 }
 
 .header-title {
@@ -152,7 +157,7 @@ h1::after {
 
 /* Main Content Container */
 main {
-    padding-top: 1rem;
+    padding-top: calc(48px + 1rem);
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
@@ -695,7 +700,7 @@ label {
         grid-template-columns: 1fr;
         gap: var(--spacing-lg);
     }
-
+    
     section {
         padding: var(--spacing-lg);
         margin-bottom: var(--spacing-md);
@@ -716,7 +721,7 @@ label {
         padding: 0.875rem;
         height: 3rem;
     }
-
+    
     .theme-controls {
         flex-direction: column;
         padding: var(--spacing-md);
@@ -763,11 +768,11 @@ label {
     }
 
     .header-title {
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
     }
 
     main {
-        padding-top: 0.75rem;
+        padding-top: calc(40px + 0.75rem);
     }
 
     section {
@@ -791,11 +796,11 @@ label {
         flex-direction: column;
         gap: var(--spacing-sm);
     }
-
+    
     .buy-in-request-actions button {
         width: 100%;
     }
-
+    
     .manual-entry-note {
         font-size: 0.75rem;
         padding: var(--spacing-sm);
@@ -847,6 +852,11 @@ label {
         padding-top: max(0.375rem, env(safe-area-inset-top));
         padding-right: max(0.75rem, env(safe-area-inset-right));
         padding-left: max(0.75rem, env(safe-area-inset-left));
+        height: calc(40px + env(safe-area-inset-top));
+    }
+
+    main {
+        padding-top: calc(40px + env(safe-area-inset-top) + 0.75rem);
     }
 }
 
@@ -858,7 +868,7 @@ label {
     }
 
     section {
-        padding: var(--spacing-md);
+    padding: var(--spacing-md);
     }
 
     h1 {
@@ -866,7 +876,7 @@ label {
     }
 
     h2 {
-        font-size: 1.5rem;
+    font-size: 1.5rem;
         margin-bottom: var(--spacing-sm);
     }
 
@@ -904,7 +914,7 @@ button,
 }
 
 @keyframes fadeIn {
-    from { 
+    from {
         opacity: 0;
         transform: translateY(20px);
     }
@@ -1386,35 +1396,6 @@ button, input, .qr-wrapper {
 .ratio-info {
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.7);
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 480px) {
-    #notifications-area {
-        top: auto;
-        bottom: 20px;
-        right: 10px;
-        left: 10px;
-        width: auto;
-    }
-    
-    .buy-in-request {
-        padding: var(--spacing-sm);
-    }
-    
-    .request-actions {
-        flex-direction: column;
-    }
-    
-    .qr-wrapper {
-        max-width: 100%;
-        padding: var(--spacing-sm);
-    }
-    
-    .qr-wrapper img {
-        max-width: 100%;
-        height: auto;
-    }
 }
 
 /* Manual Entry Note */
