@@ -670,41 +670,48 @@ label {
 
 /* Theme selector styles */
 #theme-selector {
-    background: #1a1a1a !important;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-    color: white !important;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    height: 28px;
-    max-width: 90px;
-    cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8.825L1.175 4 2.238 2.938 6 6.7l3.763-3.763L10.825 4z'/%3E%3C/svg%3E");
+    -moz-appearance: none;
+    background-color: #1a1a1a !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 0.5rem center;
-    padding-right: 1.5rem;
+    background-size: 1.5em;
 }
 
 #theme-selector option {
-    background: #1a1a1a !important;
+    background-color: #1a1a1a !important;
     color: white !important;
-    padding: 10px;
-    font-size: 0.75rem;
-}
-
-#theme-selector:hover {
-    border-color: var(--main-color);
-    background-color: #2a2a2a !important;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    padding: 0.5rem;
 }
 
 #theme-selector:focus {
     outline: none;
-    border-color: var(--main-color);
-    box-shadow: 0 0 0 2px rgba(var(--main-color-rgb), 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+#theme-selector:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Ensure the selected option is visible */
+#theme-selector option:checked {
+    background-color: #1a1a1a !important;
+    color: white !important;
+}
+
+/* For Firefox */
+#theme-selector:-moz-focusring {
+    color: white !important;
+    text-shadow: 0 0 0 white;
 }
 
 /* Theme-specific icon styles */
