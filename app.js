@@ -591,8 +591,9 @@ window.PokerApp = {
             return endGame();
         },
         
-        // Reset the game state
+        // Reset the game state - override the global one to prevent duplication
         reset() {
+            // Only call our improved resetGame function
             return resetGame();
         },
         
@@ -1815,6 +1816,8 @@ function updatePlayerCountNotification(currentCount) {
 }
 
 function resetGame() {
+    console.log('Resetting game...');
+    
     // End current game if in progress
     if (PokerApp.state.gameInProgress) {
         endGame();
@@ -1833,6 +1836,7 @@ function resetGame() {
             firebase.database().ref(`games/${PokerApp.state.sessionId}`).off();
             firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).off();
             firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastUpdate`).off();
+            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastPlayer`).off();
             
             console.log('Cleaned up all Firebase listeners and connections');
         } catch (error) {
@@ -1867,17 +1871,40 @@ function resetGame() {
         }
     }
     
-    // Clear game name input
+    // Clear game name input and enable it
     const gameNameInput = document.getElementById('game-name');
     if (gameNameInput) {
         gameNameInput.value = '';
         gameNameInput.disabled = false;
     }
     
+    // Reset lobby submit button
+    const submitButton = document.querySelector('#lobby-form button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Create Game Lobby';
+    }
+    
+    // Reset lobby status badge
+    const lobbyStatusBadge = document.querySelector('.lobby-status-badge');
+    if (lobbyStatusBadge) {
+        lobbyStatusBadge.classList.remove('active');
+        lobbyStatusBadge.classList.add('inactive');
+    }
+    
+    // Reset lobby status text
+    const lobbyStatusText = document.getElementById('lobby-status-text');
+    if (lobbyStatusText) {
+        lobbyStatusText.textContent = 'No active game';
+    }
+    
     // Update status badges
     updateGameStatus('Game reset', false);
     
-    // Save state
+    // Clear localStorage to ensure no state is persisted
+    localStorage.removeItem('pokerAppState');
+    
+    // Save the fresh state
     saveState();
     
     showToast('Game reset successfully', 'success');

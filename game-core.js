@@ -74,29 +74,9 @@ function endGame() {
     saveState();
 }
 
-function resetGame() {
-    // End current game if in progress
-    if (PokerApp.state.gameInProgress) {
-        endGame();
-    }
-    
-    // Reset game state
-    PokerApp.state.players = [];
-    PokerApp.state.dealerId = null;
-    PokerApp.state.nextPlayerId = 1;
-    PokerApp.state.gameInProgress = false;
-    
-    // Update UI
-    updatePlayerList();
-    updateEmptyState();
-    
-    // Save state
-    saveState();
-    
-    PokerApp.UI.showToast('Game reset successfully', 'success');
-}
+// resetGame function was moved to app.js to prevent duplicate implementations
 
 // Export game functions
 window.startGame = startGame;
 window.endGame = endGame;
-window.resetGame = resetGame; 
+// window.resetGame = resetGame; // Removed to prevent duplicate function calls 
