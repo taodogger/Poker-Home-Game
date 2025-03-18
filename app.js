@@ -655,12 +655,49 @@ function handleTouchEnd(e) {
     }
 }
 
+// Global setTheme function that can be accessed from anywhere
+function setTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    
+    // Update icons
+    const leftIcon = document.querySelector('.title-icon.left-icon');
+    const rightIcon = document.querySelector('.title-icon.right-icon');
+    
+    if (leftIcon && rightIcon) {
+        if (theme === 'doginme') {
+            leftIcon.src = 'images/doginme-icon.png';
+            rightIcon.src = 'images/doginme-icon.png';
+        } else if (theme === 'rizzler') {
+            leftIcon.src = 'images/rizzler-icon.png';
+            rightIcon.src = 'images/rizzler-icon.png';
+        }
+    }
+    
+    // Update background
+    document.body.style.background = getComputedStyle(document.body).getPropertyValue('--body-background');
+    
+    // Update the theme selector if it exists
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.value = theme;
+    }
+    
+    // Apply theme to HandAnimation if it exists
+    if (window.handAnimation && themes[theme]) {
+        window.handAnimation.setTheme(themes[theme]);
+    }
+    
+    // Save to global state
+    if (window.PokerApp && window.PokerApp.state) {
+        window.PokerApp.state.theme = theme;
+    }
+}
+
 // Theme handling
 document.addEventListener('DOMContentLoaded', function() {
     const themeSelector = document.getElementById('theme-selector');
-    const leftIcon = document.querySelector('.title-icon.left-icon');
-    const rightIcon = document.querySelector('.title-icon.right-icon');
-
+    
     // Set initial theme
     const savedTheme = localStorage.getItem('theme') || 'doginme';
     if (themeSelector) {
@@ -739,23 +776,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedOption.style.fontWeight = 'bold';
             }
         });
-    }
-
-    function setTheme(theme) {
-        document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        
-        // Update icons
-        if (theme === 'doginme') {
-            leftIcon.src = 'images/doginme-icon.png';
-            rightIcon.src = 'images/doginme-icon.png';
-        } else if (theme === 'rizzler') {
-            leftIcon.src = 'images/rizzler-icon.png';
-            rightIcon.src = 'images/rizzler-icon.png';
-        }
-        
-        // Update background
-        document.body.style.background = getComputedStyle(document.body).getPropertyValue('--body-background');
     }
 });
 
