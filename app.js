@@ -659,6 +659,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Force text color update
         themeSelector.style.color = 'white';
         themeSelector.style.webkitTextFillColor = 'white';
+        themeSelector.style.opacity = '1';
+        
+        // Force text color for options
+        Array.from(themeSelector.options).forEach(option => {
+            option.style.color = 'white';
+            option.style.webkitTextFillColor = 'white';
+            option.style.opacity = '1';
+        });
     }
     setTheme(savedTheme);
 
@@ -669,6 +677,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Force text color update on change
         themeSelector.style.color = 'white';
         themeSelector.style.webkitTextFillColor = 'white';
+        themeSelector.style.opacity = '1';
+        
+        // Force text color for options
+        Array.from(themeSelector.options).forEach(option => {
+            option.style.color = 'white';
+            option.style.webkitTextFillColor = 'white';
+            option.style.opacity = '1';
+        });
     });
 
     function setTheme(theme) {
@@ -679,6 +695,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Force text color update
             themeSelector.style.color = 'white';
             themeSelector.style.webkitTextFillColor = 'white';
+            themeSelector.style.opacity = '1';
+            
+            // Force text color for options
+            Array.from(themeSelector.options).forEach(option => {
+                option.style.color = 'white';
+                option.style.webkitTextFillColor = 'white';
+                option.style.opacity = '1';
+            });
         }
         
         // Update icons
