@@ -62,6 +62,61 @@
   - RIZZLER (exclusive themed experience inspired by the Rizzler himself)
   - Doginme (Tokenised Self Belief inspired theme)
 
+### 🖼️ Custom Table Images
+- Customizable table images for themed experiences
+- Enhance the game environment with unique visuals
+
+### 🔄 Theme Persistence
+- Theme settings persist between sessions
+- Consistency in game appearance across different sessions
+
+### 🎮 Improved Dealer Selection Animation
+- Enhanced animation for random dealer assignment
+- More realistic and smoother card dealing
+
+### 📊 Detailed Game Statistics
+- Track game statistics and summaries
+- Gain insights into player performance and game outcomes
+
+### 💾 Persistent Game State
+- Game state is saved in browser storage
+- Return to your game even after closing the browser
+- Multiple save slots for different game sessions
+
+### �� Responsive Design
+- Optimized for desktop, tablet, and mobile devices
+- Adjusts layout based on screen size
+- Touch-friendly controls for mobile users
+
+### 🎯 Intuitive Player Management
+- Easy-to-use interface for adding and managing players
+- Real-time updates of chip counts and standings
+
+### 🔄 Real-time Chip Total Updates
+- Instant updates of the total chip count
+- Keep track of the game's progress at a glance
+
+### 📊 Enhanced Game Statistics
+- More detailed game statistics and summaries
+- Gain insights into player performance and game outcomes
+
+### 🐛 Various Bug Fixes and Performance Improvements
+- Address various bugs and improve overall performance
+- Ensure smooth and reliable game experience
+
+### 🎨 Updated Theme System
+- Updated theme system with custom backgrounds
+- Enhance the game environment with unique visuals
+
+### 📱 Enhanced Mobile Responsiveness
+- Improved mobile responsiveness for better user experience
+- Ensure consistent game experience across all devices
+
+### 🎮 Recent Updates
+- Improved payout calculator with enhanced accuracy
+- Enhanced game statistics with more detailed information
+- Various bug fixes and performance improvements
+
 ---
 
 ## 🚀 Getting Started

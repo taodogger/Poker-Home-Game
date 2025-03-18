@@ -172,7 +172,7 @@ input {
 input:focus {
     outline: none;
     border-color: var(--main-color);
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.25);
+    box-shadow: 0 0 0 2px rgba(var(--main-color-rgb), 0.3);
     background: rgba(0, 0, 0, 0.3);
 }
 
@@ -204,7 +204,16 @@ button:hover {
 }
 
 button:active {
-    transform: translateY(0);
+    transform: translateY(1px);
+}
+
+/* Add touch feedback for mobile devices */
+.touch-active {
+    background-color: var(--secondary-color);
+    transform: translateY(1px);
+    opacity: 0.9;
+    outline: 2px solid rgba(255, 255, 255, 0.3);
+    transition: none; /* Immediate feedback without transition delay */
 }
 
 button::after {
@@ -636,6 +645,35 @@ td {
     #game-controls {
         grid-template-columns: 1fr;
     }
+    
+    .game-control-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    
+    /* Make touch targets larger on mobile */
+    button, 
+    select,
+    input[type="submit"],
+    .action-button {
+        min-height: 44px; /* Apple's recommended minimum touch target size */
+    }
+    
+    /* Improve form controls on mobile */
+    select, input, button {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+    }
+    
+    /* Make sure buttons have proper padding for touch */
+    .touch-active {
+        outline: 3px solid rgba(255, 255, 255, 0.4);
+    }
 }
 
 @media (max-width: 480px) {
@@ -648,18 +686,55 @@ td {
     }
     
     .card {
-        width: 40px;
-        height: 56px;
+        width: 36px;
+        height: 50px;
     }
     
     button {
-        padding: var(--spacing-sm) var(--spacing-md);
-        font-size: 0.9rem;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: 0.85rem;
     }
     
-th, td {
-        padding: var(--spacing-sm);
-        font-size: 0.9rem;
+    th, td {
+        padding: var(--spacing-xs);
+        font-size: 0.85rem;
+    }
+    
+    .poker-table {
+        height: 280px;
+    }
+    
+    .form-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    input {
+        width: 100%;
+    }
+    
+    .game-control-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Add a specific media query for very small screens */
+@media (max-width: 360px) {
+    h1 {
+        font-size: 1.25rem;
+    }
+    
+    .card {
+        width: 30px;
+        height: 42px;
+    }
+    
+    .card-value, .card-suit {
+        font-size: 0.7rem;
+    }
+    
+    .poker-table {
+        height: 240px;
     }
 }
 
@@ -680,6 +755,246 @@ th, td {
     margin-bottom: var(--spacing-md);
 }
 
+/* Total row styling */
+.totals-row {
+    background: rgba(var(--main-color-rgb), 0.2) !important;
+    border-top: 2px solid var(--main-color) !important;
+    font-size: 1.05rem;
+}
+
+.totals-row td {
+    padding: var(--spacing-md) !important;
+}
+
+/* Add Chips button */
+.add-chips-btn {
+    margin-left: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    color: #333;
+    font-size: 0.85rem;
+}
+
+/* Modal dialog for chip addons */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-content {
+    background: var(--surface-gradient);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--border-radius-md);
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    animation: modalSlideIn 0.3s forwards;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--surface-border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.2rem;
+}
+
+.close-modal {
+    font-size: 1.5rem;
+    color: var(--text-color);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: var(--spacing-md);
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.cancel-button {
+    background: rgba(169, 169, 169, 0.2);
+    color: white;
+    border: 1px solid rgba(169, 169, 169, 0.4);
+}
+
+.confirm-button {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Payout instructions styling */
+.payout-summary {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.payout-summary h3 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: var(--spacing-xs);
+}
+
+.prize-pool {
+    background: rgba(var(--main-color-rgb), 0.1);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.prize-pool p {
+    margin: var(--spacing-xs) 0;
+}
+
+.payment-list {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md);
+}
+
+.payment-list h3 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: var(--spacing-xs);
+}
+
+.payment-list ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.payment-list li {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-sm);
+    transition: transform var(--transition-standard);
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.payment-list li.fade-in {
+    animation: fadeInUp 0.3s ease forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.payment-list li:hover {
+    transform: translateY(-2px);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.payment-list .from {
+    font-weight: 500;
+    color: #ff7675;
+    text-align: right;
+}
+
+.payment-list .arrow {
+    font-weight: bold;
+    color: var(--main-color);
+}
+
+.payment-list .to {
+    font-weight: 500;
+    color: #55efc4;
+}
+
+.payment-list .amount {
+    font-weight: 700;
+    color: white;
+    background: var(--main-color);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.no-payments {
+    text-align: center;
+    padding: var(--spacing-md);
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 480px) {
+    .payment-list li {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "from arrow"
+            "to amount";
+        gap: var(--spacing-xs);
+    }
+    
+    .payment-list .from {
+        grid-area: from;
+        text-align: left;
+    }
+    
+    .payment-list .arrow {
+        grid-area: arrow;
+    }
+    
+    .payment-list .to {
+        grid-area: to;
+    }
+    
+    .payment-list .amount {
+        grid-area: amount;
+    }
+}
+
+/* Action button improvements */
 .action-button {
     flex: 1;
     min-width: 150px;
@@ -778,5 +1093,98 @@ th, td {
     width: 24px;
     object-fit: contain;
     vertical-align: middle;
+}
+
+/* Update totals button styling - REMOVED */
+
+/* Add animation for the update button - REMOVED */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Improve the totals row for mobile */
+@media (max-width: 480px) {
+    /* Mobile styles here */
+}
+
+/* Game statistics styling */
+.game-stats {
+    background: rgba(var(--main-color-rgb), 0.1);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+    border-left: 3px solid var(--main-color);
+}
+
+.game-stats h4 {
+    font-size: 1.05rem;
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: var(--spacing-xs);
+}
+
+.game-stats p {
+    margin: var(--spacing-xs) 0;
+    padding: var(--spacing-xs) 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    line-height: 1.4;
+}
+
+.game-stats p:last-child {
+    border-bottom: none;
+}
+
+.game-stats strong {
+    margin-right: var(--spacing-xs);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Add animation for fun statistics */
+.game-stats p {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeInStats 0.5s ease forwards;
+}
+
+@keyframes fadeInStats {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.game-stats p:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.game-stats p:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.game-stats p:nth-child(4) {
+    animation-delay: 0.3s;
+}
+
+.game-stats p:nth-child(5) {
+    animation-delay: 0.4s;
+}
+
+.game-stats p:nth-child(6) {
+    animation-delay: 0.5s;
+}
+
+/* Responsive adjustments for game stats */
+@media (max-width: 480px) {
+    .game-stats {
+        padding: var(--spacing-sm);
+    }
+    
+    .game-stats p {
+        font-size: 0.9rem;
+    }
 }
 
