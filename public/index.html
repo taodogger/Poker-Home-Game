@@ -1,89 +1,221 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Poker Home Game Manager</title>
+    <meta name="description" content="A modern poker home game manager to track chips, select dealers, and calculate payouts">
+    <meta name="theme-color" content="#2E8B57">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>
+            <span id="left-icon" class="title-icon">♠️</span>
+            Poker Home Game Manager
+            <span id="right-icon" class="title-icon">♥️</span>
+        </h1>
+        <div class="theme-controls">
+            <span>Theme:</span>
+            <select id="theme-selector" name="theme-selector" aria-label="Select theme">
+                <option value="classic-green">Classic Green</option>
+                <option value="royal-blue">Royal Blue</option>
+                <option value="crimson-red">Crimson Red</option>
+                <option value="midnight-black">Midnight Black</option>
+                <option value="ocean-breeze">Ocean Breeze</option>
+                <option value="firestorm">Firestorm</option>
+                <option value="purple-haze">Purple Haze</option>
+                <option value="neon-nights">Neon Nights</option>
+                <option value="rizzler">RIZZLER 💪</option>
+                <option value="doginme">Doginme 🐶</option>
+            </select>
+        </div>
+    </header>
+    <main>
+        <section id="money-to-chip-ratio">
+            <h2>Money to Chip Ratio</h2>
+            <div id="ratio-content">
+                <div id="ratio-form-container">
+                    <form id="ratio-form" class="setup-form">
+                        <div class="form-group">
+                            <label for="money-amount">Money Amount ($):</label>
+                            <input 
+                                type="number" 
+                                id="money-amount" 
+                                name="money-amount"
+                                autocomplete="off"
+                                placeholder="Enter money amount"
+                                min="0"
+                                step="0.01"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="chip-amount">Chip Amount:</label>
+                            <input 
+                                type="number" 
+                                id="chip-amount" 
+                                name="chip-amount"
+                                autocomplete="off"
+                                placeholder="Enter chip amount"
+                                min="0"
+                                step="1"
+                                required
+                            >
+                        </div>
+                        <button type="submit">Set Ratio</button>
+                    </form>
+                </div>
+                <div class="ratio-result">
+                    <p id="ratio-display">Each chip is worth $1.00</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="add-player">
+            <h2>Add Player</h2>
+            <form id="player-form" class="setup-form">
+                <div class="form-group">
+                    <label for="player-name">Player Name:</label>
+                    <input 
+                        type="text" 
+                        id="player-name" 
+                        name="player-name" 
+                        autocomplete="name"
+                        placeholder="Enter player name"
+                        required
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="initial-chips">Initial Chips:</label>
+                    <input 
+                        type="number" 
+                        id="initial-chips" 
+                        name="initial-chips"
+                        autocomplete="off"
+                        placeholder="Enter chip amount"
+                        min="0"
+                        step="1"
+                        required
+                    >
+                </div>
+                <button type="submit">Add Player</button>
+            </form>
+        </section>
+        
+        <section id="players">
+            <h2>Players</h2>
+            <div class="table-container">
+                <table id="player-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Initial Chips</th>
+                            <th>Current Chips</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty-state" id="no-players-message">
+                <p>No players added yet. Add players to start your game.</p>
+            </div>
+        </section>
+        
+        <section id="game-controls">
+            <h2>Game Controls</h2>
+            <div class="game-control-buttons">
+                <button id="start-game" class="action-button start-button">
+                    <span class="button-icon">▶</span> Start Game
+                </button>
+                <button id="simulate-hand" class="action-button simulate-button" disabled>
+                    <span class="button-icon">🎲</span> Simulate Hand
+                </button>
+                <button id="end-game" class="action-button end-button" disabled>
+                    <span class="button-icon">⏹</span> End Game
+                </button>
+                <button id="reset-game" class="action-button reset-button">
+                    <span class="button-icon">↺</span> Reset Game
+                </button>
+            </div>
+            <div class="game-status" id="game-status">
+                <p>Game not started. Add players to begin.</p>
+            </div>
+        </section>
+        
+        <section id="animation">
+            <h2>Dealer Selection</h2>
+            <div id="dealer-wheel" class="poker-table"></div>
+        </section>
+        
+        <section id="payouts">
+            <h2>Payout Instructions</h2>
+            <p id="payout-instructions">Update the current chip counts and click 'Calculate Payouts' to see the settlement.</p>
+            <button id="calculate-payouts" class="primary">Calculate Payouts</button>
+            <div id="payout-list" class="payout-results"></div>
+        </section>
+    </main>
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/11.4.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/11.4.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/11.4.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/11.4.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/11.4.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/11.4.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/11.4.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/11.4.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/11.4.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/11.4.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+    <script src="hand-animation.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
-
+    <!-- Firebase Config and App -->
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+        // Initialize Firebase with config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBOrgiU5qkneWp8Flgbrx2eTPYLoTi7Uhc",
+            authDomain: "poker-home-game-699e7.firebaseapp.com",
+            databaseURL: "https://poker-home-game-699e7-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "poker-home-game-699e7",
+            storageBucket: "poker-home-game-699e7.firebasestorage.app",
+            messagingSenderId: "192105659517",
+            appId: "1:192105659517:web:cc9da7339c2098dd09c514",
+            measurementId: "G-6WT21VPL0S"
+        };
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
-        }
-      });
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const analytics = firebase.analytics();
+        const database = firebase.database();
     </script>
-  </body>
+
+    <!-- Application Code -->
+    <script src="app.js"></script>
+
+    <!-- Test Script -->
+    <script>
+        // Test database connection
+        function testFirebase() {
+            const testRef = database.ref('test');
+            testRef.set({
+                timestamp: Date.now(),
+                message: 'Test connection successful'
+            })
+            .then(() => {
+                console.log('Firebase test write successful');
+                showToast('Firebase connection test successful!', 'success');
+            })
+            .catch((error) => {
+                console.error('Firebase test error:', error);
+                showToast('Firebase test failed: ' + error.message, 'error');
+            });
+        }
+
+        // Run test when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testFirebase, 1000); // Wait 1 second after page load
+        });
+    </script>
+</body>
 </html>

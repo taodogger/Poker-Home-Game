@@ -1,5 +1,5 @@
 ---
-description: Configures Cursor IDE for web development with JavaScript, TypeScript, React, Tailwind, Node.js, and Next.js, ensuring secure, performant, and maintainable coding practices
+description: 
 globs: 
 alwaysApply: true
 ---
