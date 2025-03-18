@@ -2,66 +2,106 @@
 const themes = {
     'classic-green': {
         '--main-color': '#2E8B57',
+        '--main-color-rgb': '46, 139, 87',
         '--secondary-color': '#3CB371',
+        '--secondary-color-rgb': '60, 179, 113',
+        '--vibrant-gradient': 'linear-gradient(135deg, #2E8B57, #3CB371)',
+        '--accent-gradient': 'linear-gradient(45deg, #2E8B57, #3CB371)',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '♠️'
     },
     'royal-blue': {
         '--main-color': '#4169E1',
+        '--main-color-rgb': '65, 105, 225',
         '--secondary-color': '#1E90FF',
+        '--secondary-color-rgb': '30, 144, 255',
+        '--vibrant-gradient': 'linear-gradient(135deg, #4169E1, #1E90FF)',
+        '--accent-gradient': 'linear-gradient(45deg, #4169E1, #1E90FF)',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '♦️'
     },
     'crimson-red': {
         '--main-color': '#DC143C',
+        '--main-color-rgb': '220, 20, 60',
         '--secondary-color': '#FF4500',
+        '--secondary-color-rgb': '255, 69, 0',
+        '--vibrant-gradient': 'linear-gradient(135deg, #DC143C, #FF4500)',
+        '--accent-gradient': 'linear-gradient(45deg, #DC143C, #FF4500)',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '♥️'
     },
     'midnight-black': {
         '--main-color': '#2F4F4F',
+        '--main-color-rgb': '47, 79, 79',
         '--secondary-color': '#696969',
+        '--secondary-color-rgb': '105, 105, 105',
+        '--vibrant-gradient': 'linear-gradient(135deg, #2F4F4F, #696969)',
+        '--accent-gradient': 'linear-gradient(45deg, #2F4F4F, #696969)',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '♣️'
     },
     'ocean-breeze': {
         '--main-color': '#20B2AA',
+        '--main-color-rgb': '32, 178, 170',
         '--secondary-color': '#5F9EA0',
+        '--secondary-color-rgb': '95, 158, 160',
+        '--vibrant-gradient': 'linear-gradient(135deg, #20B2AA, #5F9EA0)',
+        '--accent-gradient': 'linear-gradient(45deg, #20B2AA, #5F9EA0)',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '🌊'
     },
     'firestorm': {
         '--main-color': '#FF6347',
+        '--main-color-rgb': '255, 99, 71',
         '--secondary-color': '#FF4500',
+        '--secondary-color-rgb': '255, 69, 0',
+        '--vibrant-gradient': 'linear-gradient(135deg, #FF6347, #FF4500)',
+        '--accent-gradient': 'linear-gradient(45deg, #FF6347, #FF4500)',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '🔥'
     },
     'purple-haze': {
         '--main-color': '#9370DB',
+        '--main-color-rgb': '147, 112, 219',
         '--secondary-color': '#8A2BE2',
+        '--secondary-color-rgb': '138, 43, 226',
+        '--vibrant-gradient': 'linear-gradient(135deg, #9370DB, #8A2BE2)',
+        '--accent-gradient': 'linear-gradient(45deg, #9370DB, #8A2BE2)',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '🔮'
     },
     'neon-nights': {
         '--main-color': '#00FFFF',
+        '--main-color-rgb': '0, 255, 255',
         '--secondary-color': '#00CED1',
+        '--secondary-color-rgb': '0, 206, 209',
+        '--vibrant-gradient': 'linear-gradient(135deg, #00FFFF, #00CED1)',
+        '--accent-gradient': 'linear-gradient(45deg, #00FFFF, #00CED1)',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '💡'
     },
     'rizzler': {
-        '--main-color': '#ff00ff', // Bright pink
-        '--secondary-color': '#bf00ff', // Purple
+        '--main-color': '#ff00ff',
+        '--main-color-rgb': '255, 0, 255',
+        '--secondary-color': '#bf00ff',
+        '--secondary-color-rgb': '191, 0, 255',
+        '--vibrant-gradient': 'linear-gradient(135deg, #ff00ff, #bf00ff)',
+        '--accent-gradient': 'linear-gradient(45deg, #ff00ff, #bf00ff)',
         '--body-background': 'url("./images/rizzler-background.jpg")',
         'tableImage': './images/rizzler-board.jpg',
         'icon': './images/rizzler-icon.png'
     },
     'doginme': {
-        '--main-color': '#1e90ff', // Dodger blue
-        '--secondary-color': '#4169e1', // Royal blue
+        '--main-color': '#1e90ff',
+        '--main-color-rgb': '30, 144, 255',
+        '--secondary-color': '#4169e1',
+        '--secondary-color-rgb': '65, 105, 225',
+        '--vibrant-gradient': 'linear-gradient(135deg, #1e90ff, #4169e1)',
+        '--accent-gradient': 'linear-gradient(45deg, #1e90ff, #4169e1)',
         '--body-background': 'url("./images/doginme-background.jpg")',
         'tableImage': './images/doginme-board.jpg',
         'icon': './images/doginme-icon.png',
-        '--accent-color': '#1e90ff' // Blue accent color
+        '--accent-color': '#1e90ff'
     }
 };
 
