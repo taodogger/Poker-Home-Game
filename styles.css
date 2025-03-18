@@ -77,12 +77,17 @@ body {
 body::before {
     content: '';
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--body-gradient);
+    top: 30%;
+    left: 25%;
+    width: 50%;
+    height: 45%;
+    background: radial-gradient(circle, 
+        rgba(var(--main-color-rgb, 0, 200, 100), 0.12) 0%, 
+        rgba(var(--main-color-rgb, 0, 200, 100), 0.03) 50%, 
+        rgba(0, 0, 0, 0) 70%);
+    filter: blur(50px);
     z-index: -1;
+    pointer-events: none;
 }
 
 /* Modern Header */
@@ -235,11 +240,15 @@ section {
 section::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background: var(--accent-gradient);
-    opacity: 0;
-    transition: opacity var(--transition-standard);
-    z-index: -1;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 5px;
+    background: var(--vibrant-gradient);
+    border-radius: 0 0 5px 5px;
+    opacity: 0.85;
+    z-index: 2;
 }
 
 section::after {
@@ -692,22 +701,23 @@ label {
 }
 
 #theme-selector option {
-    background-color: #1a1a1a !important;
-    color: white !important;
-    -webkit-text-fill-color: white !important;
-    padding: 0.5rem;
-    font-size: 1rem;
-    text-shadow: none !important;
+    color: #333 !important;
+    background-color: white !important;
     opacity: 1 !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    display: block !important;
+    visibility: visible !important;
 }
 
 #theme-selector option:checked {
-    background-color: #333 !important;
-    color: white !important;
-    -webkit-text-fill-color: white !important;
-    font-weight: bold;
-    text-shadow: none !important;
+    color: #333 !important;
+    background-color: #f0f0f0 !important;
     opacity: 1 !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    display: block !important;
+    visibility: visible !important;
 }
 
 /* Mobile theme selector overrides */
@@ -2304,8 +2314,11 @@ button:active {
 
 [data-theme="rizzler"] {
     --main-color: #ff00ff;
+    --main-color-rgb: 255, 0, 255;
     --secondary-color: #bf00ff;
+    --secondary-color-rgb: 191, 0, 255;
     --body-background: url("./images/rizzler-background.jpg");
+    color-scheme: dark;
 }
 
 [data-theme="doginme"] .kahoot-card h2::after {
@@ -2323,5 +2336,59 @@ button:active {
 [data-theme="doginme"] .game-status-badge.active span {
     background: #1e90ff;
     box-shadow: 0 0 10px rgba(30, 144, 255, 0.5);
+}
+
+/* Theme-specific styling for card accents and buttons */
+[data-theme="classic-green"] .kahoot-card h2::after,
+[data-theme="royal-blue"] .kahoot-card h2::after,
+[data-theme="crimson-red"] .kahoot-card h2::after,
+[data-theme="midnight-black"] .kahoot-card h2::after,
+[data-theme="ocean-breeze"] .kahoot-card h2::after,
+[data-theme="firestorm"] .kahoot-card h2::after,
+[data-theme="purple-haze"] .kahoot-card h2::after,
+[data-theme="neon-nights"] .kahoot-card h2::after,
+[data-theme="rizzler"] .kahoot-card h2::after,
+[data-theme="doginme"] .kahoot-card h2::after {
+    background: linear-gradient(to right, var(--main-color), var(--secondary-color));
+}
+
+[data-theme="classic-green"] .kahoot-button,
+[data-theme="royal-blue"] .kahoot-button,
+[data-theme="crimson-red"] .kahoot-button,
+[data-theme="midnight-black"] .kahoot-button,
+[data-theme="ocean-breeze"] .kahoot-button,
+[data-theme="firestorm"] .kahoot-button,
+[data-theme="purple-haze"] .kahoot-button,
+[data-theme="neon-nights"] .kahoot-button,
+[data-theme="rizzler"] .kahoot-button,
+[data-theme="doginme"] .kahoot-button {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
+[data-theme="classic-green"] .player-avatar,
+[data-theme="royal-blue"] .player-avatar,
+[data-theme="crimson-red"] .player-avatar,
+[data-theme="midnight-black"] .player-avatar,
+[data-theme="ocean-breeze"] .player-avatar,
+[data-theme="firestorm"] .player-avatar,
+[data-theme="purple-haze"] .player-avatar,
+[data-theme="neon-nights"] .player-avatar,
+[data-theme="rizzler"] .player-avatar,
+[data-theme="doginme"] .player-avatar {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+}
+
+[data-theme="classic-green"] .game-status-badge.active span,
+[data-theme="royal-blue"] .game-status-badge.active span,
+[data-theme="crimson-red"] .game-status-badge.active span,
+[data-theme="midnight-black"] .game-status-badge.active span,
+[data-theme="ocean-breeze"] .game-status-badge.active span,
+[data-theme="firestorm"] .game-status-badge.active span,
+[data-theme="purple-haze"] .game-status-badge.active span,
+[data-theme="neon-nights"] .game-status-badge.active span,
+[data-theme="rizzler"] .game-status-badge.active span,
+[data-theme="doginme"] .game-status-badge.active span {
+    background: var(--main-color);
+    box-shadow: 0 0 10px rgba(var(--main-color-rgb), 0.5);
 }
 

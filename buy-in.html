@@ -6,12 +6,18 @@
     <title>Buy-in - Poker Home Game</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
         :root {
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
             --container-padding: max(1rem, env(safe-area-inset-left));
+            --main-color: #2E8B57;
+            --secondary-color: #3CB371;
+            --main-color-rgb: 46, 139, 87;
+            --secondary-color-rgb: 60, 179, 113;
+            --vibrant-gradient: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+            --glow-effect: 0 0 15px rgba(var(--main-color-rgb), 0.5);
         }
 
         body {
@@ -19,13 +25,31 @@
             padding: 0;
             min-height: 100vh;
             min-height: -webkit-fill-available;
-            background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%);
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: white;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            position: relative;
+        }
+
+        /* Add background glow that matches theme */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 30%;
+            left: 25%;
+            width: 50%;
+            height: 45%;
+            background: radial-gradient(circle, 
+                rgba(var(--main-color-rgb), 0.12) 0%, 
+                rgba(var(--main-color-rgb), 0.03) 50%, 
+                rgba(0, 0, 0, 0) 70%);
+            filter: blur(50px);
+            z-index: -1;
+            pointer-events: none;
         }
 
         html {
@@ -48,12 +72,45 @@
             padding: clamp(1.5rem, 5vw, 2.5rem);
             width: 100%;
             backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Add accent on top to match theme */
+        .buy-in-form::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 5px;
+            background: var(--vibrant-gradient);
+            border-radius: 0 0 5px 5px;
+            opacity: 0.85;
+            z-index: 2;
         }
 
         h1 {
             font-size: clamp(2rem, 8vw, 3rem);
             margin-bottom: clamp(1rem, 4vw, 2rem);
             line-height: 1.1;
+            background: linear-gradient(to right, white, rgba(255,255,255,0.8));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -10px;
+            width: 60px;
+            height: 4px;
+            background: var(--vibrant-gradient);
+            border-radius: 2px;
         }
 
         .game-info {
@@ -78,6 +135,9 @@
             padding: 0 1rem;
             font-size: clamp(1rem, 3.5vw, 1.2rem);
             border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
         }
 
         button {
@@ -85,25 +145,225 @@
             height: clamp(2.75rem, 9vw, 3.5rem);
             font-size: clamp(1rem, 3.5vw, 1.2rem);
             margin-top: clamp(1rem, 4vw, 1.5rem);
+            background: var(--vibrant-gradient);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
         }
 
         .chip-preview {
             padding: clamp(1rem, 4vw, 1.5rem);
             margin: clamp(1.5rem, 5vw, 2rem) 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
         }
 
         .chip-preview p {
             font-size: clamp(0.875rem, 3vw, 1rem);
+            margin-top: 0;
         }
 
         .chip-preview h3 {
             font-size: clamp(1.5rem, 5vw, 2rem);
+            margin-bottom: 0;
         }
 
         .status {
             font-size: clamp(0.875rem, 3vw, 1rem);
             padding: clamp(0.75rem, 3vw, 1rem);
             margin-top: clamp(1rem, 4vw, 1.5rem);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+
+        .status.error {
+            background: rgba(244, 67, 54, 0.1);
+            border-color: rgba(244, 67, 54, 0.3);
+        }
+
+        .status.pending {
+            background: rgba(255, 193, 7, 0.1);
+            border-color: rgba(255, 193, 7, 0.3);
+        }
+
+        /* Horizontal welcome message styles */
+        .welcome-container {
+            background: var(--vibrant-gradient);
+            border-radius: 16px;
+            padding: 1.5rem;
+            color: white;
+            text-align: center;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+            width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+            position: relative;
+            animation: slide-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+        
+        @keyframes slide-up {
+            0% { transform: translateY(40px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        
+        .welcome-header {
+            display: flex;
+            align-items: center;
+            position: relative;
+            flex: 1;
+            min-width: 300px;
+            gap: 1.5rem;
+        }
+        
+        .welcome-header h2 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0.8));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+        
+        .chip-badge {
+            background: white;
+            color: var(--main-color);
+            font-size: 2.2rem;
+            font-weight: bold;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: pulse 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        
+        .chip-badge small {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-top: 3px;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .welcome-message {
+            font-size: 1.1rem;
+            animation: fade-in 0.6s forwards;
+            animation-delay: 0.3s;
+            opacity: 0;
+            flex: 1;
+            min-width: 300px;
+            text-align: left;
+        }
+        
+        @keyframes fade-in {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        .player-name-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .chips-display {
+            font-size: 1.1rem;
+            margin: 0.5rem 0 1rem;
+        }
+        
+        .close-instruction {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: bounce 2s infinite;
+            animation-delay: 2s;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-5px); }
+            60% { transform: translateY(-3px); }
+        }
+        
+        .confetti-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            z-index: 0;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 20px;
+            opacity: 0.7;
+            animation: confetti-fall 3s linear infinite;
+        }
+        
+        .confetti:nth-child(1) { left: 10%; animation-delay: 0s; background: #ffcc00; }
+        .confetti:nth-child(2) { left: 20%; animation-delay: 0.5s; background: #ff6699; }
+        .confetti:nth-child(3) { left: 30%; animation-delay: 1s; background: #33ccff; }
+        .confetti:nth-child(4) { left: 40%; animation-delay: 1.5s; background: #99ff66; }
+        .confetti:nth-child(5) { left: 50%; animation-delay: 2s; background: #ff9933; }
+        .confetti:nth-child(6) { left: 60%; animation-delay: 2.5s; background: #cc99ff; }
+        .confetti:nth-child(7) { left: 70%; animation-delay: 1s; background: #66ffcc; }
+        .confetti:nth-child(8) { left: 80%; animation-delay: 1.5s; background: #ff99cc; }
+        .confetti:nth-child(9) { left: 90%; animation-delay: 0.5s; background: #ffff99; }
+        
+        @keyframes confetti-fall {
+            0% { top: -10%; transform: rotate(0deg) translateX(0); }
+            100% { top: 100%; transform: rotate(360deg) translateX(20px); }
         }
 
         @media (max-width: 480px) {
@@ -125,6 +385,22 @@
 
             .helper-text {
                 font-size: 0.75rem;
+            }
+            
+            .welcome-container {
+                flex-direction: column;
+                padding: 1.5rem 1rem;
+            }
+            
+            .welcome-header {
+                flex-direction: column;
+                gap: 1rem;
+                min-width: auto;
+            }
+            
+            .welcome-message {
+                text-align: center;
+                min-width: auto;
             }
         }
 
@@ -210,6 +486,7 @@
         // Get game ID from URL
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('gameId') || urlParams.get('game-id');
+        const gameName = urlParams.get('game-name');
         let game = null;
 
         // Update status display
@@ -232,6 +509,11 @@
             `;
         }
 
+        // Update document title with game name if available
+        if (gameName) {
+            document.title = `Join ${gameName} - Poker Home Game`;
+        }
+
         if (gameId) {
             // Load game data
             database.ref(`games/${gameId}`)
@@ -245,16 +527,7 @@
 
                     // Update theme colors from game state
                     if (game.state && game.state.theme) {
-                        const mainColor = getThemeColor(game.state.theme, '--main-color');
-                        const secondaryColor = getThemeColor(game.state.theme, '--secondary-color');
-                        document.documentElement.style.setProperty('--main-color', mainColor);
-                        document.documentElement.style.setProperty('--secondary-color', secondaryColor);
-                        // Convert main color to RGB for rgba usage
-                        const rgb = hexToRgb(mainColor.replace('#', '')) || {r: 0, g: 153, b: 255}; // Default blue fallback
-                        document.documentElement.style.setProperty('--main-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
-
-                        // Store rgb globally for use in input handler
-                        window.themeRgb = rgb;
+                        updateTheme(game.state.theme);
                     }
 
                     // Show game info
@@ -272,7 +545,7 @@
                     buyInInput.addEventListener('input', () => {
                         const amount = parseFloat(buyInInput.value) || 0;
                         const chips = Math.floor(amount / game.ratio);
-                        chipAmount.textContent = chips;
+                        chipAmount.textContent = chips > 0 ? `${chips} chips` : "-- chips";
                         
                         // Add animation class if chips > 0
                         if (chips > 0) {
@@ -284,6 +557,9 @@
                         }
                     });
 
+                    // Listen for theme changes from host
+                    listenForThemeChanges();
+
                     // Handle form submission
                     document.getElementById('buy-in-form').addEventListener('submit', async (e) => {
                         e.preventDefault();
@@ -294,7 +570,7 @@
                         form.querySelector('button').disabled = true;
                         
                         const playerName = document.getElementById('player-name').value.trim();
-                        const buyInAmount = parseFloat(buyInInput.value);
+                        const buyInAmount = parseFloat(document.getElementById('buy-in-amount').value);
                         const chips = Math.floor(buyInAmount / game.ratio);
                         
                         try {
@@ -392,30 +668,33 @@
                             updateStatus('Successfully joined the game!', 'success');
                             form.style.display = 'none';
                             
-                            // Show success message with chip amount
+                            // Show horizontal success message with chip amount
                             const successMessage = document.createElement('div');
                             successMessage.className = 'success-message';
                             successMessage.innerHTML = `
                                 <div class="welcome-container">
+                                    <div class="confetti-container">
+                                        <div class="confetti"></div>
+                                        <div class="confetti"></div>
+                                        <div class="confetti"></div>
+                                        <div class="confetti"></div>
+                                        <div class="confetti"></div>
+                                        <div class="confetti"></div>
+                                        <div class="confetti"></div>
+                                        <div class="confetti"></div>
+                                        <div class="confetti"></div>
+                                    </div>
                                     <div class="welcome-header">
-                                        <div class="confetti-container">
-                                            <div class="confetti"></div>
-                                            <div class="confetti"></div>
-                                            <div class="confetti"></div>
-                                            <div class="confetti"></div>
-                                            <div class="confetti"></div>
-                                            <div class="confetti"></div>
-                                            <div class="confetti"></div>
-                                            <div class="confetti"></div>
-                                            <div class="confetti"></div>
+                                        <div class="chip-badge">
+                                            ${chips}
+                                            <small>chips</small>
                                         </div>
                                         <h2>🎉 Welcome to the game!</h2>
-                                        <div class="chip-badge">${chips}</div>
                                     </div>
                                     <div class="welcome-message">
                                         <p>You've been added as:</p>
-                                        <p class="player-name-display">${playerName}</p>
-                                        <p class="chips-display">with <strong>${chips} chips</strong></p>
+                                        <div class="player-name-display">${playerName}</div>
+                                        <p class="chips-display">Starting with <strong>${chips} chips</strong></p>
                                         <div class="close-instruction">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                             You can close this window now
@@ -424,168 +703,6 @@
                                 </div>
                             `;
                             document.querySelector('.container').appendChild(successMessage);
-
-                            // Add styles for the welcome screen
-                            const welcomeStyle = document.createElement('style');
-                            welcomeStyle.textContent = `
-                                .welcome-container {
-                                    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
-                                    border-radius: 20px;
-                                    padding: 2.5rem 2rem;
-                                    color: white;
-                                    text-align: center;
-                                    box-shadow: 0 15px 50px rgba(0,0,0,0.25);
-                                    max-width: 90%;
-                                    margin: 0 auto;
-                                    overflow: hidden;
-                                    position: relative;
-                                    animation: slide-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                                }
-                                
-                                @keyframes slide-up {
-                                    0% { transform: translateY(40px); opacity: 0; }
-                                    100% { transform: translateY(0); opacity: 1; }
-                                }
-                                
-                                .welcome-header {
-                                    display: flex;
-                                    flex-direction: column;
-                                    align-items: center;
-                                    margin-bottom: 2rem;
-                                    position: relative;
-                                }
-                                
-                                .welcome-header h2 {
-                                    font-size: 2.2rem;
-                                    font-weight: 800;
-                                    margin: 0 0 1.5rem 0;
-                                    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-                                    background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0.8));
-                                    -webkit-background-clip: text;
-                                    background-clip: text;
-                                    -webkit-text-fill-color: transparent;
-                                    letter-spacing: 0.5px;
-                                }
-                                
-                                .chip-badge {
-                                    background: white;
-                                    color: var(--main-color);
-                                    font-size: 2.8rem;
-                                    font-weight: bold;
-                                    width: 120px;
-                                    height: 120px;
-                                    border-radius: 50%;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    margin: 0 auto;
-                                    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-                                    position: relative;
-                                    animation: pulse 2s ease-in-out infinite;
-                                }
-                                
-                                @keyframes pulse {
-                                    0% { transform: scale(1); }
-                                    50% { transform: scale(1.05); }
-                                    100% { transform: scale(1); }
-                                }
-                                
-                                .chip-badge::before {
-                                    content: 'CHIPS';
-                                    position: absolute;
-                                    bottom: -25px;
-                                    font-size: 0.9rem;
-                                    font-weight: 600;
-                                    letter-spacing: 2px;
-                                    color: rgba(255,255,255,0.9);
-                                    text-shadow: 0 1px 3px rgba(0,0,0,0.2);
-                                }
-                                
-                                .welcome-message {
-                                    font-size: 1.2rem;
-                                    margin-top: 2.5rem;
-                                    animation-delay: 0.2s;
-                                    animation: fade-in 0.6s forwards;
-                                    animation-delay: 0.3s;
-                                    opacity: 0;
-                                }
-                                
-                                @keyframes fade-in {
-                                    0% { opacity: 0; }
-                                    100% { opacity: 1; }
-                                }
-                                
-                                .player-name-display {
-                                    font-size: 2.2rem;
-                                    font-weight: bold;
-                                    margin: 1rem 0;
-                                    padding: 0.8rem 1.5rem;
-                                    background: rgba(255,255,255,0.15);
-                                    border-radius: 12px;
-                                    display: inline-block;
-                                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                                    text-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                                    border: 1px solid rgba(255,255,255,0.2);
-                                }
-                                
-                                .chips-display {
-                                    font-size: 1.3rem;
-                                    margin: 1rem 0 2rem;
-                                }
-                                
-                                .close-instruction {
-                                    font-size: 1rem;
-                                    opacity: 0.8;
-                                    margin-top: 2.5rem;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    gap: 8px;
-                                    animation: bounce 2s infinite;
-                                    animation-delay: 2s;
-                                }
-                                
-                                @keyframes bounce {
-                                    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-                                    40% { transform: translateY(-5px); }
-                                    60% { transform: translateY(-3px); }
-                                }
-                                
-                                .confetti-container {
-                                    position: absolute;
-                                    width: 100%;
-                                    height: 100%;
-                                    top: 0;
-                                    left: 0;
-                                    overflow: hidden;
-                                    z-index: 0;
-                                }
-                                
-                                .confetti {
-                                    position: absolute;
-                                    width: 10px;
-                                    height: 20px;
-                                    background-color: #fff;
-                                    opacity: 0.7;
-                                    animation: confetti-fall 3s linear infinite;
-                                }
-                                
-                                .confetti:nth-child(1) { left: 10%; animation-delay: 0s; background: #ffcc00; }
-                                .confetti:nth-child(2) { left: 20%; animation-delay: 0.5s; background: #ff6699; }
-                                .confetti:nth-child(3) { left: 30%; animation-delay: 1s; background: #33ccff; }
-                                .confetti:nth-child(4) { left: 40%; animation-delay: 1.5s; background: #99ff66; }
-                                .confetti:nth-child(5) { left: 50%; animation-delay: 2s; background: #ff9933; }
-                                .confetti:nth-child(6) { left: 60%; animation-delay: 2.5s; background: #cc99ff; }
-                                .confetti:nth-child(7) { left: 70%; animation-delay: 1s; background: #66ffcc; }
-                                .confetti:nth-child(8) { left: 80%; animation-delay: 1.5s; background: #ff99cc; }
-                                .confetti:nth-child(9) { left: 90%; animation-delay: 0.5s; background: #ffff99; }
-                                
-                                @keyframes confetti-fall {
-                                    0% { top: -10%; transform: rotate(0deg) translateX(0); }
-                                    100% { top: 100%; transform: rotate(360deg) translateX(20px); }
-                                }
-                            `;
-                            document.head.appendChild(welcomeStyle);
 
                         } catch (error) {
                             console.error('Error:', error);
@@ -598,6 +715,36 @@
                     console.error('Error loading game:', error);
                     showError(error.message);
                 });
+        }
+
+        // Listen for theme changes from the host
+        function listenForThemeChanges() {
+            if (!gameId) return;
+            
+            database.ref(`games/${gameId}/state/theme`).on('value', snapshot => {
+                const theme = snapshot.val();
+                if (theme) {
+                    console.log('Theme change detected:', theme);
+                    updateTheme(theme);
+                }
+            });
+        }
+
+        // Update theme based on host's selection
+        function updateTheme(themeName) {
+            const mainColor = getThemeColor(themeName, '--main-color');
+            const secondaryColor = getThemeColor(themeName, '--secondary-color');
+            document.documentElement.style.setProperty('--main-color', mainColor);
+            document.documentElement.style.setProperty('--secondary-color', secondaryColor);
+            
+            // Convert main color to RGB for rgba usage
+            const rgb = hexToRgb(mainColor.replace('#', '')) || {r: 0, g: 153, b: 255}; // Default blue fallback
+            document.documentElement.style.setProperty('--main-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+            
+            // Store rgb globally for use in input handler
+            window.themeRgb = rgb;
+            
+            console.log(`Theme updated to ${themeName}`);
         }
 
         // Helper function to get theme colors
