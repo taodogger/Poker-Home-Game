@@ -82,8 +82,15 @@ class HandAnimation {
         
         // Apply theme to container
         if (this.container) {
-            // Apply theme-based background to the entire dealer selection area
-            this.container.style.background = `linear-gradient(135deg, ${theme['--main-color'] || '#1B5E20'}, ${theme['--secondary-color'] || '#388E3C'})`;
+            // Check if the theme has special background settings
+            if (theme['--body-background'] && theme['--body-background'].startsWith('url')) {
+                // If the theme has a background image URL for the body, 
+                // use the main colors for gradient instead
+                this.container.style.background = `linear-gradient(135deg, ${theme['--main-color'] || '#1B5E20'}, ${theme['--secondary-color'] || '#388E3C'})`;
+            } else {
+                // Apply theme-based background to the entire dealer selection area
+                this.container.style.background = `linear-gradient(135deg, ${theme['--main-color'] || '#1B5E20'}, ${theme['--secondary-color'] || '#388E3C'})`;
+            }
             
             // If there's a table image, we'll use it for the center area only
             if (theme.tableImage) {
@@ -99,29 +106,39 @@ class HandAnimation {
                         transform: translate(-50%, -50%);
                         width: 60%;
                         height: 60%;
-                        border-radius: var(--border-radius-lg);
-                        z-index: 1;
-                        background-image: url(${theme.tableImage});
+                        border-radius: 50%;
                         background-size: cover;
                         background-position: center;
-                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
                     `;
-                    this.container.insertBefore(tableCenter, this.container.firstChild);
-                } else {
-                    tableCenter.style.backgroundImage = `url(${theme.tableImage})`;
+                    this.container.appendChild(tableCenter);
                 }
+                
+                // Set the background image
+                tableCenter.style.backgroundImage = `url('${theme.tableImage}')`;
             } else {
-                // Remove table center if no image is available
+                // No custom table image, remove it if it exists
                 const tableCenter = this.container.querySelector('.table-center');
                 if (tableCenter) {
                     tableCenter.remove();
                 }
             }
             
-            // Update card backs with theme color
-            const cardBacks = this.container.querySelectorAll('.card-back');
-            cardBacks.forEach(card => {
-                card.style.background = `linear-gradient(135deg, ${theme['--main-color']}, ${theme['--secondary-color']})`;
+            // Apply theme colors to player areas and cards
+            const playerAreas = this.container.querySelectorAll('.player-area');
+            playerAreas.forEach(area => {
+                area.style.borderColor = theme['--main-color'] || '#1B5E20';
+                area.style.backgroundColor = `rgba(${this.hexToRgb(theme['--main-color'] || '#1B5E20')}, 0.2)`;
+            });
+            
+            // Apply theme to cards if they exist
+            const cards = this.container.querySelectorAll('.card');
+            cards.forEach(card => {
+                const cardBack = card.querySelector('.card-back');
+                if (cardBack) {
+                    cardBack.style.backgroundColor = theme['--main-color'] || '#1B5E20';
+                    cardBack.style.borderColor = theme['--secondary-color'] || '#388E3C';
+                }
             });
         }
         
@@ -812,7 +829,24 @@ class HandAnimation {
         
         const centerX = this.containerWidth / 2;
         const centerY = this.containerHeight / 2;
-        const radius = Math.min(centerX, centerY) * 0.8;
+        
+        // Adjust radius based on screen size and player count
+        let radius = Math.min(centerX, centerY) * 0.8;
+        
+        // For mobile screens, adjust the radius further
+        if (window.innerWidth <= 768) {
+            radius = Math.min(centerX, centerY) * 0.7;
+        }
+        
+        // For very small screens, reduce even more
+        if (window.innerWidth <= 480) {
+            radius = Math.min(centerX, centerY) * 0.6;
+        }
+        
+        // Adjust radius based on player count to prevent overcrowding
+        if (this.players.length > 6) {
+            radius *= 0.9;
+        }
         
         this.playerPositions = [];
         
@@ -848,5 +882,16 @@ class HandAnimation {
                 }
             });
         }
+    }
+
+    // Helper function to convert hex to rgb
+    hexToRgb(hex) {
+        const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+        
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!result) return '0, 0, 0';
+        
+        return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`;
     }
 } 
