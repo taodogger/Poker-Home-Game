@@ -890,7 +890,10 @@ select#theme-selector,
         height: 1rem;
     }
 
-    #theme-selector {
+    #theme-selector,
+    #theme-selector:not(:focus),
+    #theme-selector:not(:active),
+    html body header .header-controls #theme-selector {
         min-width: 80px;
         max-width: 100px;
         padding: 4px 20px 4px 6px;
@@ -898,11 +901,36 @@ select#theme-selector,
         height: 28px;
         background-position: right 4px center;
         background-size: 14px;
+        color: white !important;
+        -webkit-text-fill-color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        font-weight: 500;
     }
 
-    #theme-selector option {
+    #theme-selector option,
+    #theme-selector:not(:focus) option {
         font-size: 0.75rem;
         padding: 4px 6px;
+        color: white !important;
+        -webkit-text-fill-color: white !important;
+    }
+
+    /* Ensure selected option remains visible */
+    #theme-selector option:checked,
+    #theme-selector:not(:focus) option:checked {
+        background-color: #333 !important;
+        color: white !important;
+        font-weight: bold;
+    }
+
+    /* Firefox-specific mobile fixes */
+    @-moz-document url-prefix() {
+        #theme-selector,
+        #theme-selector:not(:focus) {
+            color: white !important;
+            background-color: #1a1a1a !important;
+            text-shadow: none;
+        }
     }
 
     main {
@@ -2230,5 +2258,27 @@ button:active {
     --main-color: #ff00ff;
     --secondary-color: #bf00ff;
     --body-background: url("./images/rizzler-background.jpg");
+}
+
+/* Mobile theme selector overrides */
+@media (max-width: 480px) {
+    /* Force white text in all states */
+    #theme-selector,
+    #theme-selector *,
+    #theme-selector:not(:focus),
+    #theme-selector:not(:active),
+    #theme-selector:not(:hover),
+    #theme-selector option,
+    #theme-selector option:checked,
+    html body header .header-controls #theme-selector,
+    select#theme-selector {
+        color: white !important;
+        -webkit-text-fill-color: white !important;
+    }
+
+    /* Ensure dropdown arrow remains visible */
+    #theme-selector {
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e") !important;
+    }
 }
 
