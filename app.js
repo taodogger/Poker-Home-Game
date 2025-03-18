@@ -825,3 +825,133 @@ function showToast(message, type = 'success') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+// Create and manage game lobbies
+async function createGameLobby(gameName) {
+    try {
+        // Generate a unique session ID
+        const sessionId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+        
+        // Set up game state
+        PokerApp.state.sessionId = sessionId;
+        PokerApp.state.gameName = gameName;
+        PokerApp.state.lobbyActive = true;
+        
+        // Save current state to Firebase
+        const gameData = {
+            id: sessionId,
+            name: gameName,
+            createdAt: Date.now(),
+            state: PokerApp.state,
+            active: true
+        };
+        
+        // If Firebase is initialized, save to Firebase
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            await firebase.database().ref(`games/${sessionId}`).set(gameData);
+        }
+        
+        // Generate QR code for joining the game
+        generateQRCode(sessionId, gameName);
+        
+        // Update UI to show game is active
+        updateLobbyUI(true);
+        
+        showToast(`Game lobby "${gameName}" created successfully!`, 'success');
+        return sessionId;
+    } catch (error) {
+        console.error('Error creating game lobby:', error);
+        showToast('Failed to create game lobby', 'error');
+        updateLobbyUI(false);
+        throw error;
+    }
+}
+
+// Generate QR code for players to join
+function generateQRCode(sessionId, gameName) {
+    const qrWrapper = document.querySelector('#qr-code-container .qr-wrapper');
+    if (!qrWrapper) return;
+    
+    // Clear previous QR code
+    qrWrapper.innerHTML = '';
+    
+    // Create join URL
+    const baseUrl = window.location.origin;
+    const joinUrl = `${baseUrl}/buy-in.html?game-id=${sessionId}&game-name=${encodeURIComponent(gameName)}`;
+    
+    // Generate QR code if library is available
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(qrWrapper, {
+            text: joinUrl,
+            width: 200,
+            height: 200,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+        
+        // Add link below QR code
+        const linkElement = document.createElement('a');
+        linkElement.href = joinUrl;
+        linkElement.target = '_blank';
+        linkElement.textContent = 'Open Join Link';
+        linkElement.className = 'join-link';
+        qrWrapper.appendChild(linkElement);
+    } else {
+        // Fallback if QR library not loaded
+        qrWrapper.innerHTML = `
+            <div class="qr-fallback">
+                <p>QR code generation failed</p>
+                <a href="${joinUrl}" target="_blank" class="join-link">Open Join Link</a>
+            </div>
+        `;
+    }
+}
+
+// Update the UI based on lobby state
+function updateLobbyUI(isActive) {
+    const lobbyForm = document.getElementById('lobby-form');
+    const qrCodeContainer = document.getElementById('qr-code-container');
+    const submitButton = lobbyForm ? lobbyForm.querySelector('button[type="submit"]') : null;
+    const gameNameInput = document.getElementById('game-name');
+    
+    if (isActive) {
+        // Show QR code and update form
+        if (qrCodeContainer) qrCodeContainer.style.display = 'block';
+        if (submitButton) submitButton.textContent = 'Update Lobby';
+        if (gameNameInput) {
+            gameNameInput.value = PokerApp.state.gameName || '';
+            gameNameInput.disabled = false;
+        }
+        
+        // Display game status
+        const gameStatus = document.getElementById('game-status');
+        if (gameStatus) {
+            gameStatus.textContent = 'Lobby Active';
+            gameStatus.classList.add('lobby-active');
+        }
+    } else {
+        // Hide QR code and reset form
+        if (qrCodeContainer) qrCodeContainer.style.display = 'none';
+        if (submitButton) {
+            submitButton.textContent = 'Create Game Lobby';
+            submitButton.disabled = false;
+        }
+        if (gameNameInput) {
+            gameNameInput.value = '';
+            gameNameInput.disabled = false;
+        }
+        
+        // Reset game status
+        const gameStatus = document.getElementById('game-status');
+        if (gameStatus) {
+            gameStatus.textContent = PokerApp.state.gameInProgress ? 'Game in progress' : 'No active game';
+            gameStatus.classList.remove('lobby-active');
+        }
+        
+        // Reset state
+        PokerApp.state.sessionId = null;
+        PokerApp.state.gameName = null;
+        PokerApp.state.lobbyActive = false;
+    }
+}
