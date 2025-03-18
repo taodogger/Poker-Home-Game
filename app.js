@@ -64,6 +64,45 @@ const themes = {
     }
 };
 
+// Global setTheme function that can be accessed from anywhere
+function setTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    
+    // Update icons
+    const leftIcon = document.querySelector('.title-icon.left-icon');
+    const rightIcon = document.querySelector('.title-icon.right-icon');
+    
+    if (leftIcon && rightIcon) {
+        if (theme === 'doginme') {
+            leftIcon.src = 'images/doginme-icon.png';
+            rightIcon.src = 'images/doginme-icon.png';
+        } else if (theme === 'rizzler') {
+            leftIcon.src = 'images/rizzler-icon.png';
+            rightIcon.src = 'images/rizzler-icon.png';
+        }
+    }
+    
+    // Update background
+    document.body.style.background = getComputedStyle(document.body).getPropertyValue('--body-background');
+    
+    // Update the theme selector if it exists
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.value = theme;
+    }
+    
+    // Apply theme to HandAnimation if it exists
+    if (window.handAnimation && themes[theme]) {
+        window.handAnimation.setTheme(themes[theme]);
+    }
+    
+    // Save to global state
+    if (window.PokerApp && window.PokerApp.state) {
+        window.PokerApp.state.theme = theme;
+    }
+}
+
 // Create toast container and styles
 function createToastContainer() {
     const container = document.createElement('div');
@@ -655,130 +694,6 @@ function handleTouchEnd(e) {
     }
 }
 
-// Global setTheme function that can be accessed from anywhere
-function setTheme(theme) {
-    document.body.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-    
-    // Update icons
-    const leftIcon = document.querySelector('.title-icon.left-icon');
-    const rightIcon = document.querySelector('.title-icon.right-icon');
-    
-    if (leftIcon && rightIcon) {
-        if (theme === 'doginme') {
-            leftIcon.src = 'images/doginme-icon.png';
-            rightIcon.src = 'images/doginme-icon.png';
-        } else if (theme === 'rizzler') {
-            leftIcon.src = 'images/rizzler-icon.png';
-            rightIcon.src = 'images/rizzler-icon.png';
-        }
-    }
-    
-    // Update background
-    document.body.style.background = getComputedStyle(document.body).getPropertyValue('--body-background');
-    
-    // Update the theme selector if it exists
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        themeSelector.value = theme;
-    }
-    
-    // Apply theme to HandAnimation if it exists
-    if (window.handAnimation && themes[theme]) {
-        window.handAnimation.setTheme(themes[theme]);
-    }
-    
-    // Save to global state
-    if (window.PokerApp && window.PokerApp.state) {
-        window.PokerApp.state.theme = theme;
-    }
-}
-
-// Theme handling
-document.addEventListener('DOMContentLoaded', function() {
-    const themeSelector = document.getElementById('theme-selector');
-    
-    // Set initial theme
-    const savedTheme = localStorage.getItem('theme') || 'doginme';
-    if (themeSelector) {
-        // Set the value first
-        themeSelector.value = savedTheme;
-        
-        // Force text color and visibility
-        themeSelector.style.color = 'white';
-        themeSelector.style.webkitTextFillColor = 'white';
-        themeSelector.style.opacity = '1';
-        themeSelector.style.backgroundColor = '#1a1a1a';
-        
-        // Force text display for mobile
-        if (window.innerWidth <= 480) {
-            themeSelector.style.textIndent = '0';
-            themeSelector.style.appearance = 'menulist';
-            themeSelector.style.webkitAppearance = 'menulist';
-        }
-        
-        // Force text color for options
-        Array.from(themeSelector.options).forEach(option => {
-            option.style.color = 'white';
-            option.style.webkitTextFillColor = 'white';
-            option.style.opacity = '1';
-            option.style.backgroundColor = '#1a1a1a';
-        });
-        
-        // Force text color for selected option
-        const selectedOption = themeSelector.options[themeSelector.selectedIndex];
-        if (selectedOption) {
-            selectedOption.style.color = 'white';
-            selectedOption.style.webkitTextFillColor = 'white';
-            selectedOption.style.opacity = '1';
-            selectedOption.style.backgroundColor = '#333';
-            selectedOption.style.fontWeight = 'bold';
-        }
-    }
-    
-    // Set the theme
-    setTheme(savedTheme);
-
-    // Handle theme changes
-    if (themeSelector) {
-        themeSelector.addEventListener('change', function(e) {
-            const theme = e.target.value;
-            setTheme(theme);
-            
-            // Force text color and visibility
-            themeSelector.style.color = 'white';
-            themeSelector.style.webkitTextFillColor = 'white';
-            themeSelector.style.opacity = '1';
-            themeSelector.style.backgroundColor = '#1a1a1a';
-            
-            // Force text display for mobile
-            if (window.innerWidth <= 480) {
-                themeSelector.style.textIndent = '0';
-                themeSelector.style.appearance = 'menulist';
-                themeSelector.style.webkitAppearance = 'menulist';
-            }
-            
-            // Force text color for options
-            Array.from(themeSelector.options).forEach(option => {
-                option.style.color = 'white';
-                option.style.webkitTextFillColor = 'white';
-                option.style.opacity = '1';
-                option.style.backgroundColor = '#1a1a1a';
-            });
-            
-            // Force text color for selected option
-            const selectedOption = themeSelector.options[themeSelector.selectedIndex];
-            if (selectedOption) {
-                selectedOption.style.color = 'white';
-                selectedOption.style.webkitTextFillColor = 'white';
-                selectedOption.style.opacity = '1';
-                selectedOption.style.backgroundColor = '#333';
-                selectedOption.style.fontWeight = 'bold';
-            }
-        });
-    }
-});
-
 // Function to update empty state messages and UI based on game state
 function updateEmptyState() {
     const playerList = document.getElementById('player-list');
@@ -1025,3 +940,88 @@ function updateLobbyUI(isActive) {
         PokerApp.state.lobbyActive = false;
     }
 }
+
+// Theme handling
+document.addEventListener('DOMContentLoaded', function() {
+    const themeSelector = document.getElementById('theme-selector');
+    
+    // Set initial theme
+    const savedTheme = localStorage.getItem('theme') || 'doginme';
+    if (themeSelector) {
+        // Set the value first
+        themeSelector.value = savedTheme;
+        
+        // Force text color and visibility
+        themeSelector.style.color = 'white';
+        themeSelector.style.webkitTextFillColor = 'white';
+        themeSelector.style.opacity = '1';
+        themeSelector.style.backgroundColor = '#1a1a1a';
+        
+        // Force text display for mobile
+        if (window.innerWidth <= 480) {
+            themeSelector.style.textIndent = '0';
+            themeSelector.style.appearance = 'menulist';
+            themeSelector.style.webkitAppearance = 'menulist';
+        }
+        
+        // Force text color for options
+        Array.from(themeSelector.options).forEach(option => {
+            option.style.color = 'white';
+            option.style.webkitTextFillColor = 'white';
+            option.style.opacity = '1';
+            option.style.backgroundColor = '#1a1a1a';
+        });
+        
+        // Force text color for selected option
+        const selectedOption = themeSelector.options[themeSelector.selectedIndex];
+        if (selectedOption) {
+            selectedOption.style.color = 'white';
+            selectedOption.style.webkitTextFillColor = 'white';
+            selectedOption.style.opacity = '1';
+            selectedOption.style.backgroundColor = '#333';
+            selectedOption.style.fontWeight = 'bold';
+        }
+    }
+    
+    // Set the theme
+    setTheme(savedTheme);
+
+    // Handle theme changes
+    if (themeSelector) {
+        themeSelector.addEventListener('change', function(e) {
+            const theme = e.target.value;
+            setTheme(theme);
+            
+            // Force text color and visibility
+            themeSelector.style.color = 'white';
+            themeSelector.style.webkitTextFillColor = 'white';
+            themeSelector.style.opacity = '1';
+            themeSelector.style.backgroundColor = '#1a1a1a';
+            
+            // Force text display for mobile
+            if (window.innerWidth <= 480) {
+                themeSelector.style.textIndent = '0';
+                themeSelector.style.appearance = 'menulist';
+                themeSelector.style.webkitAppearance = 'menulist';
+            }
+            
+            // Force text color for options
+            Array.from(themeSelector.options).forEach(option => {
+                option.style.color = 'white';
+                option.style.webkitTextFillColor = 'white';
+                option.style.opacity = '1';
+                option.style.backgroundColor = '#1a1a1a';
+            });
+            
+            // Force text color for selected option
+            const selectedOption = themeSelector.options[themeSelector.selectedIndex];
+            if (selectedOption) {
+                selectedOption.style.color = 'white';
+                selectedOption.style.webkitTextFillColor = 'white';
+                selectedOption.style.opacity = '1';
+                selectedOption.style.backgroundColor = '#333';
+                selectedOption.style.fontWeight = 'bold';
+            }
+        });
+    }
+});
