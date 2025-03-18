@@ -307,11 +307,12 @@
                             // Add player directly to the game's player list
                             const playersRef = database.ref(`games/${gameId}/state/players`);
                             const playerId = parseInt(Date.now()); // Ensure ID is numeric
-                            const newPlayer = {
+                            const updatedPlayer = {
                                 id: playerId,
                                 name: playerName,
                                 initial_chips: parseInt(chips),
-                                current_chips: parseInt(chips)
+                                current_chips: parseInt(chips),
+                                joinedAt: Date.now()
                             };
                             
                             // First, check if game exists and has a state
@@ -321,7 +322,7 @@
                             // If state doesn't exist, create it
                             if (!gameState.exists()) {
                                 await gameStateRef.set({
-                                    players: [newPlayer],
+                                    players: [updatedPlayer],
                                     lastUpdate: Date.now()
                                 });
                             } else {
@@ -352,15 +353,6 @@
                                         throw new Error('A player with this name already exists');
                                     }
                                     
-                                    // Add the new player with additional fields
-                                    const updatedPlayer = {
-                                        id: playerId,
-                                        name: playerName,
-                                        initial_chips: parseInt(chips),
-                                        current_chips: parseInt(chips),
-                                        joinedAt: Date.now()
-                                    };
-                                    
                                     console.log('[FIREBASE] Adding new player:', updatedPlayer);
                                     players.push(updatedPlayer);
                                     console.log('[FIREBASE] Updated players array:', players);
@@ -375,6 +367,14 @@
                             // Force an update to trigger Firebase listeners on the main app
                             console.log('[FIREBASE] Forcing state update to trigger listeners');
                             await database.ref(`games/${gameId}/state/lastUpdate`).set(Date.now());
+
+                            // IMPORTANT: Add player directly to the notifications channel for immediate sync
+                            await database.ref(`playerNotifications`).push({
+                                type: 'playerJoined',
+                                gameId: gameId,
+                                player: updatedPlayer,
+                                timestamp: Date.now()
+                            });
 
                             // Update the state in Firebase
                             await database.ref(`games/${gameId}`).update({

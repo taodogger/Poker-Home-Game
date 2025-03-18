@@ -607,26 +607,46 @@ window.PokerApp = {
             const savedState = localStorage.getItem('pokerGameState');
             if (savedState) {
                 const state = JSON.parse(savedState);
+                
+                // Restore all state properties from localStorage
                 this.state.players = state.players || [];
                 this.state.gameInProgress = state.gameInProgress || false;
+                this.state.dealerId = state.dealerId || null;
+                this.state.nextPlayerId = state.nextPlayerId || 1;
                 this.state.chipRatio = state.chipRatio || 1.0;
                 this.state.theme = state.theme || 'classic-green';
+                
+                // Critical: Preserve session info across refreshes
+                this.state.sessionId = state.sessionId || null;
+                this.state.gameName = state.gameName || null;
+                this.state.lobbyActive = state.lobbyActive || false;
+                
+                console.log('Loaded state from localStorage:', this.state);
             }
-        
-        // Initialize UI components
-        this.UI.initialize();
-        
-        // Setup event listeners
-        setupEventListeners();
-        
+            
+            // Initialize UI components
+            this.UI.initialize();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
             // Set up auto-save
             setInterval(() => saveState(), 5000); // Save every 5 seconds
             window.addEventListener('beforeunload', () => saveState());
             
             // Update UI with loaded state
             updatePlayerList();
-        updateEmptyState();
-        
+            updateEmptyState();
+            
+            // Important: If we have an active session from localStorage, 
+            // make sure we restore the lobby UI and Firebase listeners
+            if (this.state.sessionId && this.state.lobbyActive) {
+                console.log('Restoring active session from localStorage:', this.state.sessionId);
+                updateLobbyUI(true);
+                // Setup Firebase listeners for the restored session
+                setupFirebaseListeners(this.state.sessionId);
+            }
+            
             console.log('PokerApp initialized successfully');
         } catch (error) {
             console.error('Error during initialization:', error);
@@ -1534,10 +1554,91 @@ function setupFirebaseListeners(gameIdOverride, forceRefresh = false) {
             // Game exists, so set up listeners
             setupPlayerListener(gameId, forceRefresh);
             setupGameListener(gameId, forceRefresh);
+            
+            // NEW: Set up notification listener for real-time player joins
+            setupNotificationListener(gameId);
         })
         .catch(error => {
             console.error(`[FIREBASE] Error checking game existence:`, error);
         });
+}
+
+// NEW: Set up notification listener for real-time player joins
+function setupNotificationListener(gameId) {
+    // Listen for notification events, especially player joins
+    const notificationRef = firebase.database().ref('playerNotifications');
+    
+    // Remove any existing notification listeners
+    notificationRef.off('child_added');
+    
+    // Store the current timestamp - we'll only process notifications
+    // that came in after we set up this listener
+    const startTime = Date.now() - (60 * 1000); // Include the last minute for safety
+    
+    // Set up a listener for new and recent notifications
+    notificationRef.orderByChild('timestamp').startAt(startTime).on('child_added', 
+        (snapshot) => {
+            const notification = snapshot.val();
+            console.log(`[FIREBASE] Received notification:`, notification);
+            
+            // Only process notifications for our game
+            if (notification && notification.gameId === gameId) {
+                console.log(`[FIREBASE] Processing notification for our game:`, notification);
+                
+                if (notification.type === 'playerJoined') {
+                    // A new player has joined - update immediately
+                    console.log(`[FIREBASE] New player joined:`, notification.player);
+                    
+                    // First, check if we already have this player
+                    const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
+                        (p.id && p.id === parseInt(notification.player.id)) || 
+                        (p.name && notification.player.name && 
+                         p.name.toLowerCase() === notification.player.name.toLowerCase())
+                    );
+                    
+                    if (existingPlayerIndex === -1) {
+                        // New player - add them
+                        const playerData = {
+                            id: parseInt(notification.player.id),
+                            name: notification.player.name,
+                            initial_chips: parseInt(notification.player.initial_chips),
+                            current_chips: parseInt(notification.player.current_chips)
+                        };
+                        
+                        console.log(`[FIREBASE] Adding new player to state:`, playerData);
+                        PokerApp.state.players.push(playerData);
+                        
+                        // Update UI
+                        updatePlayerList();
+                        updateEmptyState();
+                        
+                        // Update hand animation if it exists
+                        if (window.handAnimation) {
+                            window.handAnimation.setPlayers(PokerApp.state.players);
+                        }
+                        
+                        // Show toast notification
+                        showToast(`New player joined: ${notification.player.name}`, 'success');
+                        
+                        // Save state to localStorage
+                        saveState();
+                    } else {
+                        console.log(`[FIREBASE] Player already exists in state, skipping:`, notification.player.name);
+                    }
+                    
+                    // Once processed, remove the notification
+                    snapshot.ref.remove().catch(error => {
+                        console.error('[FIREBASE] Error removing processed notification:', error);
+                    });
+                }
+            }
+        },
+        (error) => {
+            console.error('[FIREBASE] Error in notification listener:', error);
+        }
+    );
+    
+    console.log(`[FIREBASE] Notification listener set up`);
 }
 
 // Set up the player list listener separately
