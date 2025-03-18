@@ -726,6 +726,18 @@ label {
         height: 28px;
         display: block !important;
         visibility: visible !important;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        -webkit-appearance: menulist !important;
+        appearance: menulist !important;
+        text-indent: 0 !important;
+    }
+
+    #theme-selector:not(:focus) {
+        color: white !important;
+        -webkit-text-fill-color: white !important;
+        opacity: 1 !important;
     }
 
     #theme-selector option {
@@ -763,8 +775,6 @@ label {
             opacity: 1 !important;
             font-size: 0.75rem !important;
             font-weight: 500 !important;
-            display: block !important;
-            visibility: visible !important;
         }
     }
 }

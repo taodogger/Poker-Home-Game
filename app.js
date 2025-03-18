@@ -664,6 +664,13 @@ document.addEventListener('DOMContentLoaded', function() {
         themeSelector.style.opacity = '1';
         themeSelector.style.backgroundColor = '#1a1a1a';
         
+        // Force text display for mobile
+        if (window.innerWidth <= 480) {
+            themeSelector.style.textIndent = '0';
+            themeSelector.style.appearance = 'menulist';
+            themeSelector.style.webkitAppearance = 'menulist';
+        }
+        
         // Force text color for options
         Array.from(themeSelector.options).forEach(option => {
             option.style.color = 'white';
@@ -697,6 +704,13 @@ document.addEventListener('DOMContentLoaded', function() {
             themeSelector.style.webkitTextFillColor = 'white';
             themeSelector.style.opacity = '1';
             themeSelector.style.backgroundColor = '#1a1a1a';
+            
+            // Force text display for mobile
+            if (window.innerWidth <= 480) {
+                themeSelector.style.textIndent = '0';
+                themeSelector.style.appearance = 'menulist';
+                themeSelector.style.webkitAppearance = 'menulist';
+            }
             
             // Force text color for options
             Array.from(themeSelector.options).forEach(option => {
