@@ -679,19 +679,13 @@ label {
 }
 
 /* Theme-specific icon styles */
-.theme-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 4px;
-    vertical-align: middle;
-}
-
-/* Theme-specific styles */
-[data-theme="dogeinme"] .theme-icon {
+[data-theme="doginme"] .title-icon.left-icon,
+[data-theme="doginme"] .title-icon.right-icon {
     content: url('images/doginme-icon.png');
 }
 
-[data-theme="rizzler"] .theme-icon {
+[data-theme="rizzler"] .title-icon.left-icon,
+[data-theme="rizzler"] .title-icon.right-icon {
     content: url('images/rizzler-icon.png');
 }
 
@@ -2149,10 +2143,12 @@ button:active {
 }
 
 /* Theme-specific icon styles */
-[data-theme="doginme"] .title-icon.left-icon {
+[data-theme="doginme"] .title-icon.left-icon,
+[data-theme="doginme"] .title-icon.right-icon {
     content: url('images/doginme-icon.png');
 }
 
+[data-theme="rizzler"] .title-icon.left-icon,
 [data-theme="rizzler"] .title-icon.right-icon {
     content: url('images/rizzler-icon.png');
 }
