@@ -374,14 +374,29 @@
                 height: 45px;
             }
         }
+
+        /* Hide theme-specific icons by default */
+        .theme-icon {
+            display: none;
+        }
+
+        /* Only show doginme icon when doginme theme is active */
+        [data-theme="doginme"] .doginme-icon {
+            display: block;
+        }
+
+        /* Only show rizzler icon when rizzler theme is active */
+        [data-theme="rizzler"] .rizzler-icon {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="header-title">
-            <img src="images/doginme-icon.png" alt="Theme Icon" class="title-icon left-icon">
+            <img src="images/doginme-icon.png" alt="Theme Icon" class="title-icon left-icon theme-icon doginme-icon">
             <span>Poker Home Game Manager</span>
-            <img src="images/rizzler-icon.png" alt="Theme Icon" class="title-icon right-icon">
+            <img src="images/rizzler-icon.png" alt="Theme Icon" class="title-icon right-icon theme-icon rizzler-icon">
         </div>
         <div class="header-controls">
             <select id="theme-selector" aria-label="Theme">
@@ -399,17 +414,6 @@
         </div>
     </header>
     <main>
-        <div id="welcome-message" class="welcome-message fade-in">
-            <h2>Welcome to Poker Home Game</h2>
-            <p>Create or host a home poker game with friends</p>
-            <div class="welcome-card-hand">
-                <div class="welcome-card"></div>
-                <div class="welcome-card"></div>
-                <div class="welcome-card"></div>
-                <div class="welcome-card"></div>
-                <div class="welcome-card"></div>
-            </div>
-        </div>
         <section id="players" class="kahoot-card">
             <h2>Players</h2>
             <div class="table-container">
@@ -752,7 +756,25 @@
             // Save theme preference
             localStorage.setItem('selected-theme', themeName);
             
+            // Handle theme-specific adjustments
+            updateThemeIcons(themeName);
+            
             console.log(`Theme updated to ${themeName}`);
+        }
+        
+        function updateThemeIcons(themeName) {
+            // Show/hide theme-specific icons
+            const themeIcons = document.querySelectorAll('.theme-icon');
+            themeIcons.forEach(icon => {
+                icon.style.display = 'none';
+            });
+            
+            // Only show relevant icons
+            if (themeName === 'doginme') {
+                document.querySelector('.doginme-icon').style.display = 'block';
+            } else if (themeName === 'rizzler') {
+                document.querySelector('.rizzler-icon').style.display = 'block';
+            }
         }
     </script>
 </body>

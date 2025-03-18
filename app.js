@@ -2087,3 +2087,63 @@ function setupLastPlayerListener(lastPlayerRef) {
     
     console.log(`[FIREBASE] lastPlayer listener set up`);
 }
+
+// Update the applyTheme function to ensure all themes have proper color-matched gradients
+function applyTheme(themeName) {
+    // Get theme from themes object
+    const theme = themes[themeName];
+    if (!theme) return;
+    
+    // Apply all theme properties to CSS variables
+    Object.keys(theme).forEach(prop => {
+        if (prop !== 'icon' && prop !== 'tableImage') {
+            document.documentElement.style.setProperty(prop, theme[prop]);
+        }
+    });
+    
+    // Update gradient for card hover effects
+    document.documentElement.style.setProperty('--accent-gradient', theme['--accent-gradient'] || 
+        `linear-gradient(45deg, ${theme['--main-color']}, ${theme['--secondary-color']})`);
+    
+    // Add vibrant gradient if not set
+    if (!theme['--vibrant-gradient']) {
+        document.documentElement.style.setProperty('--vibrant-gradient', 
+            `linear-gradient(135deg, ${theme['--main-color']}, ${theme['--secondary-color']})`);
+    }
+    
+    // Update data-theme attribute for CSS selectors
+    document.documentElement.setAttribute('data-theme', themeName);
+    
+    // Save theme preference
+    localStorage.setItem('selected-theme', themeName);
+    
+    // Update theme-specific elements
+    updateThemeElements(themeName);
+    
+    // If we're in a game, update the theme in Firebase
+    if (gameState.sessionId) {
+        console.log(`[THEME] Saving theme ${themeName} to Firebase for game ${gameState.sessionId}`);
+        database.ref(`games/${gameState.sessionId}/state/theme`).set(themeName);
+    }
+    
+    console.log(`Theme updated to ${themeName}`);
+}
+
+// Function to update theme-specific elements
+function updateThemeElements(themeName) {
+    // Update theme icons visibility
+    const themeIcons = document.querySelectorAll('.theme-icon');
+    themeIcons.forEach(icon => {
+        icon.style.display = 'none';
+    });
+    
+    if (themeName === 'doginme') {
+        const doginmeIcon = document.querySelector('.doginme-icon');
+        if (doginmeIcon) doginmeIcon.style.display = 'block';
+    } else if (themeName === 'rizzler') {
+        const rizzlerIcon = document.querySelector('.rizzler-icon');
+        if (rizzlerIcon) rizzlerIcon.style.display = 'block';
+    }
+    
+    // Update any other theme-specific elements here
+}
