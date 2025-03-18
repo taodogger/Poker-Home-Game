@@ -168,6 +168,316 @@ function createToastContainer() {
     return container;
 }
 
+// Save game state to localStorage and Firebase
+function saveState() {
+    try {
+        // Save to localStorage
+        const stateToSave = {
+            players: PokerApp.state.players,
+            gameInProgress: PokerApp.state.gameInProgress,
+            dealerId: PokerApp.state.dealerId,
+            nextPlayerId: PokerApp.state.nextPlayerId,
+            chipRatio: PokerApp.state.chipRatio,
+            theme: PokerApp.state.theme,
+            sessionId: PokerApp.state.sessionId,
+            gameName: PokerApp.state.gameName,
+            lobbyActive: PokerApp.state.lobbyActive
+        };
+        
+        localStorage.setItem('pokerGameState', JSON.stringify(stateToSave));
+        
+        // If we have an active session and Firebase is available, save to Firebase too
+        if (PokerApp.state.sessionId && typeof firebase !== 'undefined' && firebase.database) {
+            firebase.database().ref(`games/${PokerApp.state.sessionId}/state`).update(stateToSave);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error saving game state:', error);
+        return false;
+    }
+}
+
+// Load saved state from localStorage
+function loadSavedState() {
+    try {
+        const savedState = localStorage.getItem('pokerGameState');
+        if (savedState) {
+            const state = JSON.parse(savedState);
+            PokerApp.state.players = state.players || [];
+            PokerApp.state.gameInProgress = state.gameInProgress || false;
+            PokerApp.state.dealerId = state.dealerId || null;
+            PokerApp.state.nextPlayerId = state.nextPlayerId || 1;
+            PokerApp.state.chipRatio = state.chipRatio || 1.0;
+            PokerApp.state.theme = state.theme || 'classic-green';
+            PokerApp.state.sessionId = state.sessionId || null;
+            PokerApp.state.gameName = state.gameName || null;
+            PokerApp.state.lobbyActive = state.lobbyActive || false;
+        }
+        return true;
+    } catch (error) {
+        console.error('Error loading game state:', error);
+        return false;
+    }
+}
+
+// Player management functions
+function addPlayer(name, chips) {
+    // Check for duplicate names
+    if (PokerApp.state.players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        showToast(`Player "${name}" already exists`, 'error');
+        return false;
+    }
+    
+    // Add player to state
+    const player = {
+        id: PokerApp.state.nextPlayerId++,
+        name: name,
+        initial_chips: chips,
+        current_chips: chips
+    };
+    
+    PokerApp.state.players.push(player);
+    
+    // Update UI
+    updatePlayerList();
+    updateEmptyState();
+    
+    // Save state
+    saveState();
+    
+    showToast(`Added ${name} with ${chips} chips`, 'success');
+    return true;
+}
+
+function removePlayer(playerId) {
+    // Check if game is in progress
+    if (PokerApp.state.gameInProgress) {
+        showToast('Cannot remove players during an active game', 'error');
+        return false;
+    }
+    
+    const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) {
+        showToast('Player not found', 'error');
+        return false;
+    }
+    
+    // Remove player
+    const removedPlayer = PokerApp.state.players.splice(playerIndex, 1)[0];
+    
+    // Update UI
+    updatePlayerList();
+    updateEmptyState();
+    
+    // Save state
+    saveState();
+    
+    showToast(`Removed ${removedPlayer.name}`, 'info');
+    return true;
+}
+
+function updatePlayerList() {
+    const tableBody = document.querySelector('#player-table tbody');
+    if (!tableBody) return;
+    
+    // Clear current list
+    tableBody.innerHTML = '';
+    
+    // Add players to table
+    PokerApp.state.players.forEach(player => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${player.name}</td>
+            <td>${player.initial_chips}</td>
+            <td>
+                <input 
+                    type="number" 
+                    value="${player.current_chips}" 
+                    class="chip-input" 
+                    data-player-id="${player.id}"
+                    ${PokerApp.state.gameInProgress ? 'disabled' : ''}
+                >
+            </td>
+            <td>
+                <button 
+                    class="remove-player" 
+                    data-player-id="${player.id}"
+                    ${PokerApp.state.gameInProgress ? 'disabled' : ''}
+                >
+                    Remove
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    // Add totals row
+    updateTotalsRow();
+    
+    // Add event listeners to remove buttons
+    document.querySelectorAll('.remove-player').forEach(button => {
+        button.addEventListener('click', function() {
+            const playerId = parseInt(this.getAttribute('data-player-id'));
+            if (playerId) {
+                removePlayer(playerId);
+            }
+        });
+    });
+    
+    // Add event listeners to chip inputs
+    document.querySelectorAll('.chip-input').forEach(input => {
+        // Use input event for immediate updates
+        input.addEventListener('input', function() {
+            if (!this.hasAttribute('data-player-id')) return;
+            
+            const playerId = parseInt(this.getAttribute('data-player-id'));
+            if (!playerId) return;
+            
+            const newChips = parseInt(this.value);
+            if (isNaN(newChips) || newChips < 0) return;
+            
+            // Update player's current chips
+            const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
+            if (playerIndex !== -1) {
+                PokerApp.state.players[playerIndex].current_chips = newChips;
+                updateTotalsRow();
+                updateEmptyState();
+            }
+        });
+        
+        // Use change event for validation and persistence
+        input.addEventListener('change', function() {
+            if (!this.hasAttribute('data-player-id')) return;
+            
+            const playerId = parseInt(this.getAttribute('data-player-id'));
+            if (!playerId) return;
+            
+            const newChips = parseInt(this.value);
+            if (isNaN(newChips) || newChips < 0) {
+                showToast('Please enter a valid chip amount', 'error');
+                // Reset to previous value
+                const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
+                if (playerIndex !== -1) {
+                    this.value = PokerApp.state.players[playerIndex].current_chips;
+                }
+                return;
+            }
+            
+            // Update player's current chips
+            const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
+            if (playerIndex !== -1) {
+                PokerApp.state.players[playerIndex].current_chips = newChips;
+                saveState();
+                showToast(`Updated ${PokerApp.state.players[playerIndex].name}'s chips to ${newChips}`, 'info');
+                updateTotalsRow();
+                updateEmptyState();
+            }
+        });
+    });
+}
+
+function updateTotalsRow() {
+    const tableBody = document.querySelector('#player-table tbody');
+    if (!tableBody) return;
+    
+    // Remove existing totals row if it exists
+    const existingTotalsRow = tableBody.querySelector('.totals-row');
+    if (existingTotalsRow) {
+        existingTotalsRow.remove();
+    }
+    
+    // Calculate totals
+    const totalInitial = PokerApp.state.players.reduce((total, player) => total + player.initial_chips, 0);
+    const totalCurrent = PokerApp.state.players.reduce((total, player) => total + player.current_chips, 0);
+    
+    // Create totals row
+    const totalsRow = document.createElement('tr');
+    totalsRow.className = 'totals-row';
+    totalsRow.innerHTML = `
+        <td><strong>Totals</strong></td>
+        <td><strong>${totalInitial}</strong></td>
+        <td><strong>${totalCurrent}</strong></td>
+        <td></td>
+    `;
+    
+    tableBody.appendChild(totalsRow);
+}
+
+// Calculate payouts between players
+function calculatePayouts() {
+    // Make sure we have players
+    if (PokerApp.state.players.length < 2) {
+        showToast('Need at least 2 players to calculate payouts', 'error');
+        return;
+    }
+    
+    const payoutList = document.getElementById('payout-list');
+    if (!payoutList) return;
+    
+    // Calculate initial and final chip counts
+    const players = PokerApp.state.players.map(player => ({
+        name: player.name,
+        initial: player.initial_chips,
+        current: player.current_chips,
+        diff: player.current_chips - player.initial_chips
+    }));
+    
+    // Sort by difference (winners to losers)
+    players.sort((a, b) => b.diff - a.diff);
+    
+    // Generate payout instructions
+    let transactions = [];
+    let debtors = players.filter(p => p.diff < 0);
+    let creditors = players.filter(p => p.diff > 0);
+    
+    while (debtors.length > 0 && creditors.length > 0) {
+        const debtor = debtors[0];
+        const creditor = creditors[0];
+        
+        // Calculate the transaction amount
+        const amount = Math.min(Math.abs(debtor.diff), Math.abs(creditor.diff));
+        
+        // Record the transaction
+        transactions.push({
+            from: debtor.name,
+            to: creditor.name,
+            chips: amount,
+            cash: (amount * PokerApp.state.chipRatio).toFixed(2)
+        });
+        
+        // Update balances
+        debtor.diff += amount;
+        creditor.diff -= amount;
+        
+        // Remove settled players
+        if (Math.abs(debtor.diff) < 0.001) {
+            debtors.shift();
+        }
+        
+        if (Math.abs(creditor.diff) < 0.001) {
+            creditors.shift();
+        }
+    }
+    
+    // Display transactions
+    if (transactions.length === 0) {
+        payoutList.innerHTML = '<div class="payout-message">All players are even, no payouts needed.</div>';
+    } else {
+        let html = '<div class="payout-instructions">';
+        html += '<h4>Payment Instructions:</h4>';
+        html += '<ul class="payout-transactions">';
+        
+        transactions.forEach(t => {
+            html += `<li><strong>${t.from}</strong> pays <strong>${t.to}</strong>: ${t.chips} chips ($${t.cash})</li>`;
+        });
+        
+        html += '</ul></div>';
+        payoutList.innerHTML = html;
+    }
+}
+
 // Initialize PokerApp immediately
 window.PokerApp = {
     // Core application state
