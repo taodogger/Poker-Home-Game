@@ -327,26 +327,43 @@
                             } else {
                                 // Otherwise update existing player list as a transaction
                                 await playersRef.transaction((players) => {
-                                    console.log('Current players in transaction:', players);
+                                    console.log('[FIREBASE] Transaction started with current players:', players);
                                     
-                                    if (!players) players = [];
+                                    if (!players) {
+                                        console.log('[FIREBASE] No existing players, initializing empty array');
+                                        players = [];
+                                    }
                                     
                                     // Ensure players is an array (important!)
                                     if (!Array.isArray(players)) {
-                                        console.log('Converting object to array in transaction');
+                                        console.log('[FIREBASE] Converting object to array in transaction');
                                         // Convert object to array if Firebase has converted it
-                                        players = Object.values(players).filter(p => p !== null);
+                                        try {
+                                            players = Object.values(players).filter(p => p !== null);
+                                        } catch (error) {
+                                            console.error('[FIREBASE] Error converting players object:', error);
+                                            players = [];
+                                        }
                                     }
                                     
                                     // Check for duplicate names
                                     if (players.some(p => p && p.name && p.name.toLowerCase() === playerName.toLowerCase())) {
-                                        console.error('Player name already exists');
+                                        console.error('[FIREBASE] Player name already exists');
                                         throw new Error('A player with this name already exists');
                                     }
                                     
-                                    // Add the new player
-                                    players.push(newPlayer);
-                                    console.log('Players after adding new player:', players);
+                                    // Add the new player with additional fields
+                                    const updatedPlayer = {
+                                        id: playerId,
+                                        name: playerName,
+                                        initial_chips: parseInt(chips),
+                                        current_chips: parseInt(chips),
+                                        joinedAt: Date.now()
+                                    };
+                                    
+                                    console.log('[FIREBASE] Adding new player:', updatedPlayer);
+                                    players.push(updatedPlayer);
+                                    console.log('[FIREBASE] Updated players array:', players);
                                     return players;
                                 });
                             }
@@ -354,7 +371,11 @@
                             // Update the game ratio if it doesn't match
                             const ratio = parseFloat(buyInAmount) / parseInt(chips);
                             await database.ref(`games/${gameId}/ratio`).set(ratio);
-                            
+
+                            // Force an update to trigger Firebase listeners on the main app
+                            console.log('[FIREBASE] Forcing state update to trigger listeners');
+                            await database.ref(`games/${gameId}/state/lastUpdate`).set(Date.now());
+
                             // Update the state in Firebase
                             await database.ref(`games/${gameId}`).update({
                                 updatedAt: Date.now(),

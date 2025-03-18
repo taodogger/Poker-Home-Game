@@ -640,6 +640,8 @@ let handAnimation = null;
 
 // Global initialize function for backward compatibility
 function initialize() {
+    console.log('------ INITIALIZING APP ------');
+    
     // Handle URL parameters before initializing the app
     handleURLParameters();
     
@@ -648,6 +650,47 @@ function initialize() {
     
     // Setup Firebase listeners for real-time updates
     setupFirebaseListeners();
+    
+    // Add a direct debug test that will run 5 seconds after initialization
+    setTimeout(() => {
+        console.log('------ CHECKING FIREBASE CONNECTION ------');
+        
+        if (typeof firebase === 'undefined' || !firebase.database) {
+            console.error('Firebase not available');
+            return;
+        }
+        
+        const testRef = firebase.database().ref('test');
+        console.log('Writing test data to Firebase...');
+        
+        testRef.set({
+            timestamp: Date.now(),
+            message: 'Test connection from main app'
+        })
+        .then(() => {
+            console.log('Test write successful');
+            
+            // Now test if we can read it back
+            return testRef.once('value');
+        })
+        .then((snapshot) => {
+            console.log('Test read successful:', snapshot.val());
+            console.log('Firebase connection is working properly');
+            
+            // Check if we have an active session
+            if (PokerApp.state.sessionId) {
+                console.log(`Active session ID: ${PokerApp.state.sessionId}`);
+                
+                // Force a refresh of the Firebase listeners
+                setupFirebaseListeners(PokerApp.state.sessionId, true);
+            } else {
+                console.log('No active session ID');
+            }
+        })
+        .catch((error) => {
+            console.error('Firebase test failed:', error);
+        });
+    }, 5000);
 }
 
 // Initialize when the page loads
@@ -988,6 +1031,35 @@ function setupEventListeners() {
                 console.error('Failed to create game lobby:', error);
                 // Form will be re-enabled by updateLobbyUI(false) in createGameLobby error handler
             }
+        });
+    }
+    
+    // Add refresh Firebase button handler
+    const refreshFirebaseButton = document.getElementById('refresh-firebase');
+    if (refreshFirebaseButton) {
+        refreshFirebaseButton.addEventListener('click', function() {
+            if (!PokerApp.state.sessionId) {
+                showToast('No active game to refresh', 'error');
+                return;
+            }
+            
+            showToast('Manually refreshing player data...', 'info');
+            console.log('[FIREBASE] Manual refresh requested for game:', PokerApp.state.sessionId);
+            
+            // Force refresh of Firebase listeners
+            setupFirebaseListeners(PokerApp.state.sessionId, true);
+            
+            // Also manually fetch latest player data
+            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).once('value')
+                .then(snapshot => {
+                    console.log('[FIREBASE] Manual refresh data:', snapshot.val());
+                    handlePlayerDataUpdate(snapshot.val());
+                    showToast('Player data refreshed', 'success');
+                })
+                .catch(error => {
+                    console.error('[FIREBASE] Manual refresh failed:', error);
+                    showToast('Failed to refresh data: ' + error.message, 'error');
+                });
         });
     }
 }
@@ -1432,117 +1504,227 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Setup Firebase listeners for real-time player updates
-function setupFirebaseListeners(gameIdOverride) {
+function setupFirebaseListeners(gameIdOverride, forceRefresh = false) {
     // Use the override if provided, otherwise use the state
     const gameId = gameIdOverride || PokerApp.state.sessionId;
     
     if (!gameId) {
-        console.error('No game ID provided for Firebase listeners');
+        console.error('[FIREBASE] No game ID provided for Firebase listeners');
         return;
     }
     
     if (typeof firebase === 'undefined' || !firebase.database) {
-        console.error('Firebase not initialized yet');
+        console.error('[FIREBASE] Firebase not initialized yet');
         return;
     }
     
-    console.log(`Setting up Firebase listeners for game: ${gameId}`);
+    console.log(`[FIREBASE] Setting up Firebase listeners for game: ${gameId}`);
     
+    // Test if the gameId exists first
+    firebase.database().ref(`games/${gameId}`).once('value')
+        .then(snapshot => {
+            if (!snapshot.exists()) {
+                console.error(`[FIREBASE] Game with ID ${gameId} does not exist in the database`);
+                showToast(`Game with ID ${gameId} not found in database`, 'error');
+                return;
+            }
+            
+            console.log(`[FIREBASE] Game data exists:`, snapshot.val());
+            
+            // Game exists, so set up listeners
+            setupPlayerListener(gameId, forceRefresh);
+            setupGameListener(gameId, forceRefresh);
+        })
+        .catch(error => {
+            console.error(`[FIREBASE] Error checking game existence:`, error);
+        });
+}
+
+// Set up the player list listener separately
+function setupPlayerListener(gameId, forceRefresh = false) {
     // Listen for player list changes
     const playersRef = firebase.database().ref(`games/${gameId}/state/players`);
     
     // Remove any existing listeners first to avoid duplicates
-    playersRef.off('value');
+    if (forceRefresh) {
+        console.log(`[FIREBASE] Force refreshing player listener for game: ${gameId}`);
+        playersRef.off('value');
+    }
     
-    playersRef.on('value', (snapshot) => {
-        const playersData = snapshot.val();
-        console.log('Received players data:', playersData);
-        
-        // Only update if we have valid player data
-        if (playersData) {
-            // Handle both array and object formats from Firebase
-            let playersList = [];
-            
-            if (Array.isArray(playersData)) {
-                playersList = playersData.filter(p => p !== null);
-            } else if (typeof playersData === 'object') {
-                // Convert object to array
-                playersList = Object.values(playersData).filter(p => p !== null);
-            }
-            
-            if (playersList.length > 0) {
-                console.log('Updating players list with:', playersList);
-                
-                // Update the local state with the new player data
-                PokerApp.state.players = playersList.map(player => ({
-                    id: parseInt(player.id || 0),
-                    name: player.name || 'Unknown Player',
-                    initial_chips: parseInt(player.initial_chips || 0),
-                    current_chips: parseInt(player.current_chips || 0)
-                }));
-                
-                // Update UI
-                updatePlayerList();
-                updateEmptyState();
-                
-                // Update hand animation if it exists
-                if (window.handAnimation) {
-                    window.handAnimation.setPlayers(PokerApp.state.players);
-                }
-                
-                console.log(`Player list updated with ${playersList.length} players`);
-                
-                // Only show toast for new players to avoid flooding
-                if (playersList.length > 0 && (!window._lastPlayerCount || playersList.length > window._lastPlayerCount)) {
-                    const newCount = playersList.length;
-                    const lastCount = window._lastPlayerCount || 0;
-                    const diff = newCount - lastCount;
-                    if (diff > 0) {
-                        showToast(`${diff} new player${diff > 1 ? 's' : ''} joined`, 'success');
-                    }
-                }
-                window._lastPlayerCount = playersList.length;
-            }
+    console.log(`[FIREBASE] Setting up player listener for path: games/${gameId}/state/players`);
+    
+    // Set up the listener with error handling
+    playersRef.on('value', 
+        // Success callback
+        (snapshot) => {
+            console.log(`[FIREBASE] Received player data update for game ${gameId}:`, snapshot.val());
+            handlePlayerDataUpdate(snapshot.val());
+        }, 
+        // Error callback
+        (error) => {
+            console.error(`[FIREBASE] Error in player listener:`, error);
+            showToast(`Error syncing player data: ${error.message}`, 'error');
         }
-    }, (error) => {
-        console.error('Error in players listener:', error);
-        showToast('Error syncing player data', 'error');
-    });
+    );
     
+    // Also listen for lastUpdate changes which can trigger a refresh
+    const lastUpdateRef = firebase.database().ref(`games/${gameId}/state/lastUpdate`);
+    lastUpdateRef.on('value', (snapshot) => {
+        const timestamp = snapshot.val();
+        if (timestamp) {
+            console.log(`[FIREBASE] Detected state update at ${new Date(timestamp).toLocaleTimeString()}`);
+            
+            // Refresh player data explicitly
+            playersRef.once('value').then(snapshot => {
+                console.log(`[FIREBASE] Explicitly refreshing player data:`, snapshot.val());
+                handlePlayerDataUpdate(snapshot.val());
+            }).catch(error => {
+                console.error(`[FIREBASE] Error refreshing player data:`, error);
+            });
+        }
+    });
+}
+
+// Set up the game state listener separately
+function setupGameListener(gameId, forceRefresh = false) {
     // Listen for game state changes
     const gameRef = firebase.database().ref(`games/${gameId}`);
     
     // Remove any existing listeners first to avoid duplicates
-    gameRef.off('value');
+    if (forceRefresh) {
+        console.log(`[FIREBASE] Force refreshing game listener for game: ${gameId}`);
+        gameRef.off('value');
+    }
     
-    gameRef.on('value', (snapshot) => {
-        const gameData = snapshot.val();
-        if (gameData) {
-            console.log('Received game data:', gameData);
+    console.log(`[FIREBASE] Setting up game listener for path: games/${gameId}`);
+    
+    // Set up the listener with error handling
+    gameRef.on('value', 
+        // Success callback
+        (snapshot) => {
+            console.log(`[FIREBASE] Received game data update for game ${gameId}:`, snapshot.val());
+            handleGameDataUpdate(snapshot.val());
+        }, 
+        // Error callback
+        (error) => {
+            console.error(`[FIREBASE] Error in game listener:`, error);
+            showToast(`Error syncing game data: ${error.message}`, 'error');
+        }
+    );
+}
+
+// Handle player data updates separately for better error handling
+function handlePlayerDataUpdate(playersData) {
+    // Only update if we have valid player data
+    if (!playersData) {
+        console.log('[FIREBASE] No player data received or empty data');
+        return;
+    }
+    
+    try {
+        // Handle both array and object formats from Firebase
+        let playersList = [];
+        
+        if (Array.isArray(playersData)) {
+            console.log('[FIREBASE] Players data is an array with length:', playersData.length);
+            playersList = playersData.filter(p => p !== null && p !== undefined);
+        } else if (typeof playersData === 'object') {
+            console.log('[FIREBASE] Players data is an object, converting to array');
+            playersList = Object.values(playersData).filter(p => p !== null && p !== undefined);
+        }
+        
+        if (playersList.length > 0) {
+            console.log('[FIREBASE] Processing player list with length:', playersList.length);
             
-            if (gameData.ratio) {
-                PokerApp.state.chipRatio = parseFloat(gameData.ratio);
-                
-                // Update ratio display
-                const ratioDisplay = document.getElementById('ratio-display');
-                if (ratioDisplay) {
-                    ratioDisplay.textContent = `Each chip is worth $${PokerApp.state.chipRatio.toFixed(2)}`;
-                }
+            // Log the first player for debugging
+            if (playersList[0]) {
+                console.log('[FIREBASE] Sample player data:', playersList[0]);
             }
             
-            // Update game status
-            if (gameData.active === false) {
-                showToast('Game is no longer active', 'error');
-                // Clean up and reset if the game is no longer active
-                firebase.database().ref(`games/${gameId}`).off();
-                firebase.database().ref(`games/${gameId}/state/players`).off();
-                updateLobbyUI(false);
+            // Update the local state with the new player data
+            PokerApp.state.players = playersList.map(player => ({
+                id: parseInt(player.id || 0),
+                name: player.name || 'Unknown Player',
+                initial_chips: parseInt(player.initial_chips || 0),
+                current_chips: parseInt(player.current_chips || 0)
+            }));
+            
+            // Log the updated state
+            console.log('[FIREBASE] Updated player state:', PokerApp.state.players);
+            
+            // Update UI with new players
+            updatePlayerList();
+            updateEmptyState();
+            
+            // Update hand animation if it exists
+            if (window.handAnimation) {
+                window.handAnimation.setPlayers(PokerApp.state.players);
+            }
+            
+            // Only show toast for new players to avoid flooding
+            updatePlayerCountNotification(playersList.length);
+        } else {
+            console.log('[FIREBASE] Player list is empty after processing');
+        }
+    } catch (error) {
+        console.error('[FIREBASE] Error processing player data:', error);
+    }
+}
+
+// Handle game data updates separately
+function handleGameDataUpdate(gameData) {
+    if (!gameData) {
+        console.log('[FIREBASE] No game data received or empty data');
+        return;
+    }
+    
+    try {
+        console.log('[FIREBASE] Processing game data update');
+        
+        // Update ratio if it exists
+        if (gameData.ratio) {
+            const ratio = parseFloat(gameData.ratio);
+            PokerApp.state.chipRatio = ratio;
+            
+            // Update ratio display
+            const ratioDisplay = document.getElementById('ratio-display');
+            if (ratioDisplay) {
+                ratioDisplay.textContent = `Each chip is worth $${ratio.toFixed(2)}`;
+                console.log('[FIREBASE] Updated chip ratio to:', ratio);
             }
         }
-    }, (error) => {
-        console.error('Error in game listener:', error);
-        showToast('Error syncing game data', 'error');
-    });
+        
+        // Check game active status
+        if (gameData.active === false) {
+            console.log('[FIREBASE] Game is no longer active');
+            showToast('Game is no longer active', 'error');
+            
+            // Clean up all listeners for this game
+            firebase.database().ref(`games/${gameData.id}`).off();
+            
+            // Update UI to reflect inactive game
+            updateLobbyUI(false);
+        }
+    } catch (error) {
+        console.error('[FIREBASE] Error processing game data:', error);
+    }
+}
+
+// Track player count for notifications
+window._lastPlayerCount = 0;
+function updatePlayerCountNotification(currentCount) {
+    // If this is our first update or we have new players
+    if (!window._lastPlayerCount || currentCount > window._lastPlayerCount) {
+        const diff = currentCount - window._lastPlayerCount;
+        
+        if (diff > 0) {
+            console.log(`[FIREBASE] ${diff} new player(s) joined`);
+            showToast(`${diff} new player${diff > 1 ? 's' : ''} joined`, 'success');
+        }
+    }
+    
+    // Update the counter
+    window._lastPlayerCount = currentCount;
 }
 
 function endGame() {
