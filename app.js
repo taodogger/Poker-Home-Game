@@ -73,7 +73,8 @@ const PokerApp = {
         dealerId: null,
         nextPlayerId: 1,
         chipRatio: 1.0,
-        theme: 'classic-green' // Default theme
+        theme: 'classic-green', // Default theme
+        sessionId: null
     },
     
     // UI module for handling display and user interface
@@ -874,6 +875,164 @@ function removePlayer(playerId) {
     // Show success message
     showToast(`Player ${playerName} removed successfully`, 'success');
 }
+
+// Add game session management to gameState
+gameState.sessionId = null;
+
+// Function to initialize a new game session
+async function initializeGameSession() {
+    if (gameState.sessionId) {
+        // Clear old session listeners
+        database.ref(`games/${gameState.sessionId}`).off();
+    }
+    
+    // Create new session
+    const sessionRef = database.ref('games').push();
+    gameState.sessionId = sessionRef.key;
+    
+    // Set initial session data
+    await sessionRef.set({
+        ratio: gameState.chipRatio,
+        active: true,
+        requests: {}
+    });
+    
+    // Listen for buy-in requests
+    listenForBuyInRequests();
+    
+    // Generate and display QR code
+    generateQRCode();
+}
+
+// Function to generate QR code
+function generateQRCode() {
+    const buyInUrl = `${window.location.origin}/buy-in.html?gameId=${gameState.sessionId}`;
+    
+    // Create QR code container if it doesn't exist
+    let qrContainer = document.getElementById('qr-code-container');
+    if (!qrContainer) {
+        qrContainer = document.createElement('div');
+        qrContainer.id = 'qr-code-container';
+        qrContainer.className = 'qr-code-section';
+        
+        const header = document.createElement('h2');
+        header.textContent = 'Buy-in QR Code';
+        qrContainer.appendChild(header);
+        
+        const qrWrapper = document.createElement('div');
+        qrWrapper.className = 'qr-wrapper';
+        qrContainer.appendChild(qrWrapper);
+        
+        const instructions = document.createElement('p');
+        instructions.textContent = 'Players can scan this QR code to buy into the game';
+        qrContainer.appendChild(instructions);
+        
+        // Add container after the money-to-chip-ratio section
+        const ratioSection = document.getElementById('money-to-chip-ratio');
+        ratioSection.parentNode.insertBefore(qrContainer, ratioSection.nextSibling);
+    }
+    
+    // Generate QR code using qrcode.js library
+    const qrWrapper = qrContainer.querySelector('.qr-wrapper');
+    qrWrapper.innerHTML = '';
+    new QRCode(qrWrapper, {
+        text: buyInUrl,
+        width: 200,
+        height: 200,
+        colorDark: getComputedStyle(document.documentElement).getPropertyValue('--main-color').trim(),
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+}
+
+// Function to listen for buy-in requests
+function listenForBuyInRequests() {
+    const requestsRef = database.ref(`games/${gameState.sessionId}/requests`);
+    
+    requestsRef.on('child_added', (snapshot) => {
+        const request = snapshot.val();
+        if (request.status === 'pending') {
+            showBuyInRequest(snapshot.key, request);
+        }
+    });
+}
+
+// Function to show buy-in request
+function showBuyInRequest(requestId, request) {
+    // Create request notification
+    const notification = document.createElement('div');
+    notification.className = 'buy-in-request';
+    notification.innerHTML = `
+        <div class="request-details">
+            <h3>Buy-in Request</h3>
+            <p><strong>${request.name}</strong> wants to buy in for:</p>
+            <p class="amount">$${request.buyInAmount.toFixed(2)} (${request.chipAmount} chips)</p>
+        </div>
+        <div class="request-actions">
+            <button class="approve-btn">Approve</button>
+            <button class="reject-btn">Reject</button>
+        </div>
+    `;
+    
+    // Add to notifications area
+    let notificationsArea = document.getElementById('notifications-area');
+    if (!notificationsArea) {
+        notificationsArea = document.createElement('div');
+        notificationsArea.id = 'notifications-area';
+        document.querySelector('main').insertBefore(notificationsArea, document.querySelector('main').firstChild);
+    }
+    notificationsArea.appendChild(notification);
+    
+    // Handle approve/reject actions
+    notification.querySelector('.approve-btn').addEventListener('click', () => {
+        handleBuyInResponse(requestId, 'approved', request);
+        notification.remove();
+    });
+    
+    notification.querySelector('.reject-btn').addEventListener('click', () => {
+        handleBuyInResponse(requestId, 'rejected', request);
+        notification.remove();
+    });
+}
+
+// Function to handle buy-in response
+async function handleBuyInResponse(requestId, status, request) {
+    try {
+        // Update request status
+        await database.ref(`games/${gameState.sessionId}/requests/${requestId}`).update({
+            status: status
+        });
+        
+        if (status === 'approved') {
+            // Add player to the game
+            addPlayer(request.name, request.chipAmount);
+            showToast(`${request.name} has been added to the game with ${request.chipAmount} chips`);
+        }
+    } catch (error) {
+        console.error('Error handling buy-in response:', error);
+        showToast('Error processing buy-in request', 'error');
+    }
+}
+
+// Modify startGame function to initialize game session
+const originalStartGame = startGame;
+startGame = async function() {
+    if (gameState.players.length < 2) {
+        showToast('Need at least 2 players to start the game.', 'error');
+        return;
+    }
+    
+    // Initialize game session first
+    await initializeGameSession();
+    
+    // Call original startGame function
+    originalStartGame();
+};
+
+// Add QR code library to the page
+const qrScript = document.createElement('script');
+qrScript.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js';
+document.head.appendChild(qrScript);
 
 // Start game function
 function startGame() {
