@@ -2,210 +2,156 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Buy-in - Poker Home Game</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
         :root {
-            --main-color: #2E8B57;
-            --secondary-color: #3CB371;
-            --text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+            --container-padding: max(1rem, env(safe-area-inset-left));
         }
 
         body {
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            min-height: -webkit-fill-available;
+            background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: white;
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        html {
+            height: -webkit-fill-available;
+            height: 100%;
         }
 
         .container {
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 2rem;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            width: min(100% - 2rem, 500px);
+            margin-inline: auto;
+            padding: var(--container-padding);
+            box-sizing: border-box;
+            margin: 1rem;
+        }
+
+        .buy-in-form {
+            background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: clamp(1.5rem, 5vw, 2.5rem);
+            width: 100%;
+            backdrop-filter: blur(10px);
         }
 
         h1 {
-            margin: 0 0 1.5rem;
-            font-size: 3rem;
-            font-weight: 800;
-            text-align: center;
-            background: linear-gradient(45deg, var(--main-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: var(--text-shadow);
-            position: relative;
-        }
-
-        h1::after {
-            content: attr(data-text);
-            position: absolute;
-            left: 0;
-            top: 0;
-            z-index: -1;
-            background: none;
-            -webkit-text-fill-color: transparent;
-            -webkit-text-stroke: 2px rgba(0, 0, 0, 0.3);
-            width: 100%;
+            font-size: clamp(2rem, 8vw, 3rem);
+            margin-bottom: clamp(1rem, 4vw, 2rem);
+            line-height: 1.1;
         }
 
         .game-info {
-            text-align: center;
-            margin-bottom: 2rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: clamp(1.5rem, 5vw, 2rem);
         }
 
         .game-name {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--main-color);
-            text-shadow: var(--text-shadow);
+            font-size: clamp(1.25rem, 4vw, 1.5rem);
         }
 
         .chip-ratio {
-            font-size: 1.2rem;
-            color: var(--secondary-color);
-            text-shadow: var(--text-shadow);
+            font-size: clamp(0.875rem, 3vw, 1rem);
+        }
+
+        .form-group {
+            margin-bottom: clamp(1rem, 4vw, 1.5rem);
         }
 
         input {
             width: 100%;
-            padding: 1rem;
-            margin: 0.5rem 0;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-            box-sizing: border-box;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--main-color);
-            background: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 0 20px rgba(var(--main-color-rgb), 0.3);
+            height: clamp(2.5rem, 8vw, 3rem);
+            padding: 0 1rem;
+            font-size: clamp(1rem, 3.5vw, 1.2rem);
+            border-radius: 8px;
         }
 
         button {
             width: 100%;
-            padding: 1rem;
-            margin-top: 1rem;
-            border: none;
-            border-radius: 10px;
-            background: linear-gradient(45deg, var(--main-color), var(--secondary-color));
-            color: white;
-            font-size: 1.2rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            height: clamp(2.75rem, 9vw, 3.5rem);
+            font-size: clamp(1rem, 3.5vw, 1.2rem);
+            margin-top: clamp(1rem, 4vw, 1.5rem);
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        .chip-preview {
+            padding: clamp(1rem, 4vw, 1.5rem);
+            margin: clamp(1.5rem, 5vw, 2rem) 0;
         }
 
-        button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
+        .chip-preview p {
+            font-size: clamp(0.875rem, 3vw, 1rem);
         }
 
-        #chip-preview {
-            margin: 1rem 0;
-            padding: 1rem;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            text-align: center;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .chip-preview h3 {
+            font-size: clamp(1.5rem, 5vw, 2rem);
         }
 
-        #status {
-            margin-top: 1rem;
-            padding: 1rem;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: 500;
+        .status {
+            font-size: clamp(0.875rem, 3vw, 1rem);
+            padding: clamp(0.75rem, 3vw, 1rem);
+            margin-top: clamp(1rem, 4vw, 1.5rem);
         }
 
-        .status.pending {
-            background: rgba(255, 193, 7, 0.1);
-            color: #ffc107;
-            text-shadow: var(--text-shadow);
-        }
-
-        .status.success {
-            background: rgba(var(--main-color-rgb), 0.1);
-            color: var(--main-color);
-            text-shadow: var(--text-shadow);
-        }
-
-        .status.error {
-            background: rgba(255, 59, 48, 0.1);
-            color: #ff3b30;
-            text-shadow: var(--text-shadow);
-        }
-
-        .success-message {
-            text-align: center;
-            animation: fadeIn 0.5s ease;
-            margin-top: 2rem;
-        }
-
-        .success-message h2 {
-            color: var(--main-color);
-            margin-bottom: 1rem;
-            text-shadow: var(--text-shadow);
-        }
-
-        .success-message p {
-            color: var(--secondary-color);
-            font-size: 1.1rem;
-            margin: 0.5rem 0;
-            text-shadow: var(--text-shadow);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Mobile Optimization */
-        @media (max-width: 768px) {
+        @media (max-width: 480px) {
             .container {
-                padding: 1.5rem;
+                margin: 0.5rem;
             }
 
-            h1 {
-                font-size: 2.5rem;
+            .buy-in-form {
+                padding: 1.25rem;
             }
 
             input, button {
-                font-size: 1rem;
-                padding: 0.8rem;
+                font-size: 16px; /* Prevent iOS zoom */
+            }
+
+            .form-group label {
+                font-size: 0.875rem;
+            }
+
+            .helper-text {
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .container {
+                margin: 0.5rem;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+                margin-bottom: 1rem;
+            }
+
+            .game-info {
+                margin-bottom: 1rem;
+            }
+
+            .chip-preview {
+                margin: 1rem 0;
+                padding: 0.75rem;
+            }
+        }
+
+        @supports (-webkit-touch-callout: none) {
+            /* iOS-specific fixes */
+            body {
+                min-height: -webkit-fill-available;
             }
         }
     </style>
@@ -236,7 +182,7 @@
                     <h3 id="chip-amount">-- chips</h3>
                 </div>
 
-                <button type="submit" class="submit-btn">Join Game</button>
+                <button type="submit">Join Game</button>
             </form>
 
             <div id="status-message" class="status"></div>

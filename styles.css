@@ -668,42 +668,192 @@ label {
 @media (max-width: 768px) {
     header {
         padding: var(--spacing-md);
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-md);
     }
 
     h1 {
-        font-size: 2.5rem;
+        font-size: clamp(2rem, 8vw, 2.5rem);
+        text-align: center;
     }
 
     main {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
         grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
     }
 
     section {
-        padding: var(--spacing-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-md);
     }
 
     h2 {
-        font-size: 2rem;
+        font-size: clamp(1.5rem, 6vw, 2rem);
+        margin-bottom: var(--spacing-md);
     }
 
     .game-control-buttons {
         grid-template-columns: 1fr;
+        gap: var(--spacing-md);
     }
 
     input, button {
-        font-size: 1rem;
-        padding: 1rem;
+        font-size: 16px; /* Prevent iOS zoom */
+        padding: 0.875rem;
+        height: 3rem;
     }
 
     .theme-controls {
         flex-direction: column;
-        width: 100%;
+        padding: var(--spacing-md);
+        gap: var(--spacing-sm);
     }
 
     #theme-selector {
         width: 100%;
+        max-width: none;
     }
+
+    .qr-wrapper {
+        width: 100%;
+        max-width: 280px;
+        height: auto;
+        aspect-ratio: 1;
+    }
+
+    .join-url {
+        font-size: 0.875rem;
+        max-width: 100%;
+        word-break: break-all;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --spacing-xxl: 32px;
+        --spacing-xl: 24px;
+        --spacing-lg: 16px;
+        --spacing-md: 12px;
+        --spacing-sm: 8px;
+        --spacing-xs: 4px;
+    }
+
+    header {
+        padding: var(--spacing-sm);
+    }
+
+    main {
+        padding: var(--spacing-sm);
+    }
+
+    section {
+        padding: var(--spacing-md);
+        border-radius: var(--border-radius-md);
+    }
+
+    .game-stats {
+        font-size: 0.875rem;
+    }
+
+    .game-stats h4 {
+        font-size: 1rem;
+    }
+
+    .buy-in-request {
+        padding: var(--spacing-md);
+    }
+
+    .buy-in-request-actions {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .buy-in-request-actions button {
+        width: 100%;
+    }
+
+    .manual-entry-note {
+        font-size: 0.75rem;
+        padding: var(--spacing-sm);
+    }
+
+    .chip-preview {
+        padding: var(--spacing-md);
+    }
+
+    .chip-preview p {
+        font-size: 0.875rem;
+    }
+
+    .status {
+        font-size: 0.875rem;
+        padding: var(--spacing-sm);
+    }
+}
+
+/* iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+    body {
+        min-height: -webkit-fill-available;
+    }
+
+    html {
+        height: -webkit-fill-available;
+    }
+
+    input, select, textarea {
+        font-size: 16px !important; /* Prevent iOS zoom */
+    }
+}
+
+/* Handle landscape orientation */
+@media (max-height: 600px) and (orientation: landscape) {
+    main {
+        padding: var(--spacing-sm);
+        gap: var(--spacing-md);
+    }
+
+    section {
+        padding: var(--spacing-md);
+    }
+
+    h1 {
+        font-size: 1.75rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .game-control-buttons {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .qr-wrapper {
+        max-width: 200px;
+    }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+    body {
+        padding-left: max(var(--spacing-md), env(safe-area-inset-left));
+        padding-right: max(var(--spacing-md), env(safe-area-inset-right));
+        padding-bottom: max(var(--spacing-md), env(safe-area-inset-bottom));
+        padding-top: max(var(--spacing-md), env(safe-area-inset-top));
+    }
+}
+
+/* Ensure buttons are easily tappable on mobile */
+button, 
+.action-button,
+.form-group input,
+.form-group select {
+    min-height: 44px; /* iOS minimum tappable area */
+    touch-action: manipulation;
 }
 
 /* Animation Classes */
@@ -1693,62 +1843,76 @@ section > h2 {
     text-shadow: none;
 }
 
-/* Modern UI Typography */
+/* Modern Minimalist Typography */
 h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     color: white;
     text-shadow: none;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.02em;
+    font-feature-settings: "ss01" 1, "ss02" 1, "ss03" 1;
 }
 
 h1 {
     font-size: 3.5rem;
-    font-weight: 700;
+    font-weight: 600;
     margin-bottom: 2rem;
     background: none;
     -webkit-text-fill-color: white;
+    line-height: 1.1;
+}
+
+/* Modern Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Modern Form Elements */
 input, 
 select, 
 textarea {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border: 2px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
     color: white !important;
-    font-size: 1.2rem !important;
-    padding: 1rem 1.5rem !important;
-    transition: all 0.3s ease !important;
-    backdrop-filter: blur(10px);
+    font-size: 1rem !important;
+    padding: 1rem !important;
+    transition: all 0.2s ease !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-    border-color: var(--main-color) !important;
-    box-shadow: 0 0 0 4px rgba(var(--main-color-rgb), 0.2) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
     outline: none !important;
 }
 
 /* Modern Button Styles */
 button {
-    background: var(--main-color) !important;
+    background: white !important;
     border: none !important;
-    border-radius: 12px !important;
-    color: white !important;
-    font-size: 1.2rem !important;
-    font-weight: 600 !important;
+    border-radius: 8px !important;
+    color: black !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
     padding: 1rem 2rem !important;
-    transition: all 0.3s ease !important;
+    transition: all 0.2s ease !important;
     text-transform: none !important;
     letter-spacing: 0 !important;
-    box-shadow: 0 4px 15px rgba(var(--main-color-rgb), 0.3) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
 button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 25px rgba(var(--main-color-rgb), 0.4) !important;
+    transform: translateY(-1px) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
 }
 
 button:active {
@@ -1756,96 +1920,108 @@ button:active {
 }
 
 /* Modern Card Styles */
-.card,
-.game-stats,
-.player-stats,
-.chip-preview {
-    background: rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 16px !important;
-    padding: 1.5rem !important;
-    margin-bottom: 1.5rem !important;
+.buy-in-form {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 480px;
+    backdrop-filter: blur(10px);
+}
+
+.game-info {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Modern Text Styles */
-.game-name,
-.chip-ratio,
-.player-name,
-.buy-in-amount,
-.status {
-    color: white !important;
-    font-weight: 500 !important;
-    text-shadow: none !important;
+.game-name {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: white;
 }
 
-.status.success {
-    color: #2ecc71 !important;
+.chip-ratio {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
 }
 
-.status.pending {
-    color: #f1c40f !important;
+/* Form Groups */
+.form-group {
+    margin-bottom: 1.5rem;
 }
 
-.status.error {
-    color: #e74c3c !important;
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 
-/* Modern Labels */
-label {
-    color: rgba(255, 255, 255, 0.8) !important;
-    font-size: 1rem !important;
-    font-weight: 500 !important;
-    margin-bottom: 0.5rem !important;
-}
-
-/* Modern Section Headers */
-section > h2 {
-    font-size: 2rem !important;
-    font-weight: 600 !important;
-    color: white !important;
-    margin-bottom: 1.5rem !important;
-    text-align: center !important;
-}
-
-/* Modern Info Text */
-.info-text,
 .helper-text {
-    color: rgba(255, 255, 255, 0.7) !important;
-    font-size: 0.95rem !important;
-    line-height: 1.5 !important;
+    display: block;
+    margin-top: 0.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.875rem;
 }
 
-/* Modern Chip Preview */
+/* Chip Preview */
 .chip-preview {
-    border: 2px solid rgba(var(--main-color-rgb), 0.3) !important;
-    background: rgba(var(--main-color-rgb), 0.1) !important;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    text-align: center;
 }
 
 .chip-preview p {
-    color: white !important;
-    font-size: 1.1rem !important;
-    margin-bottom: 0.5rem !important;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
 }
 
-/* Modern Form Groups */
-.form-group {
-    margin-bottom: 1.5rem !important;
+.chip-preview h3 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: white;
+    margin: 0;
 }
 
-.form-group span {
-    color: rgba(255, 255, 255, 0.7) !important;
-    font-size: 0.9rem !important;
-    margin-top: 0.5rem !important;
-    display: block !important;
+/* Status Messages */
+.status {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    text-align: center;
 }
 
-/* Remove any remaining embossed effects */
-*[class*="text-"] {
+.status.success {
+    background: rgba(46, 213, 115, 0.1);
+    color: #2ed573;
+    border: 1px solid rgba(46, 213, 115, 0.2);
+}
+
+.status.error {
+    background: rgba(255, 71, 87, 0.1);
+    color: #ff4757;
+    border: 1px solid rgba(255, 71, 87, 0.2);
+}
+
+.status.pending {
+    background: rgba(255, 199, 0, 0.1);
+    color: #ffc700;
+    border: 1px solid rgba(255, 199, 0, 0.2);
+}
+
+/* Remove any remaining shadows or embossing */
+* {
     text-shadow: none !important;
-}
-
-*[class*="title-"] {
-    text-shadow: none !important;
+    -webkit-text-stroke: 0 !important;
 }
 
