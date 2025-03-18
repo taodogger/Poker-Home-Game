@@ -368,19 +368,26 @@
                             console.log('[FIREBASE] Forcing state update to trigger listeners');
                             await database.ref(`games/${gameId}/state/lastUpdate`).set(Date.now());
 
-                            // IMPORTANT: Add player directly to the notifications channel for immediate sync
-                            await database.ref(`playerNotifications`).push({
-                                type: 'playerJoined',
-                                gameId: gameId,
-                                player: updatedPlayer,
-                                timestamp: Date.now()
-                            });
-
-                            // Update the state in Firebase
-                            await database.ref(`games/${gameId}`).update({
-                                updatedAt: Date.now(),
-                                active: true
-                            });
+                            // IMPORTANT: Instead of using playerNotifications which has permission issues,
+                            // we will directly update the game state with our new player data
+                            // and use lastUpdate to trigger a refresh on the main app
+                            console.log('[FIREBASE] Directly updating game state with new player');
+                            
+                            // Update multiple paths at once for better atomicity
+                            const updates = {};
+                            updates[`games/${gameId}/state/lastUpdate`] = Date.now();
+                            updates[`games/${gameId}/state/lastPlayer`] = {
+                                id: playerId,
+                                name: playerName,
+                                initial_chips: chips,
+                                current_chips: chips,
+                                joinedAt: Date.now()
+                            };
+                            updates[`games/${gameId}/updatedAt`] = Date.now();
+                            updates[`games/${gameId}/active`] = true;
+                            
+                            // Apply all updates in one transaction
+                            await database.ref().update(updates);
 
                             updateStatus('Successfully joined the game!', 'success');
                             form.style.display = 'none';

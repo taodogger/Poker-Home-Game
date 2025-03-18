@@ -108,6 +108,9 @@ function updatePlayerList() { /* Will be replaced later */ }
 function saveState() { /* Will be replaced later */ }
 function updateEmptyState() { /* Will be replaced later */ }
 
+// Variable to track toast messages to prevent duplicates
+let recentToasts = new Set();
+
 // Create toast container and styles
 function createToastContainer() {
     const container = document.createElement('div');
@@ -522,6 +525,20 @@ window.PokerApp = {
         handAnimation: null,
         toastTimeout: null,
         showToast: function(message, type = 'success') {
+            // Create a unique key for this message and type
+            const toastKey = `${message}-${type}`;
+            
+            // If this exact message is already showing, don't show it again
+            if (recentToasts.has(toastKey)) {
+                return;
+            }
+            
+            // Add to recent toasts set and remove after 3 seconds
+            recentToasts.add(toastKey);
+            setTimeout(() => {
+                recentToasts.delete(toastKey);
+            }, 3000);
+            
             const toastContainer = document.getElementById('toast-container') || createToastContainer();
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
@@ -1171,27 +1188,8 @@ function updateEmptyState() {
 
 // Toast notification system
 function showToast(message, type = 'success') {
-    // Create toast container if it doesn't exist
-    let toastContainer = document.querySelector('.toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container';
-        document.body.appendChild(toastContainer);
-    }
-    
-    // Create toast
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    
-    // Add to container
-    toastContainer.appendChild(toast);
-    
-    // Remove after delay
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease forwards';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    // Use the PokerApp's showToast method to prevent duplicates
+    PokerApp.UI.showToast(message, type);
 }
 
 // Create and manage game lobbies
@@ -1565,80 +1563,68 @@ function setupFirebaseListeners(gameIdOverride, forceRefresh = false) {
 
 // NEW: Set up notification listener for real-time player joins
 function setupNotificationListener(gameId) {
-    // Listen for notification events, especially player joins
-    const notificationRef = firebase.database().ref('playerNotifications');
+    // Instead of using playerNotifications, we'll listen for changes to lastPlayer
+    const lastPlayerRef = firebase.database().ref(`games/${gameId}/state/lastPlayer`);
     
-    // Remove any existing notification listeners
-    notificationRef.off('child_added');
+    // Remove any existing listeners
+    lastPlayerRef.off('value');
     
-    // Store the current timestamp - we'll only process notifications
-    // that came in after we set up this listener
-    const startTime = Date.now() - (60 * 1000); // Include the last minute for safety
+    console.log(`[FIREBASE] Setting up lastPlayer listener for game: ${gameId}`);
     
-    // Set up a listener for new and recent notifications
-    notificationRef.orderByChild('timestamp').startAt(startTime).on('child_added', 
+    // Set up a listener for lastPlayer changes
+    lastPlayerRef.on('value', 
         (snapshot) => {
-            const notification = snapshot.val();
-            console.log(`[FIREBASE] Received notification:`, notification);
+            const lastPlayer = snapshot.val();
+            console.log(`[FIREBASE] Received lastPlayer update:`, lastPlayer);
             
-            // Only process notifications for our game
-            if (notification && notification.gameId === gameId) {
-                console.log(`[FIREBASE] Processing notification for our game:`, notification);
+            if (!lastPlayer) {
+                console.log(`[FIREBASE] No lastPlayer data`);
+                return;
+            }
+            
+            // Check if this player already exists in our state
+            const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
+                (p.id && p.id === parseInt(lastPlayer.id)) || 
+                (p.name && lastPlayer.name && 
+                    p.name.toLowerCase() === lastPlayer.name.toLowerCase())
+            );
+            
+            if (existingPlayerIndex === -1) {
+                // New player - add them
+                const playerData = {
+                    id: parseInt(lastPlayer.id),
+                    name: lastPlayer.name,
+                    initial_chips: parseInt(lastPlayer.initial_chips),
+                    current_chips: parseInt(lastPlayer.current_chips)
+                };
                 
-                if (notification.type === 'playerJoined') {
-                    // A new player has joined - update immediately
-                    console.log(`[FIREBASE] New player joined:`, notification.player);
-                    
-                    // First, check if we already have this player
-                    const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
-                        (p.id && p.id === parseInt(notification.player.id)) || 
-                        (p.name && notification.player.name && 
-                         p.name.toLowerCase() === notification.player.name.toLowerCase())
-                    );
-                    
-                    if (existingPlayerIndex === -1) {
-                        // New player - add them
-                        const playerData = {
-                            id: parseInt(notification.player.id),
-                            name: notification.player.name,
-                            initial_chips: parseInt(notification.player.initial_chips),
-                            current_chips: parseInt(notification.player.current_chips)
-                        };
-                        
-                        console.log(`[FIREBASE] Adding new player to state:`, playerData);
-                        PokerApp.state.players.push(playerData);
-                        
-                        // Update UI
-                        updatePlayerList();
-                        updateEmptyState();
-                        
-                        // Update hand animation if it exists
-                        if (window.handAnimation) {
-                            window.handAnimation.setPlayers(PokerApp.state.players);
-                        }
-                        
-                        // Show toast notification
-                        showToast(`New player joined: ${notification.player.name}`, 'success');
-                        
-                        // Save state to localStorage
-                        saveState();
-                    } else {
-                        console.log(`[FIREBASE] Player already exists in state, skipping:`, notification.player.name);
-                    }
-                    
-                    // Once processed, remove the notification
-                    snapshot.ref.remove().catch(error => {
-                        console.error('[FIREBASE] Error removing processed notification:', error);
-                    });
+                console.log(`[FIREBASE] Adding new player to state:`, playerData);
+                PokerApp.state.players.push(playerData);
+                
+                // Update UI
+                updatePlayerList();
+                updateEmptyState();
+                
+                // Update hand animation if it exists
+                if (window.handAnimation) {
+                    window.handAnimation.setPlayers(PokerApp.state.players);
                 }
+                
+                // Show toast notification
+                showToast(`New player joined: ${lastPlayer.name}`, 'success');
+                
+                // Save state to localStorage
+                saveState();
+            } else {
+                console.log(`[FIREBASE] Player already exists in state, skipping:`, lastPlayer.name);
             }
         },
         (error) => {
-            console.error('[FIREBASE] Error in notification listener:', error);
+            console.error('[FIREBASE] Error in lastPlayer listener:', error);
         }
     );
     
-    console.log(`[FIREBASE] Notification listener set up`);
+    console.log(`[FIREBASE] lastPlayer listener set up`);
 }
 
 // Set up the player list listener separately
@@ -1828,37 +1814,119 @@ function updatePlayerCountNotification(currentCount) {
     window._lastPlayerCount = currentCount;
 }
 
+function resetGame() {
+    // End current game if in progress
+    if (PokerApp.state.gameInProgress) {
+        endGame();
+    }
+    
+    // First clean up any Firebase connections
+    if (PokerApp.state.sessionId) {
+        // Update game status to inactive in Firebase
+        try {
+            firebase.database().ref(`games/${PokerApp.state.sessionId}`).update({
+                active: false,
+                status: 'reset'
+            });
+            
+            // Remove all Firebase listeners
+            firebase.database().ref(`games/${PokerApp.state.sessionId}`).off();
+            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).off();
+            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastUpdate`).off();
+            
+            console.log('Cleaned up all Firebase listeners and connections');
+        } catch (error) {
+            console.error('Error cleaning up Firebase connections:', error);
+        }
+    }
+    
+    // Reset game state
+    PokerApp.state.players = [];
+    PokerApp.state.dealerId = null;
+    PokerApp.state.nextPlayerId = 1;
+    PokerApp.state.gameInProgress = false;
+    PokerApp.state.sessionId = null;
+    PokerApp.state.gameName = null;
+    PokerApp.state.lobbyActive = false;
+    
+    // Reset player counter
+    window._lastPlayerCount = 0;
+    
+    // Update UI
+    updatePlayerList();
+    updateEmptyState();
+    updateLobbyUI(false);
+    
+    // Clear QR code container
+    const qrCodeContainer = document.getElementById('qr-code-container');
+    if (qrCodeContainer) {
+        qrCodeContainer.style.display = 'none';
+        const qrWrapper = qrCodeContainer.querySelector('.qr-wrapper');
+        if (qrWrapper) {
+            qrWrapper.innerHTML = '';
+        }
+    }
+    
+    // Clear game name input
+    const gameNameInput = document.getElementById('game-name');
+    if (gameNameInput) {
+        gameNameInput.value = '';
+        gameNameInput.disabled = false;
+    }
+    
+    // Update status badges
+    updateGameStatus('Game reset', false);
+    
+    // Save state
+    saveState();
+    
+    showToast('Game reset successfully', 'success');
+}
+
 function endGame() {
     PokerApp.state.gameInProgress = false;
     updateEmptyState();
     
     // Update UI elements
-    document.getElementById('start-game').disabled = false;
-    document.getElementById('simulate-hand').disabled = true;
-    document.getElementById('end-game').disabled = true;
-    document.getElementById('game-status').textContent = 'Game ended';
-    document.getElementById('game-status').classList.remove('active');
+    const startGameBtn = document.getElementById('start-game');
+    const simulateHandBtn = document.getElementById('simulate-hand');
+    const endGameBtn = document.getElementById('end-game');
+    
+    if (startGameBtn) startGameBtn.disabled = false;
+    if (simulateHandBtn) simulateHandBtn.disabled = true;
+    if (endGameBtn) endGameBtn.disabled = true;
+    
+    const gameStatusText = document.getElementById('game-status');
+    if (gameStatusText) {
+        gameStatusText.textContent = 'Game ended';
+        gameStatusText.classList.remove('active');
+    }
     
     // Clean up Firebase
     if (PokerApp.state.sessionId) {
-        // Update game status to ended
-        firebase.database().ref(`games/${PokerApp.state.sessionId}`).update({
-            status: 'ended',
-            active: false
-        });
-        
-        // Remove all listeners
-        firebase.database().ref(`games/${PokerApp.state.sessionId}`).off();
-        firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).off();
-        
-        // Reset session info
-        PokerApp.state.sessionId = null;
-        PokerApp.state.gameName = null;
-        PokerApp.state.lobbyActive = false;
+        try {
+            // Update game status to ended
+            firebase.database().ref(`games/${PokerApp.state.sessionId}`).update({
+                status: 'ended',
+                active: false
+            });
+            
+            // Remove all listeners
+            firebase.database().ref(`games/${PokerApp.state.sessionId}`).off();
+            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).off();
+            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastUpdate`).off();
+            
+            // Reset session info
+            PokerApp.state.sessionId = null;
+            PokerApp.state.gameName = null;
+            PokerApp.state.lobbyActive = false;
+            
+            // Update lobby UI
+            updateLobbyUI(false);
+        } catch (error) {
+            console.error('Error ending game in Firebase:', error);
+        }
     }
-    
-    // Update lobby UI
-    updateLobbyUI(false);
     
     // Save state
     saveState();
