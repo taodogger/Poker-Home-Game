@@ -51,6 +51,13 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html {
+    height: 100%;
+    height: -webkit-fill-available;
+    overflow-x: hidden;
 }
 
 body {
@@ -58,11 +65,13 @@ body {
     padding: 0;
     font-family: var(--font-primary);
     min-height: 100vh;
+    min-height: -webkit-fill-available;
     background: var(--background-color);
     color: var(--text-color);
     overflow-x: hidden;
     position: relative;
     line-height: 1.6;
+    padding-top: env(safe-area-inset-top);
 }
 
 body::before {
@@ -81,8 +90,11 @@ header {
     position: fixed;
     top: 0;
     left: 0;
+    right: 0;
     width: 100%;
     padding: 0.5rem 1rem;
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
     background: rgba(10, 10, 10, 0.95);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -91,7 +103,8 @@ header {
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
-    height: 48px;
+    height: auto;
+    min-height: 48px;
     z-index: 1000;
 }
 
@@ -157,7 +170,7 @@ h1::after {
 
 /* Main Content Container */
 main {
-    padding-top: calc(48px + 1rem);
+    padding-top: calc(48px + env(safe-area-inset-top) + 1rem);
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
@@ -764,7 +777,8 @@ label {
 
     header {
         padding: 0.375rem 0.75rem;
-        height: 40px;
+        padding-top: max(0.375rem, env(safe-area-inset-top));
+        min-height: 40px;
     }
 
     .header-title {
@@ -772,7 +786,7 @@ label {
     }
 
     main {
-        padding-top: calc(40px + 0.75rem);
+        padding-top: calc(40px + env(safe-area-inset-top) + 0.75rem);
     }
 
     section {
@@ -838,6 +852,7 @@ label {
 @supports (-webkit-touch-callout: none) {
     body {
         min-height: -webkit-fill-available;
+        padding-top: env(safe-area-inset-top);
     }
 
     html {
@@ -852,7 +867,8 @@ label {
         padding-top: max(0.375rem, env(safe-area-inset-top));
         padding-right: max(0.75rem, env(safe-area-inset-right));
         padding-left: max(0.75rem, env(safe-area-inset-left));
-        height: calc(40px + env(safe-area-inset-top));
+        height: auto;
+        min-height: calc(40px + env(safe-area-inset-top));
     }
 
     main {
