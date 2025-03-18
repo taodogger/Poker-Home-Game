@@ -641,18 +641,11 @@ label {
 }
 
 /* Theme selector styles */
-#theme-selector,
-#theme-selector option,
-#theme-selector:focus,
-#theme-selector:hover,
-#theme-selector:active {
-    color: white !important;
-    background: #1a1a1a !important;
-}
-
 #theme-selector {
+    background: #1a1a1a;
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 6px;
+    color: white !important;
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
     height: 28px;
@@ -667,13 +660,15 @@ label {
 }
 
 #theme-selector option {
+    background: #1a1a1a;
+    color: white;
     padding: 10px;
     font-size: 0.75rem;
 }
 
 #theme-selector:hover {
     border-color: var(--main-color);
-    background-color: #2a2a2a !important;
+    background-color: #2a2a2a;
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
