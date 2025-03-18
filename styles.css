@@ -2123,3 +2123,48 @@ button:active {
     -webkit-text-stroke: 0 !important;
 }
 
+/* Header title icons */
+.header-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    text-align: left;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.title-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    object-fit: contain;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.title-icon:hover {
+    opacity: 1;
+}
+
+/* Theme-specific icon styles */
+[data-theme="doginme"] .title-icon.left-icon {
+    content: url('images/doginme-icon.png');
+}
+
+[data-theme="rizzler"] .title-icon.right-icon {
+    content: url('images/rizzler-icon.png');
+}
+
+@media (max-width: 480px) {
+    .header-title {
+        font-size: 0.75rem;
+    }
+
+    .title-icon {
+        width: 1rem;
+        height: 1rem;
+    }
+}
+
