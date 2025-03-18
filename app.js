@@ -103,6 +103,11 @@ function setTheme(theme) {
     }
 }
 
+// Dummy placeholder functions to be overridden later
+function updatePlayerList() { /* Will be replaced later */ }
+function saveState() { /* Will be replaced later */ }
+function updateEmptyState() { /* Will be replaced later */ }
+
 // Create toast container and styles
 function createToastContainer() {
     const container = document.createElement('div');
