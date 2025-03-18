@@ -239,21 +239,21 @@ window.PokerApp = {
                 this.state.chipRatio = state.chipRatio || 1.0;
                 this.state.theme = state.theme || 'classic-green';
             }
-            
-            // Initialize UI components
-            this.UI.initialize();
-            
-            // Setup event listeners
-            setupEventListeners();
-            
+        
+        // Initialize UI components
+        this.UI.initialize();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
             // Set up auto-save
             setInterval(() => saveState(), 5000); // Save every 5 seconds
             window.addEventListener('beforeunload', () => saveState());
             
             // Update UI with loaded state
             updatePlayerList();
-            updateEmptyState();
-            
+        updateEmptyState();
+        
             console.log('PokerApp initialized successfully');
         } catch (error) {
             console.error('Error during initialization:', error);
@@ -765,11 +765,11 @@ function initialize() {
         // Clear the reset flag
         sessionStorage.removeItem('gameWasReset');
     }
-    
-    // Update UI
-    updatePlayerList();
-    updateEmptyState();
-    
+        
+        // Update UI
+        updatePlayerList();
+        updateEmptyState();
+        
     // Update dealer wheel if it exists
     if (handAnimation) {
         handAnimation.setPlayers(gameState.players);
@@ -1142,7 +1142,7 @@ function setupAutoSave() {
         if (gameState.sessionId) {
             try {
                 await saveState();
-            } catch (error) {
+    } catch (error) {
                 console.error('Auto-save failed:', error);
             }
         }
@@ -1153,7 +1153,7 @@ function setupAutoSave() {
         if (gameState.sessionId) {
             try {
                 await saveState();
-            } catch (error) {
+        } catch (error) {
                 console.error('Final state save failed:', error);
             }
         }
@@ -1172,8 +1172,8 @@ async function loadSavedState() {
                 gameState.gameInProgress = firebaseState.gameInProgress || false;
                 gameState.chipRatio = firebaseState.chipRatio || 1.0;
                 gameState.theme = firebaseState.theme || 'classic-green';
-                return;
-            }
+        return;
+    }
         }
         
         // Fallback to localStorage
@@ -1210,7 +1210,7 @@ function setupStateSync(sessionId) {
         if (firebaseState.players) {
             gameState.players = firebaseState.players;
             updatePlayerList();
-            updateEmptyState();
+    updateEmptyState();
         }
         
         if (firebaseState.gameInProgress !== undefined) {
@@ -1450,7 +1450,7 @@ function resetGame() {
                     // Log but don't throw - this is expected if we don't have permission
                     console.log('Note: Could not remove Firebase session (expected if not owner)');
                 });
-        } catch (error) {
+    } catch (error) {
             // Log but continue - we don't want Firebase errors to block the reset
             console.log('Note: Firebase cleanup skipped');
         }
@@ -1514,3 +1514,34 @@ function resetGame() {
     
     PokerApp.UI.showToast('Game reset successfully', 'success');
 }
+
+// Theme handling
+document.addEventListener('DOMContentLoaded', function() {
+    const themeSelector = document.getElementById('theme-selector');
+    const leftIcon = document.querySelector('.title-icon.left-icon');
+    const rightIcon = document.querySelector('.title-icon.right-icon');
+
+    // Set initial theme
+    const savedTheme = localStorage.getItem('theme') || 'doginme';
+    document.body.setAttribute('data-theme', savedTheme);
+    themeSelector.value = savedTheme;
+    updateHeaderIcons(savedTheme);
+
+    // Handle theme changes
+    themeSelector.addEventListener('change', function(e) {
+        const theme = e.target.value;
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        updateHeaderIcons(theme);
+    });
+
+    function updateHeaderIcons(theme) {
+        if (theme === 'doginme') {
+            leftIcon.src = 'images/doginme-icon.png';
+            rightIcon.src = 'images/doginme-icon.png';
+        } else if (theme === 'rizzler') {
+            leftIcon.src = 'images/rizzler-icon.png';
+            rightIcon.src = 'images/rizzler-icon.png';
+        }
+    }
+});
