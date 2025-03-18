@@ -675,6 +675,7 @@ label {
     -moz-appearance: none;
     background-color: #1a1a1a !important;
     color: white !important;
+    -webkit-text-fill-color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 0.5rem 2rem 0.5rem 1rem;
     border-radius: 4px;
@@ -693,6 +694,7 @@ label {
 #theme-selector option {
     background-color: #1a1a1a !important;
     color: white !important;
+    -webkit-text-fill-color: white !important;
     padding: 0.5rem;
     font-size: 1rem;
     text-shadow: none !important;
@@ -702,6 +704,7 @@ label {
 #theme-selector option:checked {
     background-color: #333 !important;
     color: white !important;
+    -webkit-text-fill-color: white !important;
     font-weight: bold;
     text-shadow: none !important;
     opacity: 1 !important;

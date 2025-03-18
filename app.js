@@ -655,55 +655,72 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set initial theme
     const savedTheme = localStorage.getItem('theme') || 'doginme';
     if (themeSelector) {
+        // Set the value first
         themeSelector.value = savedTheme;
-        // Force text color update
+        
+        // Force text color and visibility
         themeSelector.style.color = 'white';
         themeSelector.style.webkitTextFillColor = 'white';
         themeSelector.style.opacity = '1';
+        themeSelector.style.backgroundColor = '#1a1a1a';
         
         // Force text color for options
         Array.from(themeSelector.options).forEach(option => {
             option.style.color = 'white';
             option.style.webkitTextFillColor = 'white';
             option.style.opacity = '1';
+            option.style.backgroundColor = '#1a1a1a';
         });
+        
+        // Force text color for selected option
+        const selectedOption = themeSelector.options[themeSelector.selectedIndex];
+        if (selectedOption) {
+            selectedOption.style.color = 'white';
+            selectedOption.style.webkitTextFillColor = 'white';
+            selectedOption.style.opacity = '1';
+            selectedOption.style.backgroundColor = '#333';
+            selectedOption.style.fontWeight = 'bold';
+        }
     }
+    
+    // Set the theme
     setTheme(savedTheme);
 
     // Handle theme changes
-    themeSelector.addEventListener('change', function(e) {
-        const theme = e.target.value;
-        setTheme(theme);
-        // Force text color update on change
-        themeSelector.style.color = 'white';
-        themeSelector.style.webkitTextFillColor = 'white';
-        themeSelector.style.opacity = '1';
-        
-        // Force text color for options
-        Array.from(themeSelector.options).forEach(option => {
-            option.style.color = 'white';
-            option.style.webkitTextFillColor = 'white';
-            option.style.opacity = '1';
-        });
-    });
-
-    function setTheme(theme) {
-        document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        if (themeSelector) {
-            themeSelector.value = theme;
-            // Force text color update
+    if (themeSelector) {
+        themeSelector.addEventListener('change', function(e) {
+            const theme = e.target.value;
+            setTheme(theme);
+            
+            // Force text color and visibility
             themeSelector.style.color = 'white';
             themeSelector.style.webkitTextFillColor = 'white';
             themeSelector.style.opacity = '1';
+            themeSelector.style.backgroundColor = '#1a1a1a';
             
             // Force text color for options
             Array.from(themeSelector.options).forEach(option => {
                 option.style.color = 'white';
                 option.style.webkitTextFillColor = 'white';
                 option.style.opacity = '1';
+                option.style.backgroundColor = '#1a1a1a';
             });
-        }
+            
+            // Force text color for selected option
+            const selectedOption = themeSelector.options[themeSelector.selectedIndex];
+            if (selectedOption) {
+                selectedOption.style.color = 'white';
+                selectedOption.style.webkitTextFillColor = 'white';
+                selectedOption.style.opacity = '1';
+                selectedOption.style.backgroundColor = '#333';
+                selectedOption.style.fontWeight = 'bold';
+            }
+        });
+    }
+
+    function setTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
         
         // Update icons
         if (theme === 'doginme') {
