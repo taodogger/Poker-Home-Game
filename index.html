@@ -302,6 +302,78 @@
             50% { transform: translateY(-10px); }
             100% { transform: translateY(0); }
         }
+
+        .welcome-message {
+            background: var(--vibrant-gradient);
+            border-radius: 16px;
+            padding: 1.5rem;
+            color: white;
+            text-align: center;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+            width: 100%;
+            margin: 1rem auto;
+            overflow: hidden;
+            position: relative;
+            animation: fadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .welcome-message h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin: 0;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0.8));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .welcome-message p {
+            font-size: 1.1rem;
+            margin: 0.5rem 0;
+        }
+
+        .welcome-card-hand {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .welcome-card {
+            width: 40px;
+            height: 60px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            position: relative;
+            transform: rotate(var(--rotate, 0deg));
+        }
+
+        .welcome-card:nth-child(1) { --rotate: -10deg; }
+        .welcome-card:nth-child(2) { --rotate: -5deg; }
+        .welcome-card:nth-child(3) { --rotate: 0deg; z-index: 2; transform: translateY(-5px) scale(1.05); }
+        .welcome-card:nth-child(4) { --rotate: 5deg; }
+        .welcome-card:nth-child(5) { --rotate: 10deg; }
+
+        @media (max-width: 768px) {
+            .welcome-message {
+                flex-direction: column;
+                padding: 1.5rem 1rem;
+            }
+            
+            .welcome-card {
+                width: 30px;
+                height: 45px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -327,6 +399,17 @@
         </div>
     </header>
     <main>
+        <div id="welcome-message" class="welcome-message fade-in">
+            <h2>Welcome to Poker Home Game</h2>
+            <p>Create or host a home poker game with friends</p>
+            <div class="welcome-card-hand">
+                <div class="welcome-card"></div>
+                <div class="welcome-card"></div>
+                <div class="welcome-card"></div>
+                <div class="welcome-card"></div>
+                <div class="welcome-card"></div>
+            </div>
+        </div>
         <section id="players" class="kahoot-card">
             <h2>Players</h2>
             <div class="table-container">
@@ -579,6 +662,98 @@
             // Start initialization
             initializeApp();
         });
+    </script>
+
+    <script>
+        const themes = {
+            'classic-green': {
+                '--main-color': '#2E8B57',
+                '--main-color-rgb': '46, 139, 87',
+                '--secondary-color': '#3CB371',
+                '--secondary-color-rgb': '60, 179, 113',
+                '--accent-gradient': 'linear-gradient(45deg, #2E8B57, #3CB371)'
+            },
+            'royal-blue': {
+                '--main-color': '#4169E1',
+                '--main-color-rgb': '65, 105, 225',
+                '--secondary-color': '#1E90FF',
+                '--secondary-color-rgb': '30, 144, 255',
+                '--accent-gradient': 'linear-gradient(45deg, #4169E1, #1E90FF)'
+            },
+            'crimson-red': {
+                '--main-color': '#DC143C',
+                '--main-color-rgb': '220, 20, 60',
+                '--secondary-color': '#FF4500',
+                '--secondary-color-rgb': '255, 69, 0',
+                '--accent-gradient': 'linear-gradient(45deg, #DC143C, #FF4500)'
+            },
+            'midnight-black': {
+                '--main-color': '#2F4F4F',
+                '--main-color-rgb': '47, 79, 79',
+                '--secondary-color': '#696969',
+                '--secondary-color-rgb': '105, 105, 105',
+                '--accent-gradient': 'linear-gradient(45deg, #2F4F4F, #696969)'
+            },
+            'ocean-breeze': {
+                '--main-color': '#20B2AA',
+                '--main-color-rgb': '32, 178, 170',
+                '--secondary-color': '#5F9EA0',
+                '--secondary-color-rgb': '95, 158, 160',
+                '--accent-gradient': 'linear-gradient(45deg, #20B2AA, #5F9EA0)'
+            },
+            'firestorm': {
+                '--main-color': '#FF6347',
+                '--main-color-rgb': '255, 99, 71',
+                '--secondary-color': '#FF4500',
+                '--secondary-color-rgb': '255, 69, 0',
+                '--accent-gradient': 'linear-gradient(45deg, #FF6347, #FF4500)'
+            },
+            'purple-haze': {
+                '--main-color': '#9370DB',
+                '--main-color-rgb': '147, 112, 219',
+                '--secondary-color': '#8A2BE2',
+                '--secondary-color-rgb': '138, 43, 226',
+                '--accent-gradient': 'linear-gradient(45deg, #9370DB, #8A2BE2)'
+            },
+            'neon-nights': {
+                '--main-color': '#00FFFF',
+                '--main-color-rgb': '0, 255, 255',
+                '--secondary-color': '#00CED1',
+                '--secondary-color-rgb': '0, 206, 209',
+                '--accent-gradient': 'linear-gradient(45deg, #00FFFF, #00CED1)'
+            },
+            'rizzler': {
+                '--main-color': '#ff00ff',
+                '--main-color-rgb': '255, 0, 255',
+                '--secondary-color': '#bf00ff',
+                '--secondary-color-rgb': '191, 0, 255',
+                '--accent-gradient': 'linear-gradient(45deg, #ff00ff, #bf00ff)'
+            },
+            'doginme': {
+                '--main-color': '#1e90ff',
+                '--main-color-rgb': '30, 144, 255',
+                '--secondary-color': '#4169e1',
+                '--secondary-color-rgb': '65, 105, 225',
+                '--accent-gradient': 'linear-gradient(45deg, #1e90ff, #4169e1)'
+            }
+        };
+
+        function applyTheme(themeName) {
+            const theme = themes[themeName];
+            if (!theme) return;
+            
+            Object.keys(theme).forEach(prop => {
+                document.documentElement.style.setProperty(prop, theme[prop]);
+            });
+            
+            // Update data-theme attribute for CSS selectors
+            document.documentElement.setAttribute('data-theme', themeName);
+            
+            // Save theme preference
+            localStorage.setItem('selected-theme', themeName);
+            
+            console.log(`Theme updated to ${themeName}`);
+        }
     </script>
 </body>
 </html>
