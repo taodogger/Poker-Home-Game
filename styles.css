@@ -724,6 +724,8 @@ label {
         max-width: 100px;
         padding: 4px 20px 4px 6px;
         height: 28px;
+        display: block !important;
+        visibility: visible !important;
     }
 
     #theme-selector option {
@@ -734,6 +736,8 @@ label {
         opacity: 1 !important;
         font-size: 0.75rem !important;
         font-weight: 500 !important;
+        display: block !important;
+        visibility: visible !important;
     }
 
     #theme-selector option:checked {
@@ -744,6 +748,8 @@ label {
         opacity: 1 !important;
         font-size: 0.75rem !important;
         font-weight: bold !important;
+        display: block !important;
+        visibility: visible !important;
     }
 
     /* Firefox-specific mobile fixes */
@@ -757,6 +763,8 @@ label {
             opacity: 1 !important;
             font-size: 0.75rem !important;
             font-weight: 500 !important;
+            display: block !important;
+            visibility: visible !important;
         }
     }
 }
