@@ -646,7 +646,7 @@ label {
 }
 
 #theme-selector {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 6px;
     color: white;
@@ -672,7 +672,7 @@ label {
 
 #theme-selector:hover {
     border-color: var(--main-color);
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
@@ -693,43 +693,43 @@ label {
 
 /* Theme-specific styles */
 [data-theme="dogeinme"] .theme-icon {
-    content: url('doginme-icon.png');
+    content: url('images/doginme-icon.png');
 }
 
 [data-theme="rizzler"] .theme-icon {
-    content: url('rizzler-icon.png');
+    content: url('images/rizzler-icon.png');
 }
 
 [data-theme="neon-nights"] .theme-icon {
-    content: url('neon-icon.png');
+    content: url('images/neon-icon.png');
 }
 
 [data-theme="purple-haze"] .theme-icon {
-    content: url('purple-icon.png');
+    content: url('images/purple-icon.png');
 }
 
 [data-theme="firestorm"] .theme-icon {
-    content: url('fire-icon.png');
+    content: url('images/fire-icon.png');
 }
 
 [data-theme="ocean-breeze"] .theme-icon {
-    content: url('ocean-icon.png');
+    content: url('images/ocean-icon.png');
 }
 
 [data-theme="midnight-black"] .theme-icon {
-    content: url('midnight-icon.png');
+    content: url('images/midnight-icon.png');
 }
 
 [data-theme="crimson-red"] .theme-icon {
-    content: url('crimson-icon.png');
+    content: url('images/crimson-icon.png');
 }
 
 [data-theme="royal-blue"] .theme-icon {
-    content: url('royal-icon.png');
+    content: url('images/royal-icon.png');
 }
 
 [data-theme="classic-green"] .theme-icon {
-    content: url('classic-icon.png');
+    content: url('images/classic-icon.png');
 }
 
 /* Theme Controls */
