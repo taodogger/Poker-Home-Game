@@ -899,6 +899,8 @@ select#theme-selector,
         background-color: #1a1a1a !important;
         text-shadow: none !important;
         opacity: 1 !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
     }
 
     #theme-selector option,
@@ -927,6 +929,8 @@ select#theme-selector,
             background-color: #1a1a1a !important;
             text-shadow: none !important;
             opacity: 1 !important;
+            font-size: 0.75rem !important;
+            font-weight: 500 !important;
         }
     }
 
@@ -2274,6 +2278,8 @@ button:active {
         background-color: #1a1a1a !important;
         text-shadow: none !important;
         opacity: 1 !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
     }
 
     /* Ensure dropdown arrow remains visible */
@@ -2285,9 +2291,10 @@ button:active {
         min-width: 80px;
         max-width: 100px;
         padding: 4px 20px 4px 6px;
-        font-size: 0.75rem;
         height: 28px;
-        font-weight: 500;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
     }
 
     /* Ensure text remains visible during selection */
@@ -2300,6 +2307,8 @@ button:active {
         -webkit-text-fill-color: white !important;
         text-shadow: none !important;
         opacity: 1 !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
     }
 
     /* Firefox-specific mobile fixes */
@@ -2312,6 +2321,8 @@ button:active {
             background-color: #1a1a1a !important;
             text-shadow: none !important;
             opacity: 1 !important;
+            font-size: 0.75rem !important;
+            font-weight: 500 !important;
         }
     }
 }
