@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Poker Home Game Manager</title>
     <meta name="description" content="A modern poker home game manager to track chips, select dealers, and calculate payouts">
     <meta name="theme-color" content="#2E8B57">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Poker Game">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,7 +17,11 @@
 </head>
 <body>
     <header>
-        <h1 class="header-title">Poker</h1>
+        <div class="header-title">
+            <span class="title-icon">♠</span>
+            <span>Poker Home Game Manager</span>
+            <span class="title-icon">♣</span>
+        </div>
         <div class="header-controls">
             <select id="theme-selector" aria-label="Theme">
                 <option value="classic-green">Classic</option>
@@ -30,7 +35,6 @@
                 <option value="rizzler">Rizzler</option>
                 <option value="doginme">Dog</option>
             </select>
-            <button id="create-game" class="action-button">New</button>
         </div>
     </header>
     <main>

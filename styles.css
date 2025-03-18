@@ -115,6 +115,9 @@ header {
     color: rgba(255, 255, 255, 0.9);
     text-align: left;
     letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .header-controls {
@@ -141,15 +144,9 @@ h1::after {
 }
 
 .title-icon {
-    font-size: 3rem;
-    vertical-align: middle;
-    margin: 0 var(--spacing-sm);
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: float 3s ease-in-out infinite;
-    position: relative;
+    font-size: 1rem;
+    color: var(--main-color);
+    opacity: 0.8;
 }
 
 .title-icon::after {
@@ -783,6 +780,10 @@ label {
 
     .header-title {
         font-size: 0.75rem;
+    }
+
+    .title-icon {
+        font-size: 0.875rem;
     }
 
     main {
