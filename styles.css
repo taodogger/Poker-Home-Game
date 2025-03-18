@@ -78,34 +78,30 @@ body::before {
 
 /* Modern Header */
 header {
-    position: static;
+    position: relative;
     width: 100%;
-    padding: 8px;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9));
+    padding: 0.5rem 1rem;
+    background: transparent;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
-    z-index: 10;
-    height: auto;
-    min-height: 50px;
+    height: 48px;
 }
 
 .header-title {
-    font-size: clamp(1rem, 4vw, 1.5rem);
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 500;
     margin: 0;
-    color: white;
+    color: rgba(255, 255, 255, 0.9);
     text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
 }
 
 .header-controls {
     display: flex;
-    gap: 8px;
+    gap: 0.5rem;
     align-items: center;
 }
 
@@ -156,7 +152,7 @@ h1::after {
 
 /* Main Content Container */
 main {
-    padding-top: 8px;
+    padding-top: 1rem;
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
@@ -660,17 +656,14 @@ label {
 }
 
 #theme-selector {
-    background: rgba(0, 0, 0, 0.5);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--border-radius-md);
-    color: white;
-    padding: 0.75rem 1.25rem;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 200px;
-    outline: none;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    height: 28px;
+    max-width: 90px;
 }
 
 #theme-selector:hover {
@@ -765,15 +758,16 @@ label {
     }
 
     header {
-        padding: 4px;
+        padding: 0.375rem 0.75rem;
+        height: 40px;
     }
 
     .header-title {
-        font-size: clamp(1.25rem, 4vw, 1.5rem);
+        font-size: 0.8125rem;
     }
 
     main {
-        padding-top: 4px;
+        padding-top: 0.75rem;
     }
 
     section {
@@ -819,6 +813,20 @@ label {
         font-size: 0.875rem;
         padding: var(--spacing-sm);
     }
+
+    #theme-selector {
+        font-size: 0.6875rem;
+        padding: 0.25rem;
+        height: 24px;
+        max-width: 80px;
+    }
+
+    .action-button {
+        font-size: 0.6875rem !important;
+        padding: 0.25rem 0.5rem !important;
+        height: 24px !important;
+        min-height: 24px !important;
+    }
 }
 
 /* iOS-specific fixes */
@@ -836,9 +844,9 @@ label {
     }
 
     header {
-        padding-top: max(6px, env(safe-area-inset-top));
-        padding-right: max(6px, env(safe-area-inset-right));
-        padding-left: max(6px, env(safe-area-inset-left));
+        padding-top: max(0.375rem, env(safe-area-inset-top));
+        padding-right: max(0.75rem, env(safe-area-inset-right));
+        padding-left: max(0.75rem, env(safe-area-inset-left));
     }
 }
 
