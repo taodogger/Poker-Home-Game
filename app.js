@@ -1859,98 +1859,109 @@ function calculatePayouts() {
 
     console.log('[PAYOUT] Processing players:', players.length);
 
-    // Calculate initial differences with proper number parsing and accurate monetary values
+    // Calculate chip differences and initial cash values
     const playerDiffs = players.map(player => {
-        // Ensure chip values are parsed as integers
         const initialChips = parseInt(player.initial_chips, 10) || 0;
         const currentChips = parseInt(player.current_chips, 10) || 0;
-        const difference = currentChips - initialChips;
-        
-        // Add to total difference for verification
-        totalDifference += difference;
-        
-        // Calculate monetary value (this is the actual money won or lost)
-        const monetaryValue = (difference * PokerApp.state.chipRatio).toFixed(2);
+        const chipDifference = currentChips - initialChips;
         
         return {
             id: player.id,
             name: player.name,
-            initialChips: initialChips,
-            currentChips: currentChips,
-            chipDifference: difference,
-            cashValue: parseFloat(monetaryValue) // Store as number for calculations
+            initialChips,
+            currentChips,
+            chipDifference,
+            cashValue: 0 // Will be updated from transactions
         };
     });
 
-    // Verify the total difference sums to zero (or close to it due to rounding)
-    if (Math.abs(totalDifference) > 1) {
-        console.warn(`[PAYOUT] Total chip difference doesn't balance: ${totalDifference}`);
-        PokerApp.UI.showToast('Error: Chip counts don\'t balance. Total difference: ' + totalDifference, 'error');
-        return;
-    }
-
-    // Make sure the monetary values also balance
-    const totalCashDifference = playerDiffs.reduce((sum, player) => sum + player.cashValue, 0);
-    if (Math.abs(totalCashDifference) > 0.02) { // Allow for minor rounding errors
-        console.warn(`[PAYOUT] Total cash value doesn't balance: $${totalCashDifference.toFixed(2)}`);
-    }
-
-    // Split into winners and losers and sort by amount
-    const winners = playerDiffs.filter(p => p.cashValue > 0)
-        .sort((a, b) => b.cashValue - a.cashValue);
+    // Split into winners and losers based on chip differences
+    const winners = playerDiffs.filter(p => p.chipDifference > 0)
+        .sort((a, b) => b.chipDifference - a.chipDifference);
         
-    const losers = playerDiffs.filter(p => p.cashValue < 0)
-        .sort((a, b) => a.cashValue - b.cashValue); // Most negative first
-    
-    // Create simplified transactions - working with cash values directly
+    const losers = playerDiffs.filter(p => p.chipDifference < 0)
+        .sort((a, b) => a.chipDifference - b.chipDifference);
+
+    // Create transactions
     const transactions = [];
     
-    // We'll assign each loser to pay primarily to one winner when possible
+    // Match losers with winners
     while (losers.length > 0 && winners.length > 0) {
-        // Get the biggest loser and winner
         const loser = losers.shift();
         const winner = winners[0];
         
-        // Work with cash values directly for accuracy
-        const lossAmount = Math.abs(loser.cashValue);
+        const lossAmount = Math.abs(loser.chipDifference);
         
-        if (lossAmount >= winner.cashValue) {
-            // This loser can cover the entire winner's amount
-            const paymentAmount = parseFloat(winner.cashValue.toFixed(2));
+        if (lossAmount >= winner.chipDifference) {
+            const paymentChips = winner.chipDifference;
+            const paymentCash = (paymentChips * PokerApp.state.chipRatio).toFixed(2);
             
             transactions.push({
                 from: loser.name,
                 to: winner.name,
-                cash: paymentAmount.toFixed(2)
+                chips: paymentChips,
+                cash: paymentCash
             });
             
-            // If there's any remainder, put the loser back in the list with reduced loss
-            const remainder = parseFloat((lossAmount - winner.cashValue).toFixed(2));
-            if (remainder > 0.01) {  // Only if it's a meaningful amount ($0.01 or more)
+            const remainder = lossAmount - winner.chipDifference;
+            if (remainder > 0) {
                 losers.push({
                     ...loser,
-                    cashValue: -remainder
+                    chipDifference: -remainder
                 });
-                // Re-sort losers
-                losers.sort((a, b) => a.cashValue - b.cashValue);
+                losers.sort((a, b) => a.chipDifference - b.chipDifference);
             }
             
-            // Remove this winner as they're fully paid
             winners.shift();
         } else {
-            // Loser pays their entire amount to this winner
-            const paymentAmount = parseFloat(lossAmount.toFixed(2));
+            const paymentChips = lossAmount;
+            const paymentCash = (paymentChips * PokerApp.state.chipRatio).toFixed(2);
             
             transactions.push({
                 from: loser.name,
                 to: winner.name,
-                cash: paymentAmount.toFixed(2)
+                chips: paymentChips,
+                cash: paymentCash
             });
             
-            // Reduce the winner's amount and keep them in the list
-            winner.cashValue = parseFloat((winner.cashValue - lossAmount).toFixed(2));
+            winner.chipDifference -= lossAmount;
         }
     }
+
+    // Update cash values based on transactions
+    transactions.forEach(transaction => {
+        const amount = parseFloat(transaction.cash);
+        const fromPlayer = playerDiffs.find(p => p.name === transaction.from);
+        const toPlayer = playerDiffs.find(p => p.name === transaction.to);
+        
+        if (fromPlayer) fromPlayer.cashValue -= amount;
+        if (toPlayer) toPlayer.cashValue += amount;
+    });
+    
+    // Create player result cards
+    const sortedPlayers = [...playerDiffs].sort((a, b) => b.chipDifference - a.chipDifference);
+    
+    sortedPlayers.forEach(player => {
+        const isWinner = player.chipDifference > 0;
+        const isLoser = player.chipDifference < 0;
+        const isNeutral = player.chipDifference === 0;
+        
+        const statusClass = isWinner ? 'winner' : isLoser ? 'loser' : 'neutral';
+        const statusIcon = isWinner ? '💰' : isLoser ? '💸' : '🔄';
+        
+        const cashValue = Math.abs(player.cashValue).toFixed(2);
+        const cashDisplay = isWinner ? `+$${cashValue}` : isLoser ? `-$${cashValue}` : `$0.00`;
+        
+        html += `
+            <div class="player-result-card ${statusClass}">
+                <div class="player-status-indicator">${statusIcon}</div>
+                <div class="player-card-content">
+                    <div class="player-name">${player.name}</div>
+                    <div class="cash-value ${statusClass}">${cashDisplay}</div>
+                    <div class="chip-diff">${player.chipDifference > 0 ? '+' : ''}${player.chipDifference} chips</div>
+                </div>
+            </div>`;
+    });
 
     // Display results
     const payoutResults = document.getElementById('payout-results');
@@ -1971,22 +1982,24 @@ function calculatePayouts() {
                 <!-- Player Cards -->
                 <div class="player-results-cards">`;
     
-    // Sort players by performance (winners first, then losers)
-    const sortedPlayers = [...playerDiffs].sort((a, b) => b.difference - a.difference);
-    
-    // Calculate total payment amounts for each player based on transactions
+    // Calculate final amounts for display
     const playerPayments = {};
     
-    // Initialize with all players having $0
-    sortedPlayers.forEach(player => {
-        playerPayments[player.name] = 0;
+    // Initialize with all players
+    playerDiffs.forEach(player => {
+        playerPayments[player.name] = {
+            chips: player.chipDifference,
+            cash: 0
+        };
     });
     
-    // Add up all transactions to get real payment amounts
+    // Add up all transactions
     transactions.forEach(transaction => {
         const amount = parseFloat(transaction.cash);
-        playerPayments[transaction.from] -= amount;
-        playerPayments[transaction.to] += amount;
+        const chips = parseInt(transaction.chips, 10);
+        
+        playerPayments[transaction.from].cash -= amount;
+        playerPayments[transaction.to].cash += amount;
     });
     
     // Create a player card for each player with transaction-based amounts
