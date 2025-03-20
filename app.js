@@ -520,39 +520,39 @@ function initialize() {
 
     window.appInitialized = true;
     
-    // Create a connection status indicator
-    const header = document.querySelector('.app-header');
-    if (header) {
-        const connectionStatus = document.createElement('div');
-        connectionStatus.id = 'connection-status';
-        connectionStatus.style.display = 'inline-block';
-        connectionStatus.style.padding = '4px 8px';
-        connectionStatus.style.borderRadius = '4px';
-        connectionStatus.style.fontSize = '12px';
-        connectionStatus.style.marginRight = '10px';
-        connectionStatus.style.backgroundColor = '#555';
-        connectionStatus.style.color = 'white';
-        connectionStatus.textContent = 'Connecting...';
-        
-        // Insert before theme selector
-        const themeSelector = document.querySelector('#theme-selector');
-        if (themeSelector && themeSelector.parentNode) {
-            themeSelector.parentNode.insertBefore(connectionStatus, themeSelector);
-        } else {
-            header.appendChild(connectionStatus);
-        }
-    }
+    // Remove connection status indicator as requested by user
+    // const header = document.querySelector('.app-header');
+    // if (header) {
+    //     const connectionStatus = document.createElement('div');
+    //     connectionStatus.id = 'connection-status';
+    //     connectionStatus.style.display = 'inline-block';
+    //     connectionStatus.style.padding = '4px 8px';
+    //     connectionStatus.style.borderRadius = '4px';
+    //     connectionStatus.style.fontSize = '12px';
+    //     connectionStatus.style.marginRight = '10px';
+    //     connectionStatus.style.backgroundColor = '#555';
+    //     connectionStatus.style.color = 'white';
+    //     connectionStatus.textContent = 'Connecting...';
+    //     
+    //     // Insert before theme selector
+    //     const themeSelector = document.querySelector('#theme-selector');
+    //     if (themeSelector && themeSelector.parentNode) {
+    //         themeSelector.parentNode.insertBefore(connectionStatus, themeSelector);
+    //     } else {
+    //         header.appendChild(connectionStatus);
+    //     }
+    // }
     
     // Listen for Firebase connection events
     window.addEventListener('firebase-connected', () => {
         console.log('[INIT] Firebase connection established');
         
-        // Update connection status indicator
-        const connectionStatus = document.getElementById('connection-status');
-        if (connectionStatus) {
-            connectionStatus.textContent = 'Connected';
-            connectionStatus.style.backgroundColor = '#4caf50';
-        }
+        // Update connection status indicator - removed as requested
+        // const connectionStatus = document.getElementById('connection-status');
+        // if (connectionStatus) {
+        //     connectionStatus.textContent = 'Connected';
+        //     connectionStatus.style.backgroundColor = '#4caf50';
+        // }
         
         PokerApp.UI.showToast('Connected to server', 'success');
         
@@ -573,21 +573,22 @@ function initialize() {
                 if (!snap.val()) {
                     console.log('[FIREBASE] Connection lost, waiting for reconnect...');
                     
-                    // Update connection status indicator
-                    const connectionStatus = document.getElementById('connection-status');
-                    if (connectionStatus) {
-                        connectionStatus.textContent = 'Reconnecting...';
-                        connectionStatus.style.backgroundColor = '#ff9800';
-                    }
+                    // Update connection status indicator - removed as requested
+                    // const connectionStatus = document.getElementById('connection-status');
+                    // if (connectionStatus) {
+                    //     connectionStatus.textContent = 'Reconnecting...';
+                    //     connectionStatus.style.backgroundColor = '#ff9800';
+                    // }
                     
                     PokerApp.UI.showToast('Connection lost. Reconnecting...', 'error');
                 }
             });
             
-            // Test write function to verify connection
+            // Test write function to verify connection - FIX: use a valid path instead of .info/
             window.testFirebaseConnection = function() {
                 if (window.database) {
-                    const testRef = window.database.ref('.info/connectionTest');
+                    // Use a valid test path instead of .info/ which is reserved
+                    const testRef = window.database.ref('_connection_test');
                     testRef.set({
                         timestamp: firebase.database.ServerValue.TIMESTAMP,
                         manual: true,
@@ -613,12 +614,12 @@ function initialize() {
         .catch(error => {
             console.error('[FIREBASE] Error initializing Firebase:', error);
             
-            // Update connection status indicator
-            const connectionStatus = document.getElementById('connection-status');
-            if (connectionStatus) {
-                connectionStatus.textContent = 'Offline';
-                connectionStatus.style.backgroundColor = '#f44336';
-            }
+            // Update connection status indicator - removed as requested
+            // const connectionStatus = document.getElementById('connection-status');
+            // if (connectionStatus) {
+            //     connectionStatus.textContent = 'Offline';
+            //     connectionStatus.style.backgroundColor = '#f44336';
+            // }
             
             // Initialize app anyway but without Firebase features
             initializeApp(false);
@@ -906,6 +907,30 @@ function setupMobileCompatibility() {
         console.log('[MOBILE] Not a mobile device, skipping mobile compatibility setup');
     }
 }
+
+// Ensure forceUpdateMobileLayout is available globally even if not on mobile
+window.forceUpdateMobileLayout = window.forceUpdateMobileLayout || function() {
+    console.log('[MOBILE] Force update called on non-mobile device');
+    const appContent = document.querySelector('.app-content');
+    if (appContent) {
+        // Apply mobile-friendly styles anyway
+        appContent.style.display = 'flex';
+        appContent.style.flexDirection = 'column';
+        appContent.style.width = '100%';
+        
+        // Make all sections full width
+        document.querySelectorAll('section, .poker-card').forEach(section => {
+            section.style.width = '100%';
+            section.style.maxWidth = 'none';
+            section.style.margin = '0 0 15px 0';
+            section.style.boxSizing = 'border-box';
+        });
+        
+        PokerApp.UI.showToast('Mobile layout forced on non-mobile device', 'info');
+    } else {
+        console.error('[MOBILE] Could not find app-content element');
+    }
+};
 
 // Define themes with main colors and gradients
 const themes = {
