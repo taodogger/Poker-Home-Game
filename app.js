@@ -893,18 +893,30 @@ function setupMobileCompatibility() {
             // Simply add a "mobile-layout" class instead of inline styles
             appContent.classList.add('mobile-layout');
             
+            // Make all sections full width and ensure content is visible
+            document.querySelectorAll('section, .poker-card').forEach(section => {
+                section.style.width = '100%';
+                section.style.maxWidth = 'none';
+                section.style.margin = '0 0 15px 0';
+                section.style.boxSizing = 'border-box';
+                section.style.minHeight = 'auto';
+                section.style.height = 'auto';
+                section.style.overflow = 'visible';
+            });
+            
             // Fix iOS height issues
             function updateLayout() {
                 if (isIOS) {
                     const windowHeight = window.innerHeight;
                     const headerHeight = document.querySelector('header')?.offsetHeight || 0;
-                    appContent.style.height = `${windowHeight - headerHeight}px`;
+                    appContent.style.minHeight = `${windowHeight - headerHeight}px`;
                 }
             }
             
             // Update on various events
             window.addEventListener('resize', updateLayout);
             window.addEventListener('orientationchange', updateLayout);
+            document.addEventListener('DOMContentLoaded', updateLayout);
             
             // Initial layout update
             updateLayout();
@@ -1856,6 +1868,7 @@ function calculatePayouts() {
 
     const players = PokerApp.state.players;
     let totalDifference = 0;
+    let html = ''; // Initialize html variable here
 
     console.log('[PAYOUT] Processing players:', players.length);
 
@@ -1958,7 +1971,6 @@ function calculatePayouts() {
                 <div class="player-card-content">
                     <div class="player-name">${player.name}</div>
                     <div class="cash-value ${statusClass}">${cashDisplay}</div>
-                    <div class="chip-diff">${player.chipDifference > 0 ? '+' : ''}${player.chipDifference} chips</div>
                 </div>
             </div>`;
     });
@@ -1970,8 +1982,29 @@ function calculatePayouts() {
         return;
     }
 
-    // Create a more visually effective display
-    let html = `
+    // Calculate fun stats
+    const biggestWinner = playerDiffs.reduce((prev, curr) => 
+        (curr.cashValue > prev.cashValue) ? curr : prev
+    );
+    
+    const biggestLoser = playerDiffs.reduce((prev, curr) => 
+        (curr.cashValue < prev.cashValue) ? curr : prev
+    );
+    
+    const totalMoneyMoved = transactions.reduce((sum, t) => 
+        sum + parseFloat(t.cash), 0
+    ).toFixed(2);
+    
+    const totalChipsMoved = transactions.reduce((sum, t) => 
+        sum + parseInt(t.chips), 0
+    );
+    
+    const averageWin = playerDiffs
+        .filter(p => p.cashValue > 0)
+        .reduce((sum, p) => sum + p.cashValue, 0) / 
+        playerDiffs.filter(p => p.cashValue > 0).length;
+
+    html = `
         <div class="payout-wrapper">
             <div class="payout-summary-header">
                 <h3>Game Results</h3>
@@ -1979,61 +2012,41 @@ function calculatePayouts() {
             </div>
             
             <div class="results-container">
-                <!-- Player Cards -->
-                <div class="player-results-cards">`;
-    
-    // Calculate final amounts for display
-    const playerPayments = {};
-    
-    // Initialize with all players
-    playerDiffs.forEach(player => {
-        playerPayments[player.name] = {
-            chips: player.chipDifference,
-            cash: 0
-        };
-    });
-    
-    // Add up all transactions
-    transactions.forEach(transaction => {
-        const amount = parseFloat(transaction.cash);
-        const chips = parseInt(transaction.chips, 10);
-        
-        playerPayments[transaction.from].cash -= amount;
-        playerPayments[transaction.to].cash += amount;
-    });
-    
-    // Create a player card for each player with transaction-based amounts
-    sortedPlayers.forEach(player => {
-        const totalPayment = playerPayments[player.name];
-        const isWinner = totalPayment > 0;
-        const isLoser = totalPayment < 0;
-        const isNeutral = Math.abs(totalPayment) < 0.01;
-        
-        const statusClass = isWinner ? 'winner' : isLoser ? 'loser' : 'neutral';
-        const statusIcon = isWinner ? '💰' : isLoser ? '💸' : '🔄';
-        
-        // Format cash value with 2 decimal places
-        const cashValue = Math.abs(totalPayment).toFixed(2);
-        const cashDisplay = isWinner ? `+$${cashValue}` : isLoser ? `-$${cashValue}` : `$0.00`;
-        
-        html += `
-            <div class="player-result-card ${statusClass}">
-                <div class="player-status-indicator">${statusIcon}</div>
-                <div class="player-card-content">
-                    <div class="player-name">${player.name}</div>
-                    <div class="cash-value ${statusClass}">${cashDisplay}</div>
-                    <div class="chip-diff">${player.difference > 0 ? '+' : ''}${player.difference} chips</div>
-                </div>
-            </div>`;
-    });
-    
-    html += `
+                <!-- Fun Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👑</div>
+                        <div class="stat-title">Biggest Winner</div>
+                        <div class="stat-value">${biggestWinner.name}</div>
+                        <div class="stat-detail">+$${Math.abs(biggestWinner.cashValue).toFixed(2)}</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">😅</div>
+                        <div class="stat-title">Biggest L</div>
+                        <div class="stat-value">${biggestLoser.name}</div>
+                        <div class="stat-detail">-$${Math.abs(biggestLoser.cashValue).toFixed(2)}</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">💸</div>
+                        <div class="stat-title">Money Moved</div>
+                        <div class="stat-value">$${totalMoneyMoved}</div>
+                        <div class="stat-detail">${totalChipsMoved} chips</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-title">Avg Win</div>
+                        <div class="stat-value">$${averageWin.toFixed(2)}</div>
+                        <div class="stat-detail">per winner</div>
+                    </div>
                 </div>
                 
                 <!-- Payment Instructions -->
                 <div class="payment-instructions">
                     <h3>${transactions.length > 0 ? 'Payment Instructions' : 'No Payments Needed'}</h3>`;
-    
+
     if (transactions.length === 0) {
         html += `<div class="no-payments-message">All players are even!</div>`;
     } else {
@@ -2065,7 +2078,7 @@ function calculatePayouts() {
             });
             
             html += `
-                    </div>
+                </div>
                 </div>`;
         });
     }
@@ -2077,7 +2090,7 @@ function calculatePayouts() {
     
     payoutResults.innerHTML = html;
     
-    // Add styles for the new payout display
+    // Add styles for the new display
     if (!document.querySelector('#payout-styles')) {
         const style = document.createElement('style');
         style.id = 'payout-styles';
@@ -2118,71 +2131,46 @@ function calculatePayouts() {
                 gap: 20px;
             }
             
-            .player-results-cards {
+            .stats-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 12px;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                animation: fadeIn 0.5s ease-out;
             }
             
-            .player-result-card {
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 8px;
-                padding: 12px;
-                display: flex;
-                align-items: center;
-                position: relative;
-                border-left: 4px solid #666;
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            .stat-card {
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 10px;
+                padding: 20px;
+                text-align: center;
+                transition: transform 0.2s ease;
             }
             
-            .player-result-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            .stat-card:hover {
+                transform: translateY(-5px);
             }
             
-            .player-result-card.winner {
-                border-left-color: #2ed573;
-                background: linear-gradient(to right, rgba(46, 213, 115, 0.15), rgba(0, 0, 0, 0.2));
+            .stat-icon {
+                font-size: 2rem;
+                margin-bottom: 10px;
             }
             
-            .player-result-card.loser {
-                border-left-color: #ff4757;
-                background: linear-gradient(to right, rgba(255, 71, 87, 0.15), rgba(0, 0, 0, 0.2));
+            .stat-title {
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 0.9rem;
+                margin-bottom: 5px;
             }
             
-            .player-result-card.neutral {
-                border-left-color: #999;
-            }
-            
-            .player-status-indicator {
-                font-size: 1.2rem;
-                margin-right: 12px;
-                opacity: 0.8;
-            }
-            
-            .player-card-content {
-                flex: 1;
-            }
-            
-            .player-name {
-                font-weight: 600;
-                font-size: 1.2rem;
-                margin-bottom: 8px;
+            .stat-value {
                 color: white;
+                font-size: 1.4rem;
+                font-weight: 600;
+                margin-bottom: 5px;
             }
             
-            .cash-value {
-                font-weight: 700;
-                font-size: 1.5rem;
-                color: #666;
-            }
-            
-            .cash-value.winner {
-                color: #2ed573;
-            }
-            
-            .cash-value.loser {
-                color: #ff4757;
+            .stat-detail {
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 0.8rem;
             }
             
             /* Payment Instructions Section */
@@ -2190,6 +2178,7 @@ function calculatePayouts() {
                 background: rgba(0, 0, 0, 0.3);
                 border-radius: 10px;
                 padding: 16px;
+                margin-top: 20px;
             }
             
             .payment-instructions h3 {
@@ -2273,12 +2262,20 @@ function calculatePayouts() {
             
             /* Mobile optimizations */
             @media (max-width: 768px) {
-                .results-container {
-                    padding: 12px;
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
                 }
                 
-                .player-results-cards {
-                    grid-template-columns: 1fr;
+                .stat-card {
+                    padding: 15px;
+                }
+                
+                .stat-icon {
+                    font-size: 1.5rem;
+                }
+                
+                .stat-value {
+                    font-size: 1.2rem;
                 }
                 
                 .payment-details {
@@ -2291,11 +2288,10 @@ function calculatePayouts() {
                 }
             }
             
-            .chip-diff {
-                font-size: 0.85rem;
-                color: rgba(255, 255, 255, 0.7);
-                margin-top: 5px;
-                font-family: monospace;
+            @media (max-width: 480px) {
+                .stats-grid {
+                    grid-template-columns: 1fr;
+                }
             }
         `;
         document.head.appendChild(style);
@@ -2305,7 +2301,7 @@ function calculatePayouts() {
     payoutResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
     
     console.log('[PAYOUT] Results displayed');
-    PokerApp.UI.showToast('Payouts calculated', 'success');
+    PokerApp.UI.showToast('Game results calculated', 'success');
 }
 
 // Add removePlayer function
