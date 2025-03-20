@@ -441,6 +441,64 @@ function setupEventListeners() {
 function initialize() {
     console.log('Initializing poker app...');
     
+    // Check if Firebase is available and wait for it if necessary
+    ensureFirebaseInitialized()
+        .then(() => {
+            // Continue with normal initialization
+            initializeApp();
+        })
+        .catch(error => {
+            console.error('[FIREBASE] Error initializing Firebase:', error);
+            // Initialize app anyway but without Firebase features
+            initializeApp(false);
+        });
+}
+
+// Helper function to make sure Firebase is initialized
+function ensureFirebaseInitialized() {
+    return new Promise((resolve, reject) => {
+        // Check if Firebase and database are already available
+        if (typeof window.database !== 'undefined') {
+            console.log('[FIREBASE] Using existing database reference from window.database');
+            resolve(window.database);
+            return;
+        }
+        
+        // If Firebase libraries are loaded but not initialized
+        if (typeof firebase !== 'undefined') {
+            try {
+                // Check if firebase is already initialized
+                if (firebase.apps && firebase.apps.length > 0) {
+                    console.log('[FIREBASE] Firebase already initialized, getting database reference');
+                    window.database = firebase.database();
+                    resolve(window.database);
+                    return;
+                }
+                
+                // Check if we have config
+                if (window.firebaseConfig) {
+                    console.log('[FIREBASE] Initializing Firebase with window.firebaseConfig');
+                    firebase.initializeApp(window.firebaseConfig);
+                    window.database = firebase.database();
+                    resolve(window.database);
+                    return;
+                }
+                
+                // No config available
+                reject(new Error('Firebase configuration not found'));
+            } catch (error) {
+                console.error('[FIREBASE] Error initializing Firebase:', error);
+                reject(error);
+            }
+        } else {
+            // Firebase libraries not loaded
+            reject(new Error('Firebase libraries not loaded'));
+        }
+    });
+}
+
+// Main initialization function
+function initializeApp(firebaseAvailable = true) {
     // Create UI namespace if it doesn't exist
     if (!window.PokerApp) {
         window.PokerApp = {};
@@ -468,8 +526,8 @@ function initialize() {
         lobbyActive: false
     };
     
-    // Check for Firebase availability
-    if (typeof firebase === 'undefined' || !firebase.database) {
+    // Log Firebase availability
+    if (!firebaseAvailable) {
         console.error('[FIREBASE] Firebase not available! Some features may not work.');
         PokerApp.UI.showToast('Firebase connection error. Limited functionality available.', 'error');
     } else {
@@ -525,7 +583,7 @@ function initialize() {
     console.log('Initialization complete');
     
     // Run a quick Firebase test
-    if (typeof firebase !== 'undefined' && firebase.database) {
+    if (firebaseAvailable && typeof firebase !== 'undefined' && firebase.database) {
         firebase.database().ref('test').set({
             timestamp: Date.now(),
             message: 'Initialization test'
@@ -533,23 +591,31 @@ function initialize() {
         .then(() => console.log('[FIREBASE] Test write successful'))
         .catch(error => console.error('[FIREBASE] Test write failed:', error));
     }
-
+    
     // Set up mobile compatibility
     setupMobileCompatibility();
 }
 
-// Make core functions available globally
-window.PokerApp = {
-    ...window.PokerApp,
-    initialize,
-    addPlayer,
-    removePlayer: window.removePlayer,
-    updatePlayerList,
-    resetGame,
-    saveState,
-    loadSavedState,
-    UI: PokerApp.UI
-};
+// Make initialize function available globally
+window.initialize = initialize;
+
+// Add this function near the initialize function
+function setupMobileCompatibility() {
+    // Check if we're on iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    if (isIOS) {
+        // Add iOS-specific class to body
+        document.body.classList.add('ios-device');
+        
+        // Fix potential scroll issues
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fix potential scroll issues on page load
+            window.scrollTo(0, 1);
+            setTimeout(() => window.scrollTo(0, 0), 100);
+        });
+    }
+}
 
 // Define themes with main colors and gradients
 const themes = {
@@ -1024,184 +1090,6 @@ function cleanupFirebaseListeners() {
         }
     }
 }
-
-// Make initialize function available globally
-window.initialize = initialize;
-
-// Initialize when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    // Load saved theme first
-    const savedTheme = localStorage.getItem('theme') || 'Classic';
-    if (themes[savedTheme]) {
-        setTheme(savedTheme);
-    } else {
-        setTheme('Classic'); // Default theme
-    }
-    
-    // Set up theme selector
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        themeSelector.value = savedTheme || 'Classic';
-        
-        // Single event listener for theme changes
-        themeSelector.addEventListener('change', (e) => {
-            const selectedTheme = e.target.value;
-            if (themes[selectedTheme]) {
-                setTheme(selectedTheme);
-                PokerApp.UI.showToast(`Theme set to ${selectedTheme}`, 'success');
-            } else {
-                PokerApp.UI.showToast('Invalid theme selected', 'error');
-                setTheme('Classic');
-            }
-        });
-    }
-    
-    // Initialize rest of the app
-    initialize();
-    
-    // Load saved state after initialization
-    loadSavedState();
-    
-    // Add styles for small buttons and modern UI
-    const style = document.createElement('style');
-    style.textContent = `
-        /* Modern UI styles */
-        .button-icon.small {
-            font-size: 0.8em;
-        }
-        
-        .totals-row {
-            border-top: 2px solid var(--main-color);
-            background-color: rgba(var(--main-color-rgb), 0.1);
-            font-weight: bold;
-        }
-        
-        .totals-row td {
-            padding: 10px;
-            font-size: 1.1em;
-        }
-        
-        /* Modern input field */
-        .chip-input {
-            width: 80px;
-            padding: 6px 10px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-weight: 500;
-            text-align: center;
-            transition: all 0.2s ease;
-        }
-        
-        .chip-input:focus {
-            outline: none;
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 0 0 2px var(--main-color);
-        }
-        
-        /* Modern table styling */
-        #player-table {
-            border-collapse: separate;
-            border-spacing: 0 8px;
-        }
-        
-        #player-table tbody tr {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            transition: all 0.2s ease;
-        }
-        
-        #player-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-        
-        #player-table td {
-            padding: 12px 15px;
-        }
-        
-        #player-table td:first-child {
-            border-top-left-radius: 12px;
-            border-bottom-left-radius: 12px;
-        }
-        
-        #player-table td:last-child {
-            border-top-right-radius: 12px;
-            border-bottom-right-radius: 12px;
-        }
-        
-        /* Modern remove button */
-        .remove-player-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            background: rgba(255, 71, 87, 0.8);
-            border: none;
-            color: white;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 6px rgba(255, 71, 87, 0.3);
-        }
-        
-        .remove-player-btn:hover {
-            opacity: 1;
-            background: rgba(255, 71, 87, 1);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(255, 71, 87, 0.5);
-        }
-        
-        /* Add player button */
-        .add-player-btn {
-            background: var(--main-color);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 10px 20px;
-            font-weight: 600;
-            font-size: 0.9em;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 15px rgba(var(--main-color-rgb), 0.3);
-        }
-        
-        .add-player-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(var(--main-color-rgb), 0.4);
-        }
-        
-        .add-player-btn:active {
-            transform: translateY(0);
-        }
-    `;
-    document.head.appendChild(style);
-});
-
-// Export core functions for use in other modules
-window.PokerApp = {
-    ...window.PokerApp,
-    initialize,
-    addPlayer,
-    removePlayer,
-    updatePlayerList,
-    resetGame,
-    saveState,
-    loadSavedState,
-    UI: {
-        showToast: PokerApp.UI.showToast,
-        createToastContainer: PokerApp.UI.createToastContainer,
-        updateGameStatus: PokerApp.UI.updateGameStatus,
-        updateLobbyUI: PokerApp.UI.updateLobbyUI
-    }
-};
 
 // Function to generate a unique game ID
 function generateGameId() {
@@ -1886,24 +1774,51 @@ function updatePlayerChips(playerId, newValue) {
 // Add to global scope
 window.updatePlayerChips = updatePlayerChips;
 
-// Add this function near the initialize function
-function setupMobileCompatibility() {
-    // Check if we're on iOS or mobile device
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (isIOS || isMobile) {
-        // Add mobile class to body to assist with CSS targeting
-        document.body.classList.add('mobile-device');
-        
-        if (isIOS) {
-            document.body.classList.add('ios-device');
-            
-            // Ensure viewport meta tag is set correctly
-            const viewport = document.querySelector("meta[name=viewport]");
-            if (viewport) {
-                viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-            }
-        }
+// Make core functions available globally
+window.PokerApp = {
+    ...window.PokerApp,
+    initialize,
+    addPlayer,
+    removePlayer: window.removePlayer,
+    updatePlayerList,
+    resetGame,
+    saveState,
+    loadSavedState,
+    UI: PokerApp.UI
+};
+
+// Initialize when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Load saved theme first
+    const savedTheme = localStorage.getItem('theme') || 'Classic';
+    if (themes[savedTheme]) {
+        setTheme(savedTheme);
+    } else {
+        setTheme('Classic'); // Default theme
     }
-}
+    
+    // Set up theme selector
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.value = savedTheme || 'Classic';
+        
+        // Single event listener for theme changes
+        themeSelector.addEventListener('change', (e) => {
+            const selectedTheme = e.target.value;
+            if (themes[selectedTheme]) {
+                setTheme(selectedTheme);
+                if (window.PokerApp && window.PokerApp.UI) {
+                    window.PokerApp.UI.showToast(`Theme set to ${selectedTheme}`, 'success');
+                }
+            } else {
+                if (window.PokerApp && window.PokerApp.UI) {
+                    window.PokerApp.UI.showToast('Invalid theme selected', 'error');
+                }
+                setTheme('Classic');
+            }
+        });
+    }
+    
+    // Initialize the app (this is now async and will handle Firebase properly)
+    initialize();
+});
