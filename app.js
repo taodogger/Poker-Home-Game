@@ -188,6 +188,15 @@ function updatePlayerList() {
         noPlayersMessage.style.display = PokerApp.state.players.length > 0 ? 'none' : 'block';
     }
 
+    // Save active input states
+    const activeInputs = {};
+    document.querySelectorAll('.chip-input').forEach(input => {
+        const playerId = parseInt(input.getAttribute('data-player-id'));
+        if (playerId && document.activeElement === input) {
+            activeInputs[playerId] = true;
+        }
+    });
+
     // Clear current table rows
     playerTableBody.innerHTML = '';
 
@@ -214,21 +223,53 @@ function updatePlayerList() {
         row.className = player.id === PokerApp.state.dealerId ? 'dealer' : '';
         row.setAttribute('data-player-id', player.id);
         
-        row.innerHTML = `
-            <td class="player-name">${player.name}</td>
-            <td class="initial-chips">${player.initial_chips}</td>
-            <td class="current-chips">
-                <input type="number" class="chip-input" value="${player.current_chips}" 
-                    data-player-id="${player.id}" 
-                    onchange="updatePlayerChips(${player.id}, this.value)"
-                    min="0">
-            </td>
-            <td class="player-actions">
-                <button class="remove-player-btn" onclick="removePlayer(${player.id})">
-                    <span class="button-icon">×</span>
-                </button>
-            </td>
-        `;
+        // Create individual cells instead of using innerHTML to maintain input state
+        const nameCell = document.createElement('td');
+        nameCell.className = 'player-name';
+        nameCell.textContent = player.name;
+        row.appendChild(nameCell);
+        
+        const initialChipsCell = document.createElement('td');
+        initialChipsCell.className = 'initial-chips';
+        initialChipsCell.textContent = player.initial_chips;
+        row.appendChild(initialChipsCell);
+        
+        const currentChipsCell = document.createElement('td');
+        currentChipsCell.className = 'current-chips';
+        
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'chip-input';
+        input.value = player.current_chips;
+        input.setAttribute('data-player-id', player.id);
+        input.setAttribute('min', '0');
+        
+        // Don't use inline event handlers - we'll add proper event listeners later
+        input.id = `chip-input-${player.id}`;
+        
+        // If this input was active, we'll focus it after appending
+        if (activeInputs[player.id]) {
+            // We'll focus it after the table is fully rendered
+            setTimeout(() => input.focus(), 0);
+        }
+        
+        currentChipsCell.appendChild(input);
+        row.appendChild(currentChipsCell);
+        
+        const actionsCell = document.createElement('td');
+        actionsCell.className = 'player-actions';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-player-btn';
+        removeBtn.setAttribute('data-player-id', player.id);
+        
+        const icon = document.createElement('span');
+        icon.className = 'button-icon';
+        icon.textContent = '×';
+        
+        removeBtn.appendChild(icon);
+        actionsCell.appendChild(removeBtn);
+        row.appendChild(actionsCell);
         
         playerTableBody.appendChild(row);
     });
@@ -236,15 +277,44 @@ function updatePlayerList() {
     // Add totals row
     const totalsRow = document.createElement('tr');
     totalsRow.className = 'totals-row';
-    totalsRow.innerHTML = `
-        <td><strong>TOTALS</strong></td>
-        <td><strong>${totalInitialChips}</strong></td>
-        <td><strong>${totalCurrentChips}</strong></td>
-        <td></td>
-    `;
+    
+    const totalsLabelCell = document.createElement('td');
+    totalsLabelCell.innerHTML = '<strong>TOTALS</strong>';
+    totalsRow.appendChild(totalsLabelCell);
+    
+    const totalsInitialCell = document.createElement('td');
+    totalsInitialCell.innerHTML = `<strong>${totalInitialChips}</strong>`;
+    totalsRow.appendChild(totalsInitialCell);
+    
+    const totalsCurrentCell = document.createElement('td');
+    totalsCurrentCell.innerHTML = `<strong>${totalCurrentChips}</strong>`;
+    totalsRow.appendChild(totalsCurrentCell);
+    
+    const totalsBlankCell = document.createElement('td');
+    totalsRow.appendChild(totalsBlankCell);
+    
     playerTableBody.appendChild(totalsRow);
 
     updateEmptyState();
+    
+    // Add event listeners after DOM is built
+    playerTableBody.querySelectorAll('.chip-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const playerId = parseInt(this.getAttribute('data-player-id'));
+            if (playerId) {
+                updatePlayerChips(playerId, this.value);
+            }
+        });
+    });
+    
+    playerTableBody.querySelectorAll('.remove-player-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const playerId = parseInt(this.getAttribute('data-player-id'));
+            if (playerId) {
+                removePlayer(playerId);
+            }
+        });
+    });
     
     // Log success
     console.log(`[UI] Player list updated with ${PokerApp.state.players.length} players`);
@@ -813,98 +883,32 @@ function setupMobileCompatibility() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    console.log('[MOBILE] Device detection:', { isIOS, isMobile, userAgent: navigator.userAgent });
-    
     if (isIOS || isMobile) {
         // Add device-specific class to body
         document.body.classList.add(isIOS ? 'ios-device' : 'mobile-device');
-        console.log('[MOBILE] Applied mobile class to body:', isIOS ? 'ios-device' : 'mobile-device');
         
         // Force main app content to stack vertically
         const appContent = document.querySelector('.app-content');
         if (appContent) {
-            // Log the state before changes
-            console.log('[MOBILE] App content before styling:', {
-                display: appContent.style.display,
-                flexDirection: appContent.style.flexDirection,
-                width: appContent.style.width
-            });
-            
-            // Apply mobile-friendly styles with !important to override any conflicting styles
-            appContent.setAttribute('style', 'display: flex !important; flex-direction: column !important; width: 100% !important;');
-            
-            // Add a debug outline to see the container boundaries
-            appContent.style.outline = '1px dashed rgba(255,0,0,0.3)';
-            
-            // Make all sections full width
-            document.querySelectorAll('section, .poker-card').forEach(section => {
-                // Save original styles for debugging
-                const originalStyles = {
-                    width: section.style.width,
-                    maxWidth: section.style.maxWidth,
-                    margin: section.style.margin
-                };
-                
-                // Apply crucial mobile styles with !important
-                section.setAttribute('style', 
-                    'width: 100% !important; ' +
-                    'max-width: none !important; ' +
-                    'margin: 0 0 15px 0 !important; ' +
-                    'box-sizing: border-box !important; ' +
-                    'display: block !important; ' +
-                    'outline: 1px dashed rgba(0,0,255,0.3);'
-                );
-                
-                console.log('[MOBILE] Applied mobile styling to section:', section.id || 'unnamed section');
-            });
+            // Simply add a "mobile-layout" class instead of inline styles
+            appContent.classList.add('mobile-layout');
             
             // Fix iOS height issues
             function updateLayout() {
-                const windowHeight = window.innerHeight;
-                const windowWidth = window.innerWidth;
-                const headerHeight = document.querySelector('header')?.offsetHeight || 0;
-                
-                console.log('[MOBILE] Updating layout:', { windowHeight, windowWidth, headerHeight });
-                
-                // Set layout to vertical stacking
-                if (windowWidth <= 768) {
-                    // Ensure we're using flex column layout
-                    appContent.style.display = 'flex';
-                    appContent.style.flexDirection = 'column';
-                    
-                    // Set proper height based on device
-                    appContent.style.height = isIOS ? `${windowHeight - headerHeight}px` : 'auto';
-                    appContent.style.overflowY = 'auto';
-                    appContent.style.overflowX = 'hidden';
-                    
-                    // Log the applied layout
-                    console.log('[MOBILE] Mobile layout applied:', {
-                        display: appContent.style.display,
-                        flexDirection: appContent.style.flexDirection,
-                        height: appContent.style.height,
-                        overflow: appContent.style.overflowY
-                    });
+                if (isIOS) {
+                    const windowHeight = window.innerHeight;
+                    const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+                    appContent.style.height = `${windowHeight - headerHeight}px`;
                 }
             }
             
             // Update on various events
             window.addEventListener('resize', updateLayout);
             window.addEventListener('orientationchange', updateLayout);
-            document.addEventListener('DOMContentLoaded', updateLayout);
             
-            // Run layout update immediately
+            // Initial layout update
             updateLayout();
-            
-            // Additional check after a delay to handle any delayed rendering
-            setTimeout(updateLayout, 500);
-            
-            // Add a global function to force update layout (for testing)
-            window.forceUpdateMobileLayout = updateLayout;
-        } else {
-            console.error('[MOBILE] Could not find app-content element');
         }
-    } else {
-        console.log('[MOBILE] Not a mobile device, skipping mobile compatibility setup');
     }
 }
 
@@ -1845,33 +1849,70 @@ function calculatePayouts() {
         return;
     }
 
+    if (PokerApp.state.players.length < 2) {
+        PokerApp.UI.showToast('Need at least 2 players to calculate payouts', 'error');
+        return;
+    }
+
     const players = PokerApp.state.players;
-    const payouts = [];
     let totalDifference = 0;
 
     console.log('[PAYOUT] Processing players:', players.length);
 
-    // Calculate differences from initial chips
-    players.forEach(player => {
+    // Calculate initial differences
+    const playerDiffs = players.map(player => {
         const difference = player.current_chips - player.initial_chips;
         totalDifference += difference;
-        payouts.push({
+        return {
+            id: player.id,
             name: player.name,
             difference: difference,
-            amount: Math.abs(difference * PokerApp.state.chipRatio)
-        });
-        console.log(`[PAYOUT] Player ${player.name}: diff=${difference}, amount=${Math.abs(difference * PokerApp.state.chipRatio)}`);
+            amount: Math.abs(difference * PokerApp.state.chipRatio),
+            initial: player.initial_chips,
+            current: player.current_chips
+        };
     });
 
     // Verify the total difference sums to zero (or close to it due to rounding)
-    if (Math.abs(totalDifference) > 0.01) {
+    if (Math.abs(totalDifference) > 1) {
         console.warn(`[PAYOUT] Total difference doesn't balance: ${totalDifference}`);
-        PokerApp.UI.showToast('Error: Chip counts don\'t balance. Please check the numbers.', 'error');
+        PokerApp.UI.showToast('Error: Chip counts don\'t balance. Total difference: ' + totalDifference, 'error');
         return;
     }
 
-    // Sort payouts by difference (winners to losers)
-    payouts.sort((a, b) => b.difference - a.difference);
+    // Sort by difference (winners to losers)
+    playerDiffs.sort((a, b) => b.difference - a.difference);
+
+    // Generate optimal payment instructions
+    const transactions = [];
+    const winners = playerDiffs.filter(p => p.difference > 0);
+    const losers = playerDiffs.filter(p => p.difference < 0);
+    
+    // Create payment plan
+    for (const loser of losers) {
+        const amountOwed = Math.abs(loser.difference);
+        let remainingDebt = amountOwed;
+        
+        for (const winner of winners) {
+            if (remainingDebt <= 0 || winner.difference <= 0) continue;
+            
+            // Calculate how much this winner is owed
+            const amountToReceive = Math.min(remainingDebt, winner.difference);
+            if (amountToReceive <= 0) continue;
+            
+            // Create a transaction
+            transactions.push({
+                from: loser.name,
+                to: winner.name,
+                chips: amountToReceive,
+                cash: (amountToReceive * PokerApp.state.chipRatio).toFixed(2)
+            });
+            
+            // Update remaining amounts
+            remainingDebt -= amountToReceive;
+            winner.difference -= amountToReceive;
+        }
+    }
 
     // Display results
     const payoutResults = document.getElementById('payout-results');
@@ -1880,25 +1921,239 @@ function calculatePayouts() {
         return;
     }
 
-    let html = '<div class="payout-list">';
-    payouts.forEach(payout => {
-        const amountText = payout.difference > 0 
-            ? `Receives $${payout.amount.toFixed(2)}` 
-            : payout.difference < 0 
-                ? `Pays $${payout.amount.toFixed(2)}`
-                : 'Break even';
-
+    // Create summary of player results
+    let html = '<div class="payout-container">';
+    
+    // Player summary section
+    html += '<div class="payout-summary">';
+    html += '<h3>Player Results</h3>';
+    html += '<div class="player-results">';
+    
+    playerDiffs.forEach(player => {
+        const resultClass = player.difference > 0 ? 'winner' : player.difference < 0 ? 'loser' : 'neutral';
+        const prefix = player.difference > 0 ? '+' : '';
+        const chipDiff = prefix + player.difference;
+        const cashValue = player.difference * PokerApp.state.chipRatio;
+        const cashDiff = prefix + '$' + Math.abs(cashValue).toFixed(2);
+        
         html += `
-            <div class="payout-item ${payout.difference > 0 ? 'winner' : payout.difference < 0 ? 'loser' : 'neutral'}">
-                <span class="player-name">${payout.name}</span>
-                <span class="amount">${amountText}</span>
+            <div class="player-result ${resultClass}">
+                <div class="player-result-name">${player.name}</div>
+                <div class="player-result-chips">
+                    ${player.initial} → ${player.current}
+                    <span class="diff">(${chipDiff})</span>
+                </div>
+                <div class="player-result-cash">${cashDiff}</div>
             </div>
         `;
     });
-    html += '</div>';
-
+    
+    html += '</div>'; // End player-results
+    html += '</div>'; // End payout-summary
+    
+    // Payment instructions section
+    html += '<div class="payment-instructions">';
+    html += '<h3>Payment Instructions</h3>';
+    
+    if (transactions.length === 0) {
+        html += '<p class="no-transactions">No payments needed - all players are even!</p>';
+    } else {
+        html += '<div class="transaction-list">';
+        html += '<ol class="transaction-steps">';
+        
+        transactions.forEach(transaction => {
+            html += `
+                <li class="transaction-step">
+                    <div class="step-instruction">
+                        <span class="from-player">${transaction.from}</span>
+                        <span class="instruction-arrow">→</span>
+                        <span class="to-player">${transaction.to}</span>
+                    </div>
+                    <div class="step-amount">
+                        <span class="chip-amount">${transaction.chips} chips</span>
+                        <span class="cash-amount">$${transaction.cash}</span>
+                    </div>
+                </li>
+            `;
+        });
+        
+        html += '</ol>';
+        html += '</div>'; // End transaction-list
+    }
+    
+    html += '</div>'; // End payment-instructions
+    html += '</div>'; // End payout-container
+    
     payoutResults.innerHTML = html;
     payoutResults.style.display = 'block';
+    
+    // Add some styling for the new layout
+    const style = document.createElement('style');
+    if (!document.querySelector('#payout-styles')) {
+        style.id = 'payout-styles';
+        style.textContent = `
+            .payout-container {
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+                width: 100%;
+            }
+            
+            .payout-summary, .payment-instructions {
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                padding: 1rem;
+            }
+            
+            .payout-summary h3, .payment-instructions h3 {
+                margin-top: 0;
+                margin-bottom: 1rem;
+                color: var(--main-color);
+                font-size: 1.1rem;
+            }
+            
+            .player-results {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            
+            .player-result {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem;
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.05);
+            }
+            
+            .player-result.winner {
+                background: rgba(46, 213, 115, 0.1);
+                border-left: 3px solid #2ed573;
+            }
+            
+            .player-result.loser {
+                background: rgba(255, 71, 87, 0.1);
+                border-left: 3px solid #ff4757;
+            }
+            
+            .player-result.neutral {
+                background: rgba(255, 255, 255, 0.05);
+                border-left: 3px solid #aaa;
+            }
+            
+            .player-result-name {
+                font-weight: 600;
+                flex: 1;
+            }
+            
+            .player-result-chips {
+                font-family: monospace;
+                color: rgba(255, 255, 255, 0.7);
+            }
+            
+            .player-result-chips .diff {
+                font-weight: 600;
+                color: white;
+            }
+            
+            .player-result.winner .diff {
+                color: #2ed573;
+            }
+            
+            .player-result.loser .diff {
+                color: #ff4757;
+            }
+            
+            .player-result-cash {
+                font-weight: 700;
+                min-width: 80px;
+                text-align: right;
+            }
+            
+            .winner .player-result-cash {
+                color: #2ed573;
+            }
+            
+            .loser .player-result-cash {
+                color: #ff4757;
+            }
+            
+            .transaction-steps {
+                list-style-type: decimal;
+                padding-left: 2rem;
+                margin: 0;
+            }
+            
+            .transaction-step {
+                margin-bottom: 0.75rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .step-instruction {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .from-player {
+                color: #ff4757;
+                font-weight: 600;
+            }
+            
+            .to-player {
+                color: #2ed573;
+                font-weight: 600;
+            }
+            
+            .instruction-arrow {
+                font-size: 1.5rem;
+                color: var(--main-color);
+            }
+            
+            .step-amount {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+            }
+            
+            .chip-amount {
+                font-size: 0.9rem;
+                color: rgba(255, 255, 255, 0.7);
+            }
+            
+            .cash-amount {
+                font-weight: 700;
+                color: white;
+            }
+            
+            .no-transactions {
+                text-align: center;
+                padding: 1rem;
+                color: var(--main-color);
+                font-weight: 600;
+            }
+            
+            @media (max-width: 768px) {
+                .transaction-step {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                    margin-bottom: 1rem;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                
+                .step-amount {
+                    align-items: flex-start;
+                    margin-left: 1.5rem;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
     
     console.log('[PAYOUT] Payout results updated');
     

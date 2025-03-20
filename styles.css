@@ -2524,3 +2524,74 @@ button,
     }
 }
 
+/* Add a clean mobile-layout class */
+.mobile-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.mobile-layout section,
+.mobile-layout .poker-card {
+    width: 100%;
+    max-width: none;
+    margin: 0 0 15px 0;
+    box-sizing: border-box;
+    display: block;
+}
+
+/* Clean up existing mobile media queries */
+@media (max-width: 768px) {
+    html, body {
+        position: static;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
+    
+    main.app-content {
+        flex-direction: column;
+        width: 100%;
+        overflow-x: hidden;
+        padding: 10px;
+    }
+    
+    section, .poker-card {
+        width: 100%;
+        max-width: none;
+        margin: 0 0 15px 0;
+        padding: 10px;
+    }
+    
+    table {
+        width: 100%;
+        overflow-x: auto;
+        display: block;
+    }
+    
+    form {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    button, input, select {
+        padding: 12px;  /* Larger tap targets */
+        margin: 5px 0;
+    }
+}
+
+/* iOS specific fixes */
+.ios-device {
+    -webkit-overflow-scrolling: touch;
+}
+
+.ios-device html, 
+.ios-device body {
+    height: 100%;
+    overflow-y: auto;
+}
+
