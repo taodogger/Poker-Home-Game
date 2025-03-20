@@ -1880,37 +1880,37 @@ function calculatePayouts() {
         return;
     }
 
-    // Sort by difference (winners to losers)
-    playerDiffs.sort((a, b) => b.difference - a.difference);
-
-    // Generate optimal payment instructions
-    const transactions = [];
+    // Split players into winners and losers
     const winners = playerDiffs.filter(p => p.difference > 0);
     const losers = playerDiffs.filter(p => p.difference < 0);
     
-    // Create payment plan
+    // Generate all direct player-to-player transactions
+    const transactions = [];
+    
+    // For each loser, calculate how much they owe to each winner
     for (const loser of losers) {
-        const amountOwed = Math.abs(loser.difference);
-        let remainingDebt = amountOwed;
+        const totalLoss = Math.abs(loser.difference);
         
+        // Get total winnings to calculate proportions
+        const totalWinnings = winners.reduce((sum, w) => sum + w.difference, 0);
+        
+        // For each winner, calculate their share from this loser
         for (const winner of winners) {
-            if (remainingDebt <= 0 || winner.difference <= 0) continue;
+            // Calculate proportion this winner gets from this loser
+            const proportion = winner.difference / totalWinnings;
+            const chipsToReceive = totalLoss * proportion;
             
-            // Calculate how much this winner is owed
-            const amountToReceive = Math.min(remainingDebt, winner.difference);
-            if (amountToReceive <= 0) continue;
-            
-            // Create a transaction
-            transactions.push({
-                from: loser.name,
-                to: winner.name,
-                chips: amountToReceive,
-                cash: (amountToReceive * PokerApp.state.chipRatio).toFixed(2)
-            });
-            
-            // Update remaining amounts
-            remainingDebt -= amountToReceive;
-            winner.difference -= amountToReceive;
+            // Only add transaction if there are chips to transfer
+            if (chipsToReceive > 0.01) {
+                const cashAmount = (chipsToReceive * PokerApp.state.chipRatio).toFixed(2);
+                
+                transactions.push({
+                    from: loser.name,
+                    to: winner.name,
+                    chips: chipsToReceive.toFixed(2),
+                    cash: cashAmount
+                });
+            }
         }
     }
 
@@ -1932,7 +1932,7 @@ function calculatePayouts() {
     playerDiffs.forEach(player => {
         const resultClass = player.difference > 0 ? 'winner' : player.difference < 0 ? 'loser' : 'neutral';
         const prefix = player.difference > 0 ? '+' : '';
-        const chipDiff = prefix + player.difference;
+        const chipDiff = prefix + player.difference.toFixed(2);
         const cashValue = player.difference * PokerApp.state.chipRatio;
         const cashDiff = prefix + '$' + Math.abs(cashValue).toFixed(2);
         
@@ -1953,32 +1953,49 @@ function calculatePayouts() {
     
     // Payment instructions section
     html += '<div class="payment-instructions">';
-    html += '<h3>Payment Instructions</h3>';
+    html += '<h3>Direct Payment Instructions</h3>';
     
     if (transactions.length === 0) {
         html += '<p class="no-transactions">No payments needed - all players are even!</p>';
     } else {
-        html += '<div class="transaction-list">';
-        html += '<ol class="transaction-steps">';
+        // Group transactions by payer for easier reading
+        const payerGroups = {};
+        transactions.forEach(t => {
+            if (!payerGroups[t.from]) {
+                payerGroups[t.from] = [];
+            }
+            payerGroups[t.from].push(t);
+        });
         
-        transactions.forEach(transaction => {
+        html += '<div class="payer-groups">';
+        
+        // For each payer, show who they need to pay
+        Object.entries(payerGroups).forEach(([payer, payerTransactions]) => {
             html += `
-                <li class="transaction-step">
-                    <div class="step-instruction">
-                        <span class="from-player">${transaction.from}</span>
-                        <span class="instruction-arrow">→</span>
-                        <span class="to-player">${transaction.to}</span>
-                    </div>
-                    <div class="step-amount">
-                        <span class="chip-amount">${transaction.chips} chips</span>
-                        <span class="cash-amount">$${transaction.cash}</span>
-                    </div>
-                </li>
+                <div class="payer-group">
+                    <div class="payer-name">${payer} pays:</div>
+                    <ul class="payee-list">
+            `;
+            
+            payerTransactions.forEach(t => {
+                html += `
+                    <li class="payee-item">
+                        <span class="payee-name">${t.to}</span>
+                        <span class="payee-amount">
+                            <span class="chip-amount">${t.chips} chips</span>
+                            <strong class="cash-amount">$${t.cash}</strong>
+                        </span>
+                    </li>
+                `;
+            });
+            
+            html += `
+                    </ul>
+                </div>
             `;
         });
         
-        html += '</ol>';
-        html += '</div>'; // End transaction-list
+        html += '</div>'; // End payer-groups
     }
     
     html += '</div>'; // End payment-instructions
@@ -2079,41 +2096,43 @@ function calculatePayouts() {
                 color: #ff4757;
             }
             
-            .transaction-steps {
-                list-style-type: decimal;
-                padding-left: 2rem;
+            .payer-groups {
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            
+            .payer-name {
+                font-weight: 700;
+                font-size: 1.1rem;
+                color: #ff4757;
+                margin-bottom: 0.5rem;
+            }
+            
+            .payee-list {
+                list-style-type: none;
+                padding-left: 1rem;
                 margin: 0;
             }
             
-            .transaction-step {
-                margin-bottom: 0.75rem;
+            .payee-item {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                padding: 0.5rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             }
             
-            .step-instruction {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
+            .payee-item:last-child {
+                border-bottom: none;
             }
             
-            .from-player {
-                color: #ff4757;
-                font-weight: 600;
-            }
-            
-            .to-player {
+            .payee-name {
                 color: #2ed573;
                 font-weight: 600;
             }
             
-            .instruction-arrow {
-                font-size: 1.5rem;
-                color: var(--main-color);
-            }
-            
-            .step-amount {
+            .payee-amount {
                 display: flex;
                 flex-direction: column;
                 align-items: flex-end;
@@ -2137,18 +2156,15 @@ function calculatePayouts() {
             }
             
             @media (max-width: 768px) {
-                .transaction-step {
+                .payee-item {
                     flex-direction: column;
                     align-items: flex-start;
-                    gap: 0.5rem;
-                    margin-bottom: 1rem;
-                    padding-bottom: 0.5rem;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    gap: 0.25rem;
                 }
                 
-                .step-amount {
+                .payee-amount {
                     align-items: flex-start;
-                    margin-left: 1.5rem;
+                    margin-left: 1rem;
                 }
             }
         `;
