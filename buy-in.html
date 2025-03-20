@@ -2,851 +2,380 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buy-in - Poker Home Game</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy-in | Kapoker</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%232E8B57' d='M256 512c141.4 0 256-114.6 256-256S397.4 0 256 0 0 114.6 0 256s114.6 256 256 256z'/><path fill='white' d='M135.6 240.8l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8zm96 0l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8zm96 0l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8z'/></svg>">
     <link rel="stylesheet" href="styles.css">
     <style>
-        :root {
-            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
-            --container-padding: max(1rem, env(safe-area-inset-left));
-            --main-color: #1e90ff;
-            --secondary-color: #4169e1;
-            --main-color-rgb: 30, 144, 255;
-            --secondary-color-rgb: 65, 105, 225;
-            --vibrant-gradient: linear-gradient(135deg, var(--main-color), var(--secondary-color));
-            --glow-effect: 0 0 20px rgba(var(--main-color-rgb), 0.5);
-            --card-bg: rgba(20, 20, 40, 0.5);
-            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
         body {
-            margin: 0;
-            padding: 0;
             min-height: 100vh;
-            min-height: -webkit-fill-available;
-            background: linear-gradient(135deg, #0f1824, #1c2331);
-            font-family: var(--font-family);
-            color: white;
             display: flex;
-            justify-content: center;
             align-items: center;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-            position: relative;
-        }
-
-        /* Add enhanced background glow that matches theme */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 30%;
-            left: 25%;
-            width: 50%;
-            height: 45%;
-            background: radial-gradient(circle, 
-                rgba(var(--main-color-rgb), 0.15) 0%, 
-                rgba(var(--main-color-rgb), 0.05) 50%, 
-                rgba(0, 0, 0, 0) 70%);
-            filter: blur(60px);
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        html {
-            height: -webkit-fill-available;
-            height: 100%;
+            justify-content: center;
+            padding: 1rem;
+            background: var(--body-background, linear-gradient(135deg, #1a1a1a, #2d2d2d));
         }
 
         .container {
-            width: min(100% - 2rem, 500px);
-            margin-inline: auto;
-            padding: var(--container-padding);
-            box-sizing: border-box;
-            margin: 1rem;
-        }
-
-        .buy-in-form {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 18px;
-            padding: clamp(1.75rem, 5vw, 2.5rem);
             width: 100%;
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Enhanced accent on top to match theme */
-        .buy-in-form::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: var(--vibrant-gradient);
-            opacity: 1;
-            z-index: 2;
+            z-index: 10;
         }
 
         h1 {
-            font-size: clamp(2rem, 8vw, 2.5rem);
-            margin-bottom: clamp(1.25rem, 4vw, 2rem);
-            line-height: 1.1;
-            background: linear-gradient(to right, white, rgba(255,255,255,0.8));
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0 0 2rem;
+            background: var(--vibrant-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
-            position: relative;
-            letter-spacing: -0.5px;
+            text-align: center;
         }
 
-        .game-info {
-            margin-bottom: clamp(1.5rem, 5vw, 2rem);
+        #game-info {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .game-name {
-            font-size: clamp(1.25rem, 4vw, 1.5rem);
+        #game-info h2 {
+            font-size: 1.5rem;
+            margin: 0 0 0.5rem;
+            color: white;
         }
 
-        .chip-ratio {
-            font-size: clamp(0.875rem, 3vw, 1rem);
+        #game-info p {
+            font-size: 1.1rem;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.8);
         }
 
         .form-group {
-            margin-bottom: clamp(1.25rem, 4vw, 1.75rem);
+            margin-bottom: 1.5rem;
         }
 
-        .form-group label {
+        label {
             display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
             font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: white;
         }
 
         input {
             width: 100%;
-            height: clamp(3rem, 8vw, 3.25rem);
+            height: 3.5rem;
             padding: 0 1.25rem;
-            font-size: clamp(1rem, 3.5vw, 1.1rem);
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-size: 1.1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
             color: white;
-            transition: all 0.2s ease;
-            box-sizing: border-box;
+            transition: all 0.3s ease;
         }
 
         input:focus {
             outline: none;
             border-color: var(--main-color);
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.3);
             box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.2);
         }
 
-        button {
-            width: 100%;
-            height: clamp(3.25rem, 9vw, 3.75rem);
-            font-size: clamp(1.1rem, 3.5vw, 1.2rem);
-            margin-top: clamp(1.5rem, 4vw, 2rem);
-            background: var(--vibrant-gradient);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            font-weight: 600;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 20px rgba(var(--main-color-rgb), 0.25);
-            transition: all 0.3s ease;
-            letter-spacing: 0.5px;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 30px rgba(var(--main-color-rgb), 0.3);
-        }
-
         .chip-preview {
-            padding: clamp(1.25rem, 4vw, 1.75rem);
-            margin: clamp(1.5rem, 5vw, 2rem) 0;
-            background: rgba(var(--main-color-rgb), 0.08);
-            border-radius: 14px;
-            border: 1px solid rgba(var(--main-color-rgb), 0.15);
-            transition: all 0.3s ease;
-        }
-
-        .chip-preview p {
-            font-size: clamp(0.875rem, 3vw, 1rem);
-            margin-top: 0;
-        }
-
-        .chip-preview h3 {
-            font-size: clamp(1.5rem, 5vw, 2rem);
-            margin-bottom: 0;
-        }
-
-        .status {
-            font-size: clamp(0.875rem, 3vw, 1rem);
-            padding: clamp(0.75rem, 3vw, 1rem);
-            margin-top: clamp(1rem, 4vw, 1.5rem);
+            text-align: center;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .status.success {
-            background: rgba(76, 175, 80, 0.1);
-            border-color: rgba(76, 175, 80, 0.3);
-        }
-
-        .status.error {
-            background: rgba(244, 67, 54, 0.1);
-            border-color: rgba(244, 67, 54, 0.3);
-        }
-
-        .status.pending {
-            background: rgba(255, 193, 7, 0.1);
-            border-color: rgba(255, 193, 7, 0.3);
-        }
-
-        /* Enhanced welcome container styles */
-        .welcome-container {
-            background: linear-gradient(135deg, rgba(30, 144, 255, 0.9), rgba(65, 105, 225, 0.9));
-            border-radius: 20px;
-            padding: 2rem;
-            color: white;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 0 30px rgba(30, 144, 255, 0.3);
-            margin: 0 auto;
-            position: relative;
-            overflow: hidden;
-            animation: slide-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        @keyframes slide-up {
-            0% { transform: translateY(40px); opacity: 0; }
-            100% { transform: translateY(0); opacity: 1; }
-        }
-        
-        .welcome-content {
-            position: relative;
-            z-index: 5;
-        }
-        
-        .welcome-header {
-            display: flex;
-            align-items: center;
-            position: relative;
-            flex: 1;
-            min-width: 300px;
-            gap: 1.5rem;
-        }
-        
-        .welcome-header h2 {
-            font-size: 2rem;
-            font-weight: 800;
-            margin: 0 0 1.5rem 0;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            color: white;
-            -webkit-text-fill-color: white;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .welcome-emoji {
-            font-size: 2rem;
-            -webkit-text-fill-color: initial;
-        }
-        
-        .welcome-body {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .player-info {
-            text-align: left;
-            flex: 1;
-        }
-        
-        .player-name-display {
-            font-size: 1.75rem;
-            font-weight: bold;
-            padding: 0.75rem 1.25rem;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            display: inline-block;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            margin-bottom: 0.75rem;
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-        }
-        
-        .chips-display {
-            font-size: 1.1rem;
+        .chip-preview p {
             margin: 0.5rem 0;
+            color: white;
         }
-        
-        .chip-badge {
-            background: white;
-            color: #1e90ff;
-            font-size: 2.2rem;
-            font-weight: bold;
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-            animation: pulse 2s ease-in-out infinite;
-            margin-left: 1.5rem;
-            border: 4px solid rgba(255, 255, 255, 0.5);
+
+        .chip-preview strong {
+            color: var(--main-color);
         }
-        
-        .chip-badge small {
-            font-size: 0.7rem;
-            text-transform: uppercase;
+
+        .status-message {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
             font-weight: 600;
-            letter-spacing: 1px;
-            margin-top: 3px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
         }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+
+        .status-message.pending {
+            opacity: 1;
+            transform: translateY(0);
+            background: rgba(var(--main-color-rgb), 0.2);
+            color: var(--main-color);
         }
-        
+
+        .status-message.success {
+            opacity: 1;
+            transform: translateY(0);
+            background: rgba(46, 213, 115, 0.2);
+            color: #2ed573;
+        }
+
+        .status-message.error {
+            opacity: 1;
+            transform: translateY(0);
+            background: rgba(255, 71, 87, 0.2);
+            color: #ff4757;
+        }
+
+        .welcome-container {
+            background: var(--vibrant-gradient);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            color: white;
+            margin-top: 2rem;
+            animation: slideUp 0.5s ease forwards;
+        }
+
+        .welcome-content h2 {
+            font-size: 2rem;
+            margin: 0 0 1rem;
+            color: white;
+        }
+
+        .player-info {
+            margin: 1.5rem 0;
+        }
+
+        .player-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
         .close-instruction {
             font-size: 0.9rem;
             opacity: 0.8;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            animation: bounce 2s infinite;
-            animation-delay: 2s;
-            justify-content: center;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-5px); }
-            60% { transform: translateY(-3px); }
-        }
-        
-        .confetti-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            overflow: hidden;
-            z-index: 0;
-        }
-        
-        .confetti {
-            position: absolute;
-            width: 10px;
-            height: 20px;
-            opacity: 0.7;
-            animation: confetti-fall 3s linear infinite;
-        }
-        
-        .confetti:nth-child(1) { left: 10%; animation-delay: 0s; background: #ffcc00; }
-        .confetti:nth-child(2) { left: 20%; animation-delay: 0.5s; background: #ff6699; }
-        .confetti:nth-child(3) { left: 30%; animation-delay: 1s; background: #33ccff; }
-        .confetti:nth-child(4) { left: 40%; animation-delay: 1.5s; background: #99ff66; }
-        .confetti:nth-child(5) { left: 50%; animation-delay: 2s; background: #ff9933; }
-        .confetti:nth-child(6) { left: 60%; animation-delay: 2.5s; background: #cc99ff; }
-        .confetti:nth-child(7) { left: 70%; animation-delay: 1s; background: #66ffcc; }
-        .confetti:nth-child(8) { left: 80%; animation-delay: 1.5s; background: #ff99cc; }
-        .confetti:nth-child(9) { left: 90%; animation-delay: 0.5s; background: #ffff99; }
-        
-        @keyframes confetti-fall {
-            0% { top: -10%; transform: rotate(0deg) translateX(0); }
-            100% { top: 100%; transform: rotate(360deg) translateX(20px); }
+            margin-top: 1.5rem;
         }
 
-        /* Add a subtle pattern to the welcome container for more texture */
-        .welcome-container::before {
-            content: '';
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Toast container and notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background: white;
+            color: #333;
+            padding: 12px 20px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            animation: slideIn 0.3s ease forwards;
+            max-width: 300px;
+        }
+
+        .toast.success {
+            background: linear-gradient(45deg, #2ed573, #7bed9f);
+            color: white;
+        }
+
+        .toast.error {
+            background: linear-gradient(45deg, #ff4757, #ff6b81);
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Poker chip animation */
+        .chip-stack {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 100px;
+            height: 120px;
+            z-index: 5;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            pointer-events: none;
+        }
+
+        .poker-chip {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 12%),
-                radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.15) 0%, transparent 15%);
-            opacity: 0.6;
-            z-index: 0;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--vibrant-gradient);
+            border: 4px dashed rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(0, 0, 0, 0.2);
+            transform: translateZ(0);
+            opacity: 0.9;
+            animation: spinChip 20s linear infinite;
+        }
+
+        .poker-chip:nth-child(1) {
+            bottom: 0;
+            left: 20px;
+            background: linear-gradient(45deg, #ff4757, #ff6b81);
+            animation-delay: 0s;
+        }
+
+        .poker-chip:nth-child(2) {
+            bottom: 15px;
+            left: 20px;
+            background: linear-gradient(45deg, #2ed573, #7bed9f);
+            animation-delay: 0.1s;
+        }
+
+        .poker-chip:nth-child(3) {
+            bottom: 30px;
+            left: 20px;
+            background: linear-gradient(45deg, #1e90ff, #4169e1);
+            animation-delay: 0.2s;
+        }
+
+        .poker-chip:nth-child(4) {
+            bottom: 45px;
+            left: 20px;
+            background: linear-gradient(45deg, #ff00ff, #bf00ff);
+            animation-delay: 0.3s;
+        }
+
+        .poker-chip:nth-child(5) {
+            bottom: 60px;
+            left: 20px;
+            background: linear-gradient(45deg, #ff9f1a, #ffa502);
+            animation-delay: 0.4s;
+        }
+
+        @keyframes spinChip {
+            0% {
+                transform: rotateY(0deg);
+            }
+            100% {
+                transform: rotateY(360deg);
+            }
         }
 
         @media (max-width: 480px) {
             .container {
-                margin: 0.5rem;
-            }
-
-            .buy-in-form {
-                padding: 1.25rem;
-            }
-
-            input, button {
-                font-size: 16px; /* Prevent iOS zoom */
-            }
-
-            .form-group label {
-                font-size: 0.875rem;
-            }
-
-            .helper-text {
-                font-size: 0.75rem;
-            }
-            
-            .welcome-body {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .player-info {
-                text-align: center;
-                margin-bottom: 1rem;
-            }
-            
-            .chip-badge {
-                margin: 0 auto;
-            }
-            
-            .welcome-header h2 {
-                font-size: 1.5rem;
-                justify-content: center;
-            }
-        }
-
-        @media (max-height: 600px) {
-            .container {
-                margin: 0.5rem;
+                padding: 1.5rem;
+                border-radius: 8px;
             }
 
             h1 {
-                font-size: 1.75rem;
-                margin-bottom: 1rem;
-            }
-
-            .game-info {
-                margin-bottom: 1rem;
-            }
-
-            .chip-preview {
-                margin: 1rem 0;
-                padding: 0.75rem;
-            }
-        }
-
-        @supports (-webkit-touch-callout: none) {
-            /* iOS-specific fixes */
-            body {
-                min-height: -webkit-fill-available;
+                font-size: 2rem;
             }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="buy-in-form">
-            <h1>Join Game</h1>
-            <div class="game-info">
-                <h2 class="game-name">Loading game info...</h2>
-                <p class="chip-ratio">Chip ratio: <span id="ratio-display">--</span></p>
-            </div>
-            
-            <form id="buy-in-form">
-                <div class="form-group">
-                    <label for="player-name">Your Name</label>
-                    <input type="text" id="player-name" required placeholder="Enter your name">
-                </div>
-                
-                <div class="form-group">
-                    <label for="buy-in-amount">Buy-in Amount ($)</label>
-                    <input type="number" id="buy-in-amount" required min="0" step="0.01" placeholder="Enter amount">
-                    <span class="helper-text">Enter the amount you want to buy in for</span>
-                </div>
-
-                <div class="chip-preview">
-                    <p>You will receive:</p>
-                    <h3 id="chip-amount">-- chips</h3>
-                </div>
-
-                <button type="submit">Join Game</button>
-            </form>
-
-            <div id="status-message" class="status"></div>
-        </div>
+<body class="buy-in-body">
+    <!-- Particle Effects -->
+    <div class="buy-in-particles"></div>
+    
+    <!-- Flying Card Animation -->
+    <div class="buy-in-cards">
+        <div class="buy-in-card"></div>
+        <div class="buy-in-card"></div>
+        <div class="buy-in-card"></div>
+        <div class="buy-in-card"></div>
+        <div class="buy-in-card"></div>
+    </div>
+    
+    <!-- Chip Stack Animation -->
+    <div class="chip-stack">
+        <div class="poker-chip"></div>
+        <div class="poker-chip"></div>
+        <div class="poker-chip"></div>
+        <div class="poker-chip"></div>
+        <div class="poker-chip"></div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script>
-        // Initialize Firebase with the same config
-        const firebaseConfig = {
-            apiKey: "AIzaSyBOrgiU5qkneWp8Flgbrx2eTPYLoTi7Uhc",
-            authDomain: "poker-home-game-699e7.firebaseapp.com",
-            databaseURL: "https://poker-home-game-699e7-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "poker-home-game-699e7",
-            storageBucket: "poker-home-game-699e7.firebasestorage.app",
-            messagingSenderId: "192105659517",
-            appId: "1:192105659517:web:cc9da7339c2098dd09c514"
-        };
+    <div class="container">
+        <h1>Buy-in</h1>
+        <div id="game-info">
+            <h2>Loading game info...</h2>
+        </div>
+        <form id="buy-in-form" class="setup-form">
+            <div class="form-group">
+                <label for="player-name">Your Name</label>
+                <input type="text" id="player-name" name="player-name" required>
+            </div>
+            <div class="form-group">
+                <label for="buy-in-amount">Buy-in Amount ($)</label>
+                <input type="number" id="buy-in-amount" name="buy-in-amount" required min="1" step="0.01">
+            </div>
+            <div class="chip-preview">
+                <p>You will receive <strong><span id="chip-amount">0</span> chips</strong></p>
+                <p>Current ratio: $<span id="chip-ratio">1.00</span> per chip</p>
+            </div>
+            <button type="submit" class="poker-button">Join Game</button>
+        </form>
+        <div id="status-message"></div>
+    </div>
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        // Get game ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('gameId') || urlParams.get('game-id');
-        const gameName = urlParams.get('game-name');
-        let game = null;
-
-        // Update status display
-        function updateStatus(message, type = 'pending') {
-            const statusDiv = document.getElementById('status-message');
-            statusDiv.className = `status ${type}`;
-            statusDiv.textContent = message;
-        }
-
-        // Show error page
-        function showError(message) {
-            document.querySelector('.container').innerHTML = `
-                <div class="error-container">
-                    <h1 data-text="Error">Error</h1>
-                    <div class="error-message">${message}</div>
-                    <button onclick="window.location.reload()" class="retry-button">
-                        Try Again
-                    </button>
-                </div>
-            `;
-        }
-
-        // Update document title with game name if available
-        if (gameName) {
-            document.title = `Join ${gameName} - Poker Home Game`;
-        }
-
-        if (gameId) {
-            // Load game data
-            database.ref(`games/${gameId}`)
-                .once('value')
-                .then((snapshot) => {
-                    game = snapshot.val();
-                    
-                    if (!game || !game.active) {
-                        throw new Error('Game not found or no longer active');
-                    }
-
-                    // Update theme colors from game state
-                    if (game.state && game.state.theme) {
-                        updateTheme(game.state.theme);
-                    }
-
-                    // Show game info
-                    const gameInfo = document.querySelector('.game-info');
-                    gameInfo.innerHTML = `
-                        <h2 class="game-name">${game.name}</h2>
-                        <p class="chip-ratio">$${game.ratio} per chip</p>
-                    `;
-
-                    // Set up buy-in amount listener for chip preview
-                    const buyInInput = document.getElementById('buy-in-amount');
-                    const chipPreview = document.querySelector('.chip-preview');
-                    const chipAmount = chipPreview.querySelector('h3');
-                    
-                    buyInInput.addEventListener('input', () => {
-                        const amount = parseFloat(buyInInput.value) || 0;
-                        const chips = Math.floor(amount / game.ratio);
-                        chipAmount.textContent = chips > 0 ? `${chips} chips` : "-- chips";
-                        
-                        // Add animation class if chips > 0
-                        if (chips > 0) {
-                            // Use the safely stored RGB variable or a fallback
-                            const rgb = window.themeRgb || {r: 0, g: 153, b: 255};
-                            chipPreview.style.background = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
-                        } else {
-                            chipPreview.style.background = 'rgba(255, 255, 255, 0.05)';
-                        }
-                    });
-
-                    // Listen for theme changes from host
-                    listenForThemeChanges();
-
-                    // Handle form submission
-                    document.getElementById('buy-in-form').addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        
-                        updateStatus('Processing...');
-                        
-                        const form = e.target;
-                        form.querySelector('button').disabled = true;
-                        
-                        const playerName = document.getElementById('player-name').value.trim();
-                        const buyInAmount = parseFloat(document.getElementById('buy-in-amount').value);
-                        const chips = Math.floor(buyInAmount / game.ratio);
-                        
-                        try {
-                            // Verify game is still active
-                            const currentGame = await database.ref(`games/${gameId}`).once('value');
-                            if (!currentGame.val()?.active) {
-                                throw new Error('Game is no longer active');
-                            }
-
-                            // Add player directly to the game's player list
-                            const playersRef = database.ref(`games/${gameId}/state/players`);
-                            const playerId = parseInt(Date.now()); // Ensure ID is numeric
-                            const updatedPlayer = {
-                                id: playerId,
-                                name: playerName,
-                                initial_chips: parseInt(chips),
-                                current_chips: parseInt(chips),
-                                joinedAt: Date.now()
-                            };
-                            
-                            // First, check if game exists and has a state
-                            const gameStateRef = database.ref(`games/${gameId}/state`);
-                            const gameState = await gameStateRef.once('value');
-                            
-                            // If state doesn't exist, create it
-                            if (!gameState.exists()) {
-                                await gameStateRef.set({
-                                    players: [updatedPlayer],
-                                    lastUpdate: Date.now()
-                                });
-                            } else {
-                                // Otherwise update existing player list as a transaction
-                                await playersRef.transaction((players) => {
-                                    console.log('[FIREBASE] Transaction started with current players:', players);
-                                    
-                                    if (!players) {
-                                        console.log('[FIREBASE] No existing players, initializing empty array');
-                                        players = [];
-                                    }
-                                    
-                                    // Ensure players is an array (important!)
-                                    if (!Array.isArray(players)) {
-                                        console.log('[FIREBASE] Converting object to array in transaction');
-                                        // Convert object to array if Firebase has converted it
-                                        try {
-                                            players = Object.values(players).filter(p => p !== null);
-                                        } catch (error) {
-                                            console.error('[FIREBASE] Error converting players object:', error);
-                                            players = [];
-                                        }
-                                    }
-                                    
-                                    // Check for duplicate names but DON'T throw error
-                                    // Just log the issue but still allow the player to be added
-                                    if (players.some(p => p && p.name && p.name.toLowerCase() === playerName.toLowerCase())) {
-                                        console.warn('[FIREBASE] Note: Player name already exists, but allowing addition anyway');
-                                        // No error thrown, continue with adding player
-                                    }
-                                    
-                                    console.log('[FIREBASE] Adding new player:', updatedPlayer);
-                                    players.push(updatedPlayer);
-                                    console.log('[FIREBASE] Updated players array:', players);
-                                    return players;
-                                });
-                            }
-
-                            // Update the game ratio if it doesn't match
-                            const ratio = parseFloat(buyInAmount) / parseInt(chips);
-                            await database.ref(`games/${gameId}/ratio`).set(ratio);
-
-                            // Force an update to trigger Firebase listeners on the main app
-                            console.log('[FIREBASE] Forcing state update to trigger listeners');
-                            await database.ref(`games/${gameId}/state/lastUpdate`).set(Date.now());
-
-                            // IMPORTANT: Instead of using playerNotifications which has permission issues,
-                            // we will directly update the game state with our new player data
-                            // and use lastUpdate to trigger a refresh on the main app
-                            console.log('[FIREBASE] Directly updating game state with new player');
-                            
-                            // Update multiple paths at once for better atomicity
-                            const updates = {};
-                            updates[`games/${gameId}/state/lastUpdate`] = Date.now();
-                            updates[`games/${gameId}/state/lastPlayer`] = {
-                                id: playerId,
-                                name: playerName,
-                                initial_chips: chips,
-                                current_chips: chips,
-                                joinedAt: Date.now()
-                            };
-                            updates[`games/${gameId}/updatedAt`] = Date.now();
-                            updates[`games/${gameId}/active`] = true;
-                            
-                            // Apply all updates in one transaction
-                            await database.ref().update(updates);
-
-                            updateStatus('Successfully joined the game!', 'success');
-                            form.style.display = 'none';
-                            
-                            // Create success message as a sibling to buy-in-form, not a child
-                            const successMessage = document.createElement('div');
-                            successMessage.className = 'success-message';
-                            successMessage.innerHTML = `
-                                <div class="welcome-container">
-                                    <div class="confetti-container">
-                                        <div class="confetti"></div>
-                                        <div class="confetti"></div>
-                                        <div class="confetti"></div>
-                                        <div class="confetti"></div>
-                                        <div class="confetti"></div>
-                                        <div class="confetti"></div>
-                                        <div class="confetti"></div>
-                                        <div class="confetti"></div>
-                                        <div class="confetti"></div>
-                                    </div>
-                                    <div class="welcome-content">
-                                        <div class="welcome-header">
-                                            <h2><span class="welcome-emoji">🎉</span> Welcome to the game!</h2>
-                                        </div>
-                                        <div class="welcome-body">
-                                            <div class="player-info">
-                                                <div class="player-name-display">${playerName}</div>
-                                                <p class="chips-display">You've been added with <strong>${chips} chips</strong></p>
-                                            </div>
-                                            <div class="chip-badge">
-                                                ${chips}
-                                                <small>chips</small>
-                                            </div>
-                                        </div>
-                                        <div class="close-instruction">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                            You can close this window now
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-
-                            // Add to container div, not inside buy-in-form
-                            const container = document.querySelector('.container');
-                            // Remove the buy-in-form 
-                            const buyInForm = document.querySelector('.buy-in-form');
-                            buyInForm.style.display = 'none';
-                            // Add the success message directly to the container
-                            container.appendChild(successMessage);
-
-                        } catch (error) {
-                            console.error('Error:', error);
-                            updateStatus(`Error: ${error.message}`, 'error');
-                            form.querySelector('button').disabled = false;
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading game:', error);
-                    showError(error.message);
-                });
-        }
-
-        // Listen for theme changes from the host
-        function listenForThemeChanges() {
-            if (!gameId) return;
-            
-            database.ref(`games/${gameId}/state/theme`).on('value', snapshot => {
-                const theme = snapshot.val();
-                if (theme) {
-                    console.log('Theme change detected:', theme);
-                    updateTheme(theme);
-                }
-            });
-        }
-
-        // Update theme based on host's selection
-        function updateTheme(themeName) {
-            const mainColor = getThemeColor(themeName, '--main-color');
-            const secondaryColor = getThemeColor(themeName, '--secondary-color');
-            document.documentElement.style.setProperty('--main-color', mainColor);
-            document.documentElement.style.setProperty('--secondary-color', secondaryColor);
-            
-            // Convert main color to RGB for rgba usage
-            const rgb = hexToRgb(mainColor.replace('#', '')) || {r: 0, g: 153, b: 255}; // Default blue fallback
-            document.documentElement.style.setProperty('--main-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
-            
-            // Store rgb globally for use in input handler
-            window.themeRgb = rgb;
-            
-            console.log(`Theme updated to ${themeName}`);
-        }
-
-        // Helper function to get theme colors
-        function getThemeColor(themeName, colorVar) {
-            const themes = {
-                'classic-green': {
-                    '--main-color': '#2E8B57',
-                    '--secondary-color': '#3CB371'
-                },
-                'royal-blue': {
-                    '--main-color': '#4169E1',
-                    '--secondary-color': '#1E90FF'
-                },
-                'crimson-red': {
-                    '--main-color': '#DC143C',
-                    '--secondary-color': '#FF4500'
-                },
-                'midnight-black': {
-                    '--main-color': '#2F4F4F',
-                    '--secondary-color': '#696969'
-                },
-                'ocean-breeze': {
-                    '--main-color': '#20B2AA',
-                    '--secondary-color': '#5F9EA0'
-                },
-                'firestorm': {
-                    '--main-color': '#FF6347',
-                    '--secondary-color': '#FF4500'
-                },
-                'purple-haze': {
-                    '--main-color': '#9370DB',
-                    '--secondary-color': '#8A2BE2'
-                },
-                'neon-nights': {
-                    '--main-color': '#00FFFF',
-                    '--secondary-color': '#00CED1'
-                },
-                'rizzler': {
-                    '--main-color': '#ff00ff',
-                    '--secondary-color': '#bf00ff'
-                },
-                'doginme': {
-                    '--main-color': '#1e90ff',
-                    '--secondary-color': '#4169e1'
-                }
-            };
-            
-            return themes[themeName]?.[colorVar] || themes['classic-green'][colorVar];
-        }
-
-        // Helper function to convert hex to RGB
-        function hexToRgb(hex) {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)
-            } : null;
-        }
-    </script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
+    
+    <!-- Firebase Configuration - Make sure this comes before other app code -->
+    <script src="firebase-config.js"></script>
+    
+    <!-- Optional Firebase debugging (remove in production) -->
+    <script src="firebase-debug.js"></script>
+    
+    <!-- Application Code -->
+    <script src="buy-in.js"></script>
 </body>
 </html> 

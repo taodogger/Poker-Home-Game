@@ -1,20 +1,20 @@
-# 🃏 Poker Home Game Manager
+# 🃏 Kapoker
 
-<div align="center">
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Kapoker](https://img.shields.io/badge/Kapoker-2E8B57?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-active-success.svg)
 
-![Poker Home Game Manager](https://img.shields.io/badge/Poker-Home%20Game%20Manager-2E8B57?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-4169E1?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.0.0-DC143C?style=for-the-badge)
+*The ultimate solution for managing your poker games with style and precision*
 
-*The ultimate solution for managing your poker home games with style and precision*
+## Overview
 
-</div>
+**Kapoker** is a sophisticated yet user-friendly web application designed to streamline the management of poker games. Say goodbye to messy chip calculations, disputed dealer selections, and end-of-night payment confusion. Our application handles everything from tracking player chips to calculating final payouts.
 
 ---
 
 ## 📋 Overview
 
-**Poker Home Game Manager** is a sophisticated yet user-friendly web application designed to streamline the management of poker home games. Say goodbye to messy chip calculations, disputed dealer selections, and end-of-night payment confusion. Our application handles everything from tracking player chips to calculating final payouts, allowing you and your friends to focus on what matters most—the game itself.
+**Kapoker** is a sophisticated yet user-friendly web application designed to streamline the management of poker games. Say goodbye to messy chip calculations, disputed dealer selections, and end-of-night payment confusion. Our application handles everything from tracking player chips to calculating final payouts, allowing you and your friends to focus on what matters most—the game itself.
 
 ---
 
@@ -83,7 +83,7 @@
 - Return to your game even after closing the browser
 - Multiple save slots for different game sessions
 
-### �� Responsive Design
+### 🎮 Responsive Design
 - Optimized for desktop, tablet, and mobile devices
 - Adjusts layout based on screen size
 - Touch-friendly controls for mobile users
@@ -272,7 +272,7 @@
 
 ## 🤝 Contributing
 
-We welcome contributions to improve the Poker Home Game Manager! Here's how you can help:
+We welcome contributions to improve Kapoker! Here's how you can help:
 
 1. **Fork the repository**
 2. **Create a feature branch**:
@@ -314,11 +314,11 @@ We welcome contributions to improve the Poker Home Game Manager! Here's how you 
 
 ## 📜 License
 
+Copyright (c) 2023 Kapoker
+
 This project is licensed under the MIT License.
 
 MIT License
-
-Copyright (c) 2023 Poker Home Game Manager
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

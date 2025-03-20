@@ -1,6 +1,455 @@
+console.log('Kapoker - Initializing...');
+
+// Initialize Firebase database reference
+let appDatabase;
+try {
+    if (window.database) {
+        appDatabase = window.database;
+        console.log('[FIREBASE] Using existing database reference');
+    } else {
+        throw new Error('Firebase database reference not available');
+    }
+} catch (error) {
+    console.error('[FIREBASE] Error initializing database:', error);
+    if (window.PokerApp && window.PokerApp.UI) {
+        window.PokerApp.UI.showToast('Error connecting to database', 'error');
+    }
+}
+
+// Global state object
+window.PokerApp = window.PokerApp || {};
+PokerApp.state = {
+    players: [],
+    gameInProgress: false,
+    dealerId: null,
+    nextPlayerId: 1,
+    chipRatio: 1.0,
+    theme: 'Classic',
+    sessionId: null,
+    gameName: null,
+    lobbyActive: false
+};
+
+// Create UI namespace with toast functionality first
+PokerApp.UI = {
+    showToast(message, type = 'info') {
+        this.createToastContainer();
+        const toast = document.createElement('div');
+        toast.className = `toast ${type || 'info'}`;
+        toast.textContent = message;
+        const container = document.querySelector('.toast-container');
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    },
+    
+    createToastContainer() {
+        if (!document.querySelector('.toast-container')) {
+            const container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+        return document.querySelector('.toast-container');
+    },
+    
+    updateGameStatus(message, isActive = false) {
+        const gameStatus = document.getElementById('game-status');
+        const statusBadge = gameStatus?.closest('.game-status-badge');
+        if (gameStatus) {
+            gameStatus.textContent = message;
+        }
+        if (statusBadge) {
+            statusBadge.classList.toggle('inactive', !isActive);
+            statusBadge.classList.toggle('active', isActive);
+        }
+    },
+    
+    updateLobbyUI(isActive = false) {
+        console.log('[UI] Updating lobby UI, active:', isActive);
+        
+        const qrCodeContainer = document.getElementById('qr-code-container');
+        const gameControls = document.querySelector('.lobby-content');
+        const lobbyStatus = document.getElementById('lobby-status');
+        const statusBadge = document.querySelector('.game-status-badge');
+        const createLobbyForm = document.getElementById('create-lobby-form');
+        
+        if (isActive && PokerApp.state.sessionId && PokerApp.state.gameName) {
+            console.log('[UI] Showing active lobby with session:', PokerApp.state.sessionId);
+            
+            // Update status badge
+            if (statusBadge) {
+                statusBadge.classList.remove('inactive');
+                statusBadge.classList.add('active');
+            }
+            
+            // Update status text
+            if (lobbyStatus) {
+                lobbyStatus.textContent = `Lobby active: ${PokerApp.state.gameName}`;
+            }
+            
+            // Hide create lobby form
+            if (createLobbyForm) {
+                createLobbyForm.style.display = 'none';
+            }
+            
+            // Generate join URL
+            const joinUrl = getJoinUrl(PokerApp.state.sessionId, PokerApp.state.gameName);
+            const joinUrlElement = document.getElementById('join-url-text');
+            if (joinUrlElement) {
+                joinUrlElement.textContent = joinUrl;
+            }
+            
+            // Show QR code container and generate QR code
+            if (qrCodeContainer) {
+                qrCodeContainer.style.display = 'block';
+                
+                // Force visibility - this is crucial for QR generation
+                setTimeout(() => {
+                    // Generate QR code
+                    generateQrCode(joinUrl);
+                    console.log('[QR] QR code should be visible now');
+                }, 100); // Small delay to ensure display change takes effect
+            }
+        } else {
+            console.log('[UI] Showing inactive lobby state');
+            
+            // Update status badge
+            if (statusBadge) {
+                statusBadge.classList.remove('active');
+                statusBadge.classList.add('inactive');
+            }
+            
+            // Update status text
+            if (lobbyStatus) {
+                lobbyStatus.textContent = 'No active game';
+            }
+            
+            // Show create lobby form
+            if (createLobbyForm) {
+                createLobbyForm.style.display = 'block';
+            }
+            
+            // Hide QR code
+            if (qrCodeContainer) {
+                qrCodeContainer.style.display = 'none';
+            }
+        }
+    }
+};
+
+// Core functions that need to be defined early
+function updateEmptyState() {
+    const noPlayersMessage = document.getElementById('no-players-message');
+    if (noPlayersMessage) {
+        noPlayersMessage.style.display = PokerApp.state.players.length > 0 ? 'none' : 'block';
+    }
+    
+    const startGameBtn = document.getElementById('start-game-btn');
+    if (startGameBtn) {
+        startGameBtn.disabled = PokerApp.state.players.length < 2;
+    }
+}
+
+function updatePlayerList() {
+    const playerList = document.getElementById('player-list');
+    if (!playerList) return;
+
+    if (!PokerApp.state.players.length) {
+        playerList.innerHTML = '<div class="no-players">No players added yet</div>';
+        return;
+    }
+
+    playerList.innerHTML = PokerApp.state.players.map(player => `
+        <div class="player-row ${player.id === PokerApp.state.dealerId ? 'dealer' : ''}" data-player-id="${player.id}">
+            <div class="player-info">
+                <span class="player-name">${player.name}</span>
+                <div class="chip-count">
+                    <span class="initial-chips">${player.initial_chips}</span>
+                    <span class="current-chips">${player.current_chips}</span>
+                </div>
+            </div>
+            <div class="player-actions">
+                <button class="adjust-chips" onclick="adjustChips(${player.id})">
+                    <span class="icon">💰</span>
+                </button>
+                <button class="remove-player" onclick="removePlayer(${player.id})">
+                    <span class="icon">❌</span>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    updateEmptyState();
+}
+
+function addPlayer(name, chips) {
+    if (!name || !chips) {
+        PokerApp.UI.showToast('Please provide both name and chip amount', 'error');
+        return false;
+    }
+
+    if (PokerApp.state.players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        PokerApp.UI.showToast(`Player "${name}" already exists`, 'error');
+        return false;
+    }
+
+    const player = {
+        id: PokerApp.state.nextPlayerId++,
+        name: name,
+        initial_chips: chips,
+        current_chips: chips
+    };
+
+    PokerApp.state.players.push(player);
+    updatePlayerList();
+    updateEmptyState();
+    saveState();
+
+    if (PokerApp.state.sessionId) {
+        updatePlayersInFirebase();
+    }
+
+    PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
+    return true;
+}
+
+function setupEventListeners() {
+    // Lobby form handler
+    const lobbyForm = document.getElementById('lobby-form');
+    if (lobbyForm) {
+        console.log('[SETUP] Found create lobby form:', lobbyForm);
+        
+        // Clone form to remove any existing listeners
+        const newLobbyForm = lobbyForm.cloneNode(true);
+        lobbyForm.parentNode.replaceChild(newLobbyForm, lobbyForm);
+        
+        newLobbyForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('[FORM] Create lobby form submitted');
+            
+            const gameName = document.getElementById('game-name').value.trim();
+            
+            if (!gameName) {
+                showToast('Please enter a game name', 'error');
+                return;
+            }
+            
+            // Disable form while creating lobby
+            const submitButton = this.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                console.log('[FORM] Disabling submit button during processing');
+            }
+            
+            try {
+                // Generate a unique session ID and save it immediately to state
+                const gameId = generateGameId();
+                PokerApp.state.sessionId = gameId;
+                PokerApp.state.gameName = gameName;
+                PokerApp.state.lobbyActive = true;
+                
+                console.log('[FIREBASE] Creating game with ID:', gameId);
+                
+                // Save to Firebase
+                const gameRef = window.database.ref(`games/${gameId}`);
+                
+                // Create game object
+                const gameData = {
+                    id: gameId,
+                    name: gameName,
+                    createdAt: Date.now(),
+                    state: PokerApp.state,
+                    active: true,
+                    ratio: PokerApp.state.chipRatio || 1.0
+                };
+                
+                // Save game to Firebase
+                gameRef.set(gameData)
+                    .then(() => {
+                        console.log('[FIREBASE] Game created successfully');
+                        
+                        // Set up Firebase listeners for the new game
+                        setupGameStateListener(gameId);
+                        
+                        // Update UI to show game is active
+                        updateLobbyUI(true);
+                        
+                        // Generate QR code and make it visible
+                        const joinUrl = getJoinUrl(gameId, gameName);
+                        
+                        // Make sure QR code container is visible
+                        const qrCodeContainer = document.getElementById('qr-code-container');
+                        if (qrCodeContainer) {
+                            qrCodeContainer.style.display = 'block';
+                            console.log('[UI] QR code container display style:', qrCodeContainer.style.display);
+                        }
+                        
+                        // Generate QR code with join URL
+                        generateQrCode(joinUrl);
+                        
+                        showToast(`Game lobby "${gameName}" created successfully!`, 'success');
+                        
+                        // Re-enable form
+                        if (submitButton) submitButton.disabled = false;
+                    })
+                    .catch(error => {
+                        console.error('[FIREBASE] Error creating game:', error);
+                        showToast('Failed to create game lobby', 'error');
+                        
+                        // Reset state
+                        PokerApp.state.sessionId = null;
+                        PokerApp.state.gameName = null;
+                        PokerApp.state.lobbyActive = false;
+                        
+                        // Update UI
+                        updateLobbyUI(false);
+                        
+                        // Re-enable form
+                        if (submitButton) submitButton.disabled = false;
+                    });
+            } catch (error) {
+                console.error('[ERROR] Create game failed:', error);
+                showToast('Failed to create game lobby', 'error');
+                
+                // Reset state
+                PokerApp.state.sessionId = null;
+                PokerApp.state.gameName = null;
+                PokerApp.state.lobbyActive = false;
+                
+                // Update UI
+                updateLobbyUI(false);
+                
+                // Re-enable form
+                if (submitButton) submitButton.disabled = false;
+            }
+        });
+    }
+
+    // Add player form
+    const playerForm = document.getElementById('player-form');
+    if (playerForm) {
+        playerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const playerName = document.getElementById('player-name').value.trim();
+            const initialChips = parseInt(document.getElementById('initial-chips').value);
+            
+            // Don't validate the player name - form required attribute will handle this
+            // and prevents redundant toast messages
+            
+            if (isNaN(initialChips) || initialChips <= 0) {
+                PokerApp.UI.showToast('Please enter a valid chip amount', 'error');
+                return;
+            }
+            
+            if (addPlayer(playerName, initialChips)) {
+                this.reset();
+                document.getElementById('player-name').focus();
+            }
+        });
+    }
+
+    // Reset game button
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetGame);
+    }
+
+    // Theme selector
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.addEventListener('change', (e) => {
+            const selectedTheme = e.target.value;
+            if (themes[selectedTheme]) {
+                setTheme(selectedTheme);
+            }
+        });
+    }
+}
+
+// Initialize function
+function initialize() {
+    console.log('Initializing poker app...');
+    
+    // Clear any existing state first
+    localStorage.clear();
+    
+    // Reset state to default values
+    PokerApp.state = {
+        players: [],
+        gameInProgress: false,
+        dealerId: null,
+        nextPlayerId: 1,
+        chipRatio: 1.0,
+        theme: 'Classic',
+        sessionId: null,
+        gameName: null,
+        lobbyActive: false
+    };
+    
+    // Clean up any existing Firebase listeners
+    if (appDatabase) {
+        try {
+            appDatabase.ref().off();
+        } catch (error) {
+            console.error('[FIREBASE] Error cleaning up listeners:', error);
+        }
+    }
+    
+    // Hide QR code section
+    const qrCodeSection = document.querySelector('.qr-code-section');
+    if (qrCodeSection) {
+        qrCodeSection.style.display = 'none';
+    }
+    
+    // Reset game name input
+    const gameNameInput = document.getElementById('game-name');
+    if (gameNameInput) {
+        gameNameInput.value = '';
+        gameNameInput.disabled = false;
+    }
+    
+    // Reset create lobby button
+    const createLobbyBtn = document.querySelector('.create-lobby-btn');
+    if (createLobbyBtn) {
+        createLobbyBtn.disabled = false;
+    }
+    
+    // Initialize empty player list
+    const playerList = document.getElementById('player-list');
+    if (playerList) {
+        playerList.innerHTML = '<div class="no-players">No players added yet</div>';
+    }
+    
+    // Set up form listeners
+    setupEventListeners();
+    
+    // Update UI to show offline state
+    PokerApp.UI.updateGameStatus('No active game', false);
+    PokerApp.UI.updateLobbyUI(false);
+    
+    console.log('Initialization complete');
+}
+
+// Make core functions available globally
+window.PokerApp = {
+    ...window.PokerApp,
+    initialize,
+    addPlayer,
+    removePlayer: window.removePlayer,
+    updatePlayerList,
+    resetGame,
+    saveState,
+    loadSavedState,
+    UI: PokerApp.UI
+};
+
 // Define themes with main colors and gradients
 const themes = {
-    'classic-green': {
+    'Classic': {
         '--main-color': '#2E8B57',
         '--main-color-rgb': '46, 139, 87',
         '--secondary-color': '#3CB371',
@@ -10,7 +459,7 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '♠️'
     },
-    'royal-blue': {
+    'Royal': {
         '--main-color': '#4169E1',
         '--main-color-rgb': '65, 105, 225',
         '--secondary-color': '#1E90FF',
@@ -20,7 +469,7 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '♦️'
     },
-    'crimson-red': {
+    'Crimson': {
         '--main-color': '#DC143C',
         '--main-color-rgb': '220, 20, 60',
         '--secondary-color': '#FF4500',
@@ -30,7 +479,7 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '♥️'
     },
-    'midnight-black': {
+    'Midnight': {
         '--main-color': '#2F4F4F',
         '--main-color-rgb': '47, 79, 79',
         '--secondary-color': '#696969',
@@ -40,7 +489,7 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '♣️'
     },
-    'ocean-breeze': {
+    'Ocean': {
         '--main-color': '#20B2AA',
         '--main-color-rgb': '32, 178, 170',
         '--secondary-color': '#5F9EA0',
@@ -50,7 +499,7 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '🌊'
     },
-    'firestorm': {
+    'Fire': {
         '--main-color': '#FF6347',
         '--main-color-rgb': '255, 99, 71',
         '--secondary-color': '#FF4500',
@@ -60,7 +509,7 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '🔥'
     },
-    'purple-haze': {
+    'Purple': {
         '--main-color': '#9370DB',
         '--main-color-rgb': '147, 112, 219',
         '--secondary-color': '#8A2BE2',
@@ -70,7 +519,7 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '🔮'
     },
-    'neon-nights': {
+    'Neon': {
         '--main-color': '#00FFFF',
         '--main-color-rgb': '0, 255, 255',
         '--secondary-color': '#00CED1',
@@ -80,7 +529,7 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         'icon': '💡'
     },
-    'rizzler': {
+    'Rizzler': {
         '--main-color': '#ff00ff',
         '--main-color-rgb': '255, 0, 255',
         '--secondary-color': '#bf00ff',
@@ -91,7 +540,7 @@ const themes = {
         'tableImage': './images/rizzler-board.jpg',
         'icon': './images/rizzler-icon.png'
     },
-    'doginme': {
+    'Doginme': {
         '--main-color': '#1e90ff',
         '--main-color-rgb': '30, 144, 255',
         '--secondary-color': '#4169e1',
@@ -105,27 +554,76 @@ const themes = {
     }
 };
 
-// Global setTheme function that can be accessed from anywhere
+// Function to set the theme
 function setTheme(theme) {
-    document.body.setAttribute('data-theme', theme);
+    if (!theme || !themes[theme]) {
+        console.warn('[THEME] Invalid theme:', theme);
+        theme = 'Classic'; // Fallback to Classic theme
+    }
+    
+    // Store the theme in localStorage and state
     localStorage.setItem('theme', theme);
+    
+    // Update the app state
+    PokerApp.state.theme = theme;
+    
+    console.log('[THEME] Setting theme to:', theme);
+    
+    // Apply theme colors to document
+    document.body.setAttribute('data-theme', theme);
+    
+    // Update theme properties
+    const themeConfig = themes[theme];
+    if (themeConfig) {
+        Object.entries(themeConfig).forEach(([key, value]) => {
+            if (key.startsWith('--')) {
+                document.documentElement.style.setProperty(key, value);
+            }
+        });
+    }
+    
+    // Handle special theme-specific backgrounds
+    if (theme === 'Rizzler' || theme === 'Doginme') {
+        // Set body background with repeat pattern and shadow overlay
+        document.body.style.backgroundImage = `
+            linear-gradient(
+                rgba(0, 0, 0, 0.5),
+                rgba(0, 0, 0, 0.5)
+            ),
+            url('./images/${theme.toLowerCase()}-background.jpg')
+        `;
+        document.body.style.backgroundRepeat = 'repeat';
+        document.body.style.backgroundSize = 'auto';
+        document.body.style.backgroundAttachment = 'fixed';
+        
+        // Update poker table background if available
+        const pokerTable = document.querySelector('.poker-table');
+        if (pokerTable && themeConfig.tableImage) {
+            pokerTable.style.backgroundImage = `url('${themeConfig.tableImage}')`;
+            pokerTable.style.backgroundSize = 'cover';
+            pokerTable.style.backgroundPosition = 'center';
+        }
+    } else {
+        // Reset to CSS variable for other themes
+        document.body.style.backgroundImage = '';
+        document.body.style.background = `var(--body-background)`;
+        document.body.style.backgroundRepeat = '';
+        document.body.style.backgroundSize = '';
+        document.body.style.backgroundAttachment = '';
+    }
     
     // Update icons
     const leftIcon = document.querySelector('.title-icon.left-icon');
     const rightIcon = document.querySelector('.title-icon.right-icon');
-    
     if (leftIcon && rightIcon) {
-        if (theme === 'doginme') {
-            leftIcon.src = 'images/doginme-icon.png';
-            rightIcon.src = 'images/doginme-icon.png';
-        } else if (theme === 'rizzler') {
-            leftIcon.src = 'images/rizzler-icon.png';
-            rightIcon.src = 'images/rizzler-icon.png';
+        if (theme === 'Doginme' || theme === 'Rizzler') {
+            leftIcon.src = `images/${theme.toLowerCase()}-icon.png`;
+            rightIcon.src = `images/${theme.toLowerCase()}-icon.png`;
+        } else if (themeConfig && themeConfig.icon) {
+            leftIcon.textContent = themeConfig.icon;
+            rightIcon.textContent = themeConfig.icon;
         }
     }
-    
-    // Update background
-    document.body.style.background = getComputedStyle(document.body).getPropertyValue('--body-background');
     
     // Update the theme selector if it exists
     const themeSelector = document.getElementById('theme-selector');
@@ -133,116 +631,57 @@ function setTheme(theme) {
         themeSelector.value = theme;
     }
     
-    // Apply theme to HandAnimation if it exists
+    // Apply theme to HandAnimation
     if (window.handAnimation && themes[theme]) {
         window.handAnimation.setTheme(themes[theme]);
     }
     
-    // Save to global state
-    if (window.PokerApp && window.PokerApp.state) {
-        window.PokerApp.state.theme = theme;
+    // Update Firebase if we have an active session
+    if (PokerApp.state.sessionId) {
+        try {
+            updateGameStateInFirebase({ theme });
+        } catch (error) {
+            console.error('[FIREBASE] Error updating theme in Firebase:', error);
+        }
     }
-}
-
-// Dummy placeholder functions to be overridden later
-function updatePlayerList() { /* Will be replaced later */ }
-function saveState() { /* Will be replaced later */ }
-function updateEmptyState() { /* Will be replaced later */ }
-
-// Variable to track toast messages to prevent duplicates
-let recentToasts = new Set();
-
-// Create toast container and styles
-function createToastContainer() {
-    const container = document.createElement('div');
-    container.id = 'toast-container';
-    container.className = 'toast-container';
-    document.body.appendChild(container);
-
-    // Add toast styles if they don't exist
-    if (!document.getElementById('toast-styles')) {
-        const style = document.createElement('style');
-        style.id = 'toast-styles';
-        style.textContent = `
-            .toast-container {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                z-index: 9999;
-            }
-            .toast {
-                padding: 12px 16px;
-                border-radius: 8px;
-                color: white;
-                max-width: 300px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                animation: slideIn 0.3s ease forwards;
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            .toast.success {
-                background: linear-gradient(to right, #00b09b, #96c93d);
-            }
-            .toast.error {
-                background: linear-gradient(to right, #ff5f6d, #ffc371);
-            }
-            .toast.info {
-                background: linear-gradient(to right, #2193b0, #6dd5ed);
-            }
-            @keyframes slideIn {
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-            .toast.fade-out {
-                animation: slideOut 0.3s ease forwards;
-            }
-            @keyframes slideOut {
-                to {
-                    opacity: 0;
-                    transform: translateX(50px);
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    return container;
 }
 
 // Save game state to localStorage and Firebase
 function saveState() {
     try {
-        // Save to localStorage
         const stateToSave = {
-            players: PokerApp.state.players,
-            gameInProgress: PokerApp.state.gameInProgress,
-            dealerId: PokerApp.state.dealerId,
-            nextPlayerId: PokerApp.state.nextPlayerId,
-            chipRatio: PokerApp.state.chipRatio,
-            theme: PokerApp.state.theme,
+            players: PokerApp.state.players || [],
+            gameInProgress: PokerApp.state.gameInProgress || false,
+            dealerId: PokerApp.state.dealerId || null,
+            nextPlayerId: PokerApp.state.nextPlayerId || 1,
+            chipRatio: PokerApp.state.chipRatio || 1.0,
+            theme: PokerApp.state.theme || 'Classic',
+            lastUpdate: Date.now()
+        };
+        
+        // Save to localStorage
+        localStorage.setItem('pokerGameState', JSON.stringify({
+            ...stateToSave,
             sessionId: PokerApp.state.sessionId,
             gameName: PokerApp.state.gameName,
             lobbyActive: PokerApp.state.lobbyActive
-        };
+        }));
         
-        localStorage.setItem('pokerGameState', JSON.stringify(stateToSave));
+        console.log('[STORAGE] Game state saved to localStorage');
         
-        // If we have an active session and Firebase is available, save to Firebase too
+        // Update Firebase if we have a session
         if (PokerApp.state.sessionId && typeof firebase !== 'undefined' && firebase.database) {
-            firebase.database().ref(`games/${PokerApp.state.sessionId}/state`).update(stateToSave);
+            const updates = {};
+            updates[`games/${PokerApp.state.sessionId}/active`] = true;
+            updates[`games/${PokerApp.state.sessionId}/updatedAt`] = Date.now();
+            updates[`games/${PokerApp.state.sessionId}/state`] = stateToSave;
+            
+            return firebase.database().ref().update(updates);
         }
         
         return true;
     } catch (error) {
-        console.error('Error saving game state:', error);
+        console.error('[STORAGE] Error saving game state:', error);
         return false;
     }
 }
@@ -253,1935 +692,776 @@ function loadSavedState() {
         const savedState = localStorage.getItem('pokerGameState');
         if (savedState) {
             const state = JSON.parse(savedState);
-            PokerApp.state.players = state.players || [];
-            PokerApp.state.gameInProgress = state.gameInProgress || false;
-            PokerApp.state.dealerId = state.dealerId || null;
-            PokerApp.state.nextPlayerId = state.nextPlayerId || 1;
-            PokerApp.state.chipRatio = state.chipRatio || 1.0;
-            PokerApp.state.theme = state.theme || 'classic-green';
-            PokerApp.state.sessionId = state.sessionId || null;
-            PokerApp.state.gameName = state.gameName || null;
-            PokerApp.state.lobbyActive = state.lobbyActive || false;
+            
+            // Only restore state if there's an active game or lobby
+            if (state.gameInProgress || state.lobbyActive) {
+                PokerApp.state = {
+                    ...PokerApp.state,  // Keep default values
+                    ...state,  // Override with saved values
+                    players: state.players || [],
+                    gameInProgress: state.gameInProgress || false,
+                    dealerId: state.dealerId || null,
+                    nextPlayerId: state.nextPlayerId || 1,
+                    chipRatio: state.chipRatio || 1.0,
+                    sessionId: state.sessionId || null,
+                    gameName: state.gameName || null,
+                    lobbyActive: false  // Start with lobby inactive until Firebase confirms
+                };
+                
+                // If we have a session ID, reconnect to Firebase first
+                if (state.sessionId) {
+                    setupGameStateListener(state.sessionId);
+                }
+            } else {
+                resetGameState();
+            }
+            
+            console.log('[STORAGE] Game state loaded:', PokerApp.state);
+        } else {
+            console.log('[STORAGE] No saved game state found');
+            resetGameState();
         }
+        
+        // Apply theme
+        setTheme(PokerApp.state.theme || 'Classic');
+        
+        // Update UI based on state
+        updateUIFromState();
+        
         return true;
     } catch (error) {
-        console.error('Error loading game state:', error);
+        console.error('[STORAGE] Error loading game state:', error);
+        resetGameState();
         return false;
     }
 }
 
-// Player management functions
-function addPlayer(name, chips) {
-    // Check for duplicate names
-    if (PokerApp.state.players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-        showToast(`Player "${name}" already exists`, 'error');
-        return false;
-    }
+// Add function to reset game state to defaults
+function resetGameState() {
+    // Clean up Firebase listeners first
+    cleanupFirebaseListeners();
     
-    // Add player to state
-    const player = {
-        id: PokerApp.state.nextPlayerId++,
-        name: name,
-        initial_chips: chips,
-        current_chips: chips
-    };
-    
-    PokerApp.state.players.push(player);
-    
-    // Update UI
-    updatePlayerList();
-    updateEmptyState();
-    
-    // Save state
-    saveState();
-    
-    showToast(`Added ${name} with ${chips} chips`, 'success');
-    return true;
-}
-
-function removePlayer(playerId) {
-    // Check if game is in progress
-    if (PokerApp.state.gameInProgress) {
-        showToast('Cannot remove players during an active game', 'error');
-        return false;
-    }
-    
-    const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) {
-        showToast('Player not found', 'error');
-        return false;
-    }
-    
-    // Remove player
-    const removedPlayer = PokerApp.state.players.splice(playerIndex, 1)[0];
-    
-    // Update UI
-    updatePlayerList();
-    updateEmptyState();
-    
-    // Save state
-    saveState();
-    
-    showToast(`Removed ${removedPlayer.name}`, 'info');
-    return true;
-}
-
-function updatePlayerList() {
-    const tableBody = document.querySelector('#player-table tbody');
-    if (!tableBody) return;
-    
-    // Clear current list
-    tableBody.innerHTML = '';
-    
-    // Add players to table with modern UI
-    PokerApp.state.players.forEach((player, index) => {
-        const row = document.createElement('tr');
-        row.style.animationDelay = `${index * 0.1}s`; // Staggered animation
-        
-        // Get initial for avatar
-        const initial = player.name.charAt(0).toUpperCase();
-        
-        row.innerHTML = `
-            <td>
-                <div style="display: flex; align-items: center;">
-                    <div class="player-avatar">${initial}</div>
-                    ${player.name}
-                </div>
-            </td>
-            <td><strong>${player.initial_chips}</strong></td>
-            <td>
-                <input 
-                    type="number" 
-                    value="${player.current_chips}" 
-                    class="chip-input" 
-                    data-player-id="${player.id}"
-                    ${PokerApp.state.gameInProgress ? 'disabled' : ''}
-                >
-            </td>
-            <td>
-                <button 
-                    class="kahoot-button remove-player" 
-                    data-player-id="${player.id}"
-                    style="margin: 0; padding: 8px 16px; font-size: 0.85rem;"
-                    ${PokerApp.state.gameInProgress ? 'disabled' : ''}
-                >
-                    Remove
-                </button>
-            </td>
-        `;
-        
-        tableBody.appendChild(row);
-    });
-    
-    // Add totals row
-    updateTotalsRow();
-    
-    // Add event listeners to remove buttons
-    document.querySelectorAll('.remove-player').forEach(button => {
-        button.addEventListener('click', function() {
-            const playerId = parseInt(this.getAttribute('data-player-id'));
-            if (playerId) {
-                removePlayer(playerId);
-            }
-        });
-    });
-    
-    // Add event listeners to chip inputs
-    document.querySelectorAll('.chip-input').forEach(input => {
-        // Use input event for immediate updates
-        input.addEventListener('input', function() {
-            if (!this.hasAttribute('data-player-id')) return;
-            
-            const playerId = parseInt(this.getAttribute('data-player-id'));
-            if (!playerId) return;
-            
-            const newChips = parseInt(this.value);
-            if (isNaN(newChips) || newChips < 0) return;
-            
-            // Update player's current chips
-            const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
-            if (playerIndex !== -1) {
-                PokerApp.state.players[playerIndex].current_chips = newChips;
-                updateTotalsRow();
-                updateEmptyState();
-            }
-        });
-        
-        // Use change event for validation and persistence
-        input.addEventListener('change', function() {
-            if (!this.hasAttribute('data-player-id')) return;
-            
-            const playerId = parseInt(this.getAttribute('data-player-id'));
-            if (!playerId) return;
-            
-            const newChips = parseInt(this.value);
-            if (isNaN(newChips) || newChips < 0) {
-                showToast('Please enter a valid chip amount', 'error');
-                // Reset to previous value
-                const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
-                if (playerIndex !== -1) {
-                    this.value = PokerApp.state.players[playerIndex].current_chips;
-                }
-                return;
-            }
-            
-            // Update player's current chips
-            const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
-            if (playerIndex !== -1) {
-                PokerApp.state.players[playerIndex].current_chips = newChips;
-                saveState();
-                showToast(`Updated ${PokerApp.state.players[playerIndex].name}'s chips to ${newChips}`, 'info');
-                updateTotalsRow();
-                updateEmptyState();
-            }
-        });
-    });
-}
-
-function updateTotalsRow() {
-    const tableBody = document.querySelector('#player-table tbody');
-    if (!tableBody) return;
-    
-    // Remove existing totals row if it exists
-    const existingTotalsRow = tableBody.querySelector('.totals-row');
-    if (existingTotalsRow) {
-        existingTotalsRow.remove();
-    }
-    
-    // Calculate totals
-    const totalInitial = PokerApp.state.players.reduce((total, player) => total + player.initial_chips, 0);
-    const totalCurrent = PokerApp.state.players.reduce((total, player) => total + player.current_chips, 0);
-    
-    // Create totals row with modern style
-    const totalsRow = document.createElement('tr');
-    totalsRow.className = 'totals-row';
-    totalsRow.style.background = 'linear-gradient(135deg, rgba(var(--main-color-rgb), 0.2), rgba(var(--secondary-color-rgb), 0.2))';
-    totalsRow.style.fontWeight = 'bold';
-    
-    totalsRow.innerHTML = `
-        <td>
-            <div style="display: flex; align-items: center;">
-                <div class="player-avatar" style="background: rgba(255,255,255,0.2);">Σ</div>
-                <strong>Totals</strong>
-            </div>
-        </td>
-        <td><strong>${totalInitial}</strong></td>
-        <td><strong>${totalCurrent}</strong></td>
-        <td></td>
-    `;
-    
-    tableBody.appendChild(totalsRow);
-}
-
-// Calculate payouts between players
-function calculatePayouts() {
-    // Make sure we have players
-    if (PokerApp.state.players.length < 2) {
-        showToast('Need at least 2 players to calculate payouts', 'error');
-        return;
-    }
-    
-    const payoutList = document.getElementById('payout-list');
-    if (!payoutList) return;
-    
-    // Calculate initial and final chip counts
-    const players = PokerApp.state.players.map(player => ({
-        name: player.name,
-        initial: player.initial_chips,
-        current: player.current_chips,
-        diff: player.current_chips - player.initial_chips
-    }));
-    
-    // Sort by difference (winners to losers)
-    players.sort((a, b) => b.diff - a.diff);
-    
-    // Generate payout instructions
-    let transactions = [];
-    let debtors = players.filter(p => p.diff < 0);
-    let creditors = players.filter(p => p.diff > 0);
-    
-    while (debtors.length > 0 && creditors.length > 0) {
-        const debtor = debtors[0];
-        const creditor = creditors[0];
-        
-        // Calculate the transaction amount
-        const amount = Math.min(Math.abs(debtor.diff), Math.abs(creditor.diff));
-        
-        // Record the transaction
-        transactions.push({
-            from: debtor.name,
-            to: creditor.name,
-            chips: amount,
-            cash: (amount * PokerApp.state.chipRatio).toFixed(2)
-        });
-        
-        // Update balances
-        debtor.diff += amount;
-        creditor.diff -= amount;
-        
-        // Remove settled players
-        if (Math.abs(debtor.diff) < 0.001) {
-            debtors.shift();
-        }
-        
-        if (Math.abs(creditor.diff) < 0.001) {
-            creditors.shift();
-        }
-    }
-    
-    // Display transactions
-    if (transactions.length === 0) {
-        payoutList.innerHTML = '<div class="payout-message">All players are even, no payouts needed.</div>';
-    } else {
-        let html = '<div class="payout-instructions">';
-        html += '<h4>Payment Instructions:</h4>';
-        html += '<ul class="payout-transactions">';
-        
-        transactions.forEach(t => {
-            html += `<li><strong>${t.from}</strong> pays <strong>${t.to}</strong>: ${t.chips} chips ($${t.cash})</li>`;
-        });
-        
-        html += '</ul></div>';
-        payoutList.innerHTML = html;
-    }
-}
-
-// Initialize PokerApp immediately
-window.PokerApp = {
-    // Core application state
-    state: {
+    PokerApp.state = {
         players: [],
         gameInProgress: false,
         dealerId: null,
         nextPlayerId: 1,
         chipRatio: 1.0,
-        theme: 'classic-green',
+        theme: localStorage.getItem('theme') || 'Classic',
         sessionId: null,
         gameName: null,
         lobbyActive: false
-    },
+    };
     
-    // UI module for handling display and user interface
-    UI: {
-        handAnimation: null,
-        toastTimeout: null,
-        showToast: function(message, type = 'success') {
-            // Create a unique key for this message and type
-            const toastKey = `${message}-${type}`;
-            
-            // If this exact message is already showing, don't show it again
-            if (recentToasts.has(toastKey)) {
-                return;
-            }
-            
-            // Add to recent toasts set and remove after 3 seconds
-            recentToasts.add(toastKey);
-            setTimeout(() => {
-                recentToasts.delete(toastKey);
-            }, 3000);
-            
-            const toastContainer = document.getElementById('toast-container') || createToastContainer();
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            toastContainer.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('fade-out');
-                setTimeout(() => toast.remove(), 500);
-            }, 3000);
-        },
-        initialize: function() {
-            initializeUI();
-            initializeDealerWheel();
-            updateEmptyState();
-            if (!this.theme) {
-                setTheme(PokerApp.state.theme);
-            }
-        }
-    },
-    
-    // Player management module
-    Players: {
-        // Add a new player
-        add(name, chips) {
-            return addPlayer(name, chips);
-        },
-        
-        // Remove a player
-        remove(playerId) {
-            return removePlayer(playerId);
-        },
-        
-        // Update the player list display
-        updateList() {
-            // Call both updatePlayerList and updateEmptyState to ensure everything is updated
-            updatePlayerList();
-            return updateEmptyState();
-        }
-    },
-    
-    // Game management module
-    Game: {
-        // Start a new game
-        start() {
-            return startGame();
-        },
-        
-        // End the current game
-        end() {
-            return endGame();
-        },
-        
-        // Reset the game state - override the global one to prevent duplication
-        reset() {
-            // Only call our improved resetGame function
-            return resetGame();
-        },
-        
-        // Calculate payouts between players
-        calculatePayouts() {
-            return calculatePayouts();
-        }
-    },
-    
-    // Storage module for persistence
-    Storage: {
-        // Save the current game state
-        save() {
-            return saveState();
-        },
-        
-        // Load the saved game state
-        load() {
-            return loadSavedState();
-        }
-    },
-    
-    // Initialize the application
-    initialize: async function() {
-        console.log('Initializing PokerApp...');
-        
-        try {
-            // Load saved state from localStorage
-            const savedState = localStorage.getItem('pokerGameState');
-            if (savedState) {
-                const state = JSON.parse(savedState);
-                
-                // Restore all state properties from localStorage
-                this.state.players = state.players || [];
-                this.state.gameInProgress = state.gameInProgress || false;
-                this.state.dealerId = state.dealerId || null;
-                this.state.nextPlayerId = state.nextPlayerId || 1;
-                this.state.chipRatio = state.chipRatio || 1.0;
-                this.state.theme = state.theme || 'classic-green';
-                
-                // Critical: Preserve session info across refreshes
-                this.state.sessionId = state.sessionId || null;
-                this.state.gameName = state.gameName || null;
-                this.state.lobbyActive = state.lobbyActive || false;
-                
-                console.log('Loaded state from localStorage:', this.state);
-            }
-            
-            // Initialize UI components
-            this.UI.initialize();
-            
-            // Setup event listeners
-            setupEventListeners();
-            
-            // Set up auto-save
-            setInterval(() => saveState(), 5000); // Save every 5 seconds
-            window.addEventListener('beforeunload', () => saveState());
-            
-            // Update UI with loaded state
-            updatePlayerList();
-            updateEmptyState();
-            
-            // Important: If we have an active session from localStorage, 
-            // make sure we restore the lobby UI and Firebase listeners
-            if (this.state.sessionId && this.state.lobbyActive) {
-                console.log('Restoring active session from localStorage:', this.state.sessionId);
-                updateLobbyUI(true);
-                // Setup Firebase listeners for the restored session
-                setupFirebaseListeners(this.state.sessionId);
-            }
-            
-            console.log('PokerApp initialized successfully');
-        } catch (error) {
-            console.error('Error during initialization:', error);
-        }
-    }
-};
-
-// For backward compatibility
-let gameState = window.PokerApp.state;
-let handAnimation = null;
-
-// Global initialize function for backward compatibility
-function initialize() {
-    console.log('------ INITIALIZING APP ------');
-    
-    // Handle URL parameters before initializing the app
-    handleURLParameters();
-    
-    // Then initialize the main app
-    PokerApp.initialize();
-    
-    // Setup Firebase listeners for real-time updates
-    setupFirebaseListeners();
-    
-    // Add a direct debug test that will run 5 seconds after initialization
-    setTimeout(() => {
-        console.log('------ CHECKING FIREBASE CONNECTION ------');
-        
-        if (typeof firebase === 'undefined' || !firebase.database) {
-            console.error('Firebase not available');
-            return;
-        }
-        
-        const testRef = firebase.database().ref('test');
-        console.log('Writing test data to Firebase...');
-        
-        testRef.set({
-            timestamp: Date.now(),
-            message: 'Test connection from main app'
-        })
-        .then(() => {
-            console.log('Test write successful');
-            
-            // Now test if we can read it back
-            return testRef.once('value');
-        })
-        .then((snapshot) => {
-            console.log('Test read successful:', snapshot.val());
-            console.log('Firebase connection is working properly');
-            
-            // Check if we have an active session
-            if (PokerApp.state.sessionId) {
-                console.log(`Active session ID: ${PokerApp.state.sessionId}`);
-                
-                // Force a refresh of the Firebase listeners
-                setupFirebaseListeners(PokerApp.state.sessionId, true);
-            } else {
-                console.log('No active session ID');
-            }
-        })
-        .catch((error) => {
-            console.error('Firebase test failed:', error);
-        });
-    }, 5000);
-}
-
-// Initialize when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    initialize();
-    updateEmptyState();
-    setTheme(gameState.theme || 'classic-green');
-});
-
-// Initialize UI elements
-function initializeUI() {
-    // Set initial display states
-    const animationSection = document.getElementById('animation');
-    if (animationSection) {
-        animationSection.style.display = 'none'; // Only show when game starts
-    }
-    
-    // Initialize the ratio display
-    const ratioDisplay = document.getElementById('ratio-display');
-    if (ratioDisplay) {
-        ratioDisplay.textContent = `Each chip is worth $${gameState.chipRatio.toFixed(2)}`;
-    }
-    
-    // Create toast container if it doesn't exist
-    if (!document.querySelector('.toast-container')) {
-        const toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container';
-        document.body.appendChild(toastContainer);
-    }
-}
-
-// Initialize dealer wheel
-function initializeDealerWheel() {
-    const container = document.getElementById('dealer-wheel');
-    if (!container) {
-        console.error('Dealer wheel container not found');
-        return;
-    }
-    
-    try {
-        handAnimation = new HandAnimation(container);
-        
-        // Only set the theme if it's not already set in gameState
-        if (!gameState.theme) {
-            const savedTheme = localStorage.getItem('pokerTheme') || 'classic-green';
-            if (themes[savedTheme]) {
-                setTheme(savedTheme);
-                const themeSelector = document.getElementById('theme-selector');
-                if (themeSelector) {
-                    themeSelector.value = savedTheme;
-                }
-            } else {
-                setTheme('classic-green');
-            }
-        } else {
-            // Apply the current theme to the dealer wheel
-            handAnimation.setTheme(themes[gameState.theme]);
-        }
-
-        // Set up players if they exist
-        if (gameState.players.length > 0) {
-            handAnimation.setPlayers(gameState.players);
-        }
-    } catch (error) {
-        console.error('Error initializing dealer wheel:', error);
-        showToast('Error initializing poker table. Please refresh the page.', 'error');
-    }
-}
-
-// Set up all event listeners
-function setupEventListeners() {
-    // Theme selector
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        // Set the initial value based on the current theme
-        if (gameState.theme) {
-            themeSelector.value = gameState.theme;
-        }
-        
-        themeSelector.addEventListener('change', function(e) {
-            const selectedTheme = e.target.value;
-            setTheme(selectedTheme);
-            showToast(`Theme set to ${selectedTheme.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`);
-        });
-    }
-
-    // Ratio form handler
-    const ratioForm = document.getElementById('ratio-form');
-    if (ratioForm) {
-        ratioForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            let realMoney = parseFloat(document.getElementById('money-amount').value);
-            let chips = parseInt(document.getElementById('chip-amount').value);
-            
-            if (isNaN(realMoney) || isNaN(chips) || realMoney <= 0 || chips <= 0) {
-                showToast('Please enter valid numbers for money and chips.', 'error');
-                return;
-            }
-            
-            gameState.chipRatio = realMoney / chips;
-            const ratioDisplay = document.getElementById('ratio-display');
-            if (ratioDisplay) {
-                ratioDisplay.textContent = `Each chip is worth $${gameState.chipRatio.toFixed(2)}`;
-                ratioDisplay.classList.add('highlight');
-                setTimeout(() => {
-                    ratioDisplay.classList.remove('highlight');
-                }, 1500);
-            }
-            
-            PokerApp.Storage.save();
-            showToast('Ratio set successfully!');
-            
-            // Optionally close the form
-            const ratioContent = document.getElementById('ratio-content');
-            const minimizeButton = document.getElementById('minimize-button');
-            if (ratioContent && minimizeButton) {
-                ratioContent.classList.add('hidden');
-                minimizeButton.textContent = '+';
-            }
-        });
-    }
-
-    // Set up the add player form
-    const playerForm = document.getElementById('player-form');
-    if (playerForm) {
-        playerForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const playerName = document.getElementById('player-name').value.trim();
-            const initialChips = parseInt(document.getElementById('initial-chips').value);
-            
-            // Don't validate the player name - form required attribute will handle this
-            // and prevents redundant toast messages
-            
-            if (isNaN(initialChips) || initialChips <= 0) {
-                showToast('Please enter a valid chip amount', 'error');
-                return;
-            }
-            
-            // Add the player directly using our addPlayer function
-            addPlayer(playerName, initialChips);
-            
-            // Reset the form
-            this.reset();
-            document.getElementById('player-name').focus();
-        });
-    }
-
-    // Game control buttons with improved functionality and feedback
-    const startGameBtn = document.getElementById('start-game');
-    const endGameBtn = document.getElementById('end-game');
-    const resetGameBtn = document.getElementById('reset-game');
-    const simulateHandBtn = document.getElementById('simulate-hand');  // New button for clarity
-    
-    if (startGameBtn) {
-        startGameBtn.addEventListener('click', function() {
-            if (gameState.players.length < 2) {
-                showToast('Need at least 2 players to start a game', 'error');
-                startGameBtn.classList.add('invalid-action');
-                setTimeout(() => startGameBtn.classList.remove('invalid-action'), 500);
-                return;
-            }
-            PokerApp.Game.start();
-        });
-    }
-    
-    if (endGameBtn) {
-        endGameBtn.addEventListener('click', function() {
-            if (!gameState.gameInProgress) {
-                showToast('No active game to end', 'error');
-                endGameBtn.classList.add('invalid-action');
-                setTimeout(() => endGameBtn.classList.remove('invalid-action'), 500);
-                return;
-            }
-            PokerApp.Game.end();
-        });
-    }
-    
-    if (resetGameBtn) {
-        resetGameBtn.addEventListener('click', function() {
-            // Make reset require confirmation
-            if (confirm('Are you sure you want to reset the game? This will clear all players and settings.')) {
-                PokerApp.Game.reset();
-            }
-        });
-    }
-    
-    // Add a new button specifically for simulating hands
-    if (simulateHandBtn) {
-        simulateHandBtn.addEventListener('click', function() {
-            if (!gameState.gameInProgress) {
-                showToast('Start the game first to simulate hands', 'error');
-                simulateHandBtn.classList.add('invalid-action');
-                setTimeout(() => simulateHandBtn.classList.remove('invalid-action'), 500);
-                return;
-            }
-            
-            if (handAnimation && handAnimation.isAnimating) {
-                showToast('Animation already in progress', 'error');
-                return;
-            }
-            
-            // Spin the dealer wheel to simulate a hand
-            if (handAnimation) {
-                try {
-                    handAnimation.spin();
-                    showToast('Simulating a new hand...');
-                } catch (error) {
-                    console.error('Error simulating hand:', error);
-                    showToast('Error simulating hand', 'error');
-                }
-            }
-        });
-    }
-
-    // Payout calculation
-    const calculatePayoutsBtn = document.getElementById('calculate-payouts');
-    if (calculatePayoutsBtn) {
-        calculatePayoutsBtn.addEventListener('click', PokerApp.Game.calculatePayouts);
-    }
-
-    // Add touch event handling for better mobile experience
-    if ('ontouchstart' in window) {
-        // Add passive touch listeners to improve scrolling performance
-        document.addEventListener('touchstart', handleTouchStart, { passive: true });
-        document.addEventListener('touchmove', handleTouchMove, { passive: true });
-        document.addEventListener('touchend', handleTouchEnd, { passive: true });
-        
-        // Make buttons more responsive on touch devices
-        const allButtons = document.querySelectorAll('button');
-        allButtons.forEach(button => {
-            button.addEventListener('touchstart', function() {
-                this.classList.add('touch-active');
-            }, { passive: true });
-            
-            button.addEventListener('touchend', function() {
-                this.classList.remove('touch-active');
-            }, { passive: true });
-        });
-    }
-
-    // Add event listeners to chip inputs for realtime updates
-    document.querySelectorAll('.chip-input').forEach(input => {
-        // Use input event for immediate updates
-        input.addEventListener('input', function() {
-            // Check if the element has the data-player-id attribute
-            if (!this.hasAttribute('data-player-id')) {
-                return;
-            }
-            
-            const playerId = parseInt(this.getAttribute('data-player-id'));
-            if (!playerId) {
-                // Log error only if there was an attempt to get a player ID but it was invalid
-                console.error('Invalid player ID for chip update');
-                return;
-            }
-            
-            const newChips = parseInt(this.value);
-            if (isNaN(newChips) || newChips < 0) {
-                // Don't update for invalid values
-                return;
-            }
-            
-            // Update player's current chips
-            const playerIndex = gameState.players.findIndex(p => p.id === playerId);
-            if (playerIndex !== -1) {
-                gameState.players[playerIndex].current_chips = newChips;
-                // Update totals row immediately
-                updateTotalsRow();
-                // Update payout instructions with new prize pool info
-                updateEmptyState();
-            }
-        });
-        
-        // Keep the change event for validation and persistence
-        input.addEventListener('change', function() {
-            // Check if the element has the data-player-id attribute
-            if (!this.hasAttribute('data-player-id')) {
-                return;
-            }
-            
-            const playerId = parseInt(this.getAttribute('data-player-id'));
-            if (!playerId) {
-                // Log error only if there was an attempt to get a player ID but it was invalid
-                console.error('Invalid player ID for chip update');
-                return;
-            }
-            
-            const newChips = parseInt(this.value);
-            if (isNaN(newChips) || newChips < 0) {
-                showToast('Please enter a valid chip amount.', 'error');
-                // Reset to previous value
-                const playerIndex = gameState.players.findIndex(p => p.id === playerId);
-                if (playerIndex !== -1) {
-                    this.value = gameState.players[playerIndex].current_chips;
-                }
-                return;
-            }
-            
-            // Update player's current chips
-            const playerIndex = gameState.players.findIndex(p => p.id === playerId);
-            if (playerIndex !== -1) {
-                gameState.players[playerIndex].current_chips = newChips;
-                PokerApp.Storage.save();
-                showToast(`Updated ${gameState.players[playerIndex].name}'s chips to ${newChips}`, 'info');
-                
-                // Update totals row
-                updateTotalsRow();
-                
-                // Update payout instructions with new prize pool info
-                updateEmptyState();
-            }
-        });
-    });
-
-    // Lobby form handler
-    const lobbyForm = document.getElementById('lobby-form');
-    if (lobbyForm) {
-        lobbyForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const gameName = document.getElementById('game-name').value.trim();
-            
-            if (!gameName) {
-                showToast('Please enter a game name', 'error');
-                return;
-            }
-            
-            // Disable form while creating lobby
-            const submitButton = this.querySelector('button[type="submit"]');
-            const gameNameInput = document.getElementById('game-name');
-            if (submitButton) submitButton.disabled = true;
-            if (gameNameInput) gameNameInput.disabled = true;
-            
-            try {
-                await createGameLobby(gameName);
-            } catch (error) {
-                console.error('Failed to create game lobby:', error);
-                // Form will be re-enabled by updateLobbyUI(false) in createGameLobby error handler
-            }
-        });
-    }
-    
-    // Add refresh Firebase button handler
-    const refreshFirebaseButton = document.getElementById('refresh-firebase');
-    if (refreshFirebaseButton) {
-        refreshFirebaseButton.addEventListener('click', function() {
-            if (!PokerApp.state.sessionId) {
-                showToast('No active game to refresh', 'error');
-                return;
-            }
-            
-            showToast('Manually refreshing player data...', 'info');
-            console.log('[FIREBASE] Manual refresh requested for game:', PokerApp.state.sessionId);
-            
-            // Force refresh of Firebase listeners
-            setupFirebaseListeners(PokerApp.state.sessionId, true);
-            
-            // Also manually fetch latest player data
-            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).once('value')
-                .then(snapshot => {
-                    console.log('[FIREBASE] Manual refresh data:', snapshot.val());
-                    handlePlayerDataUpdate(snapshot.val());
-                    showToast('Player data refreshed', 'success');
-                })
-                .catch(error => {
-                    console.error('[FIREBASE] Manual refresh failed:', error);
-                    showToast('Failed to refresh data: ' + error.message, 'error');
-                });
-        });
-    }
-    
-    // Fix reset button
-    const resetBtn = document.getElementById('reset-btn');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function() {
-            // Make reset require confirmation
-            if (confirm('Are you sure you want to reset the game? This will clear all players and settings.')) {
-                PokerApp.Game.reset();
-            }
-        });
-    }
-}
-
-// Touch event handlers for mobile
-let touchStartX = 0;
-let touchStartY = 0;
-
-function handleTouchStart(e) {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-}
-
-function handleTouchMove(e) {
-    // Implement if needed for swipe gestures
-}
-
-function handleTouchEnd(e) {
-    if (!touchStartX || !touchStartY) return;
-    
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-    
-    const diffX = touchStartX - touchEndX;
-    const diffY = touchStartY - touchEndY;
-    
-    // Reset touch coordinates
-    touchStartX = 0;
-    touchStartY = 0;
-    
-    // Minimum distance for a swipe
-    const minSwipeDistance = 50;
-    
-    // Check for horizontal swipe (can be used for future features like swiping between players)
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
-        if (diffX > 0) {
-            // Swipe left - can be used for future features
-        } else {
-            // Swipe right - can be used for future features
-        }
-    }
-}
-
-// Function to update empty state messages and UI based on game state
-function updateEmptyState() {
-    const playerList = document.getElementById('player-list');
-    const emptyState = document.getElementById('empty-state');
-    const payoutInstructions = document.getElementById('payout-instructions');
-    
-    // If no player list is found, can't update anything
-    if (!playerList) return;
-    
-    // Handle empty player list
-    if (PokerApp.state.players.length === 0) {
-        if (emptyState) {
-            emptyState.style.display = 'block';
-            emptyState.innerHTML = '<p>No players added yet. Add players to get started!</p>';
-        }
-        
-        if (payoutInstructions) {
-            payoutInstructions.innerHTML = '';
-        }
-        
-        return;
-    }
-    
-    // Hide empty state message when we have players
-    if (emptyState) {
-        emptyState.style.display = 'none';
-    }
-    
-    // Update payout instructions
-    if (payoutInstructions) {
-        const totalChips = PokerApp.state.players.reduce((sum, p) => sum + p.current_chips, 0);
-        const totalBuyIn = PokerApp.state.players.reduce((sum, p) => sum + p.initial_chips, 0);
-        
-        let html = '<h3>Game Information</h3>';
-        html += `<p>Total buy-in: ${totalBuyIn} chips</p>`;
-        html += `<p>Current chips in play: ${totalChips} chips</p>`;
-        
-        if (PokerApp.state.chipRatio > 0) {
-            const moneyPool = (totalBuyIn * PokerApp.state.chipRatio).toFixed(2);
-            html += `<p>Prize pool: $${moneyPool}</p>`;
-        }
-        
-        payoutInstructions.innerHTML = html;
-    }
-}
-
-// Toast notification system
-function showToast(message, type = 'success') {
-    // Use the PokerApp's showToast method to prevent duplicates
-    PokerApp.UI.showToast(message, type);
-}
-
-// Create and manage game lobbies
-async function createGameLobby(gameName) {
-    try {
-        // Generate a unique session ID
-        const sessionId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-        
-        // Set up game state
-        PokerApp.state.sessionId = sessionId;
-        PokerApp.state.gameName = gameName;
-        PokerApp.state.lobbyActive = true;
-        
-        // Save current state to Firebase
-        const gameData = {
-            id: sessionId,
-            name: gameName,
-            createdAt: Date.now(),
-            state: PokerApp.state,
-            active: true,
-            ratio: PokerApp.state.chipRatio || 1.0
-        };
-        
-        // If Firebase is initialized, save to Firebase
-        if (typeof firebase !== 'undefined' && firebase.database) {
-            await firebase.database().ref(`games/${sessionId}`).set(gameData);
-        }
-        
-        // Generate QR code for joining the game
-        generateQRCode(sessionId, gameName);
-        
-        // Update UI to show game is active
-        updateLobbyUI(true);
-        
-        // Force a refresh of player data when a lobby is created
-        console.log('[FIREBASE] Automatically setting up Firebase listeners after lobby creation');
-        setupFirebaseListeners(sessionId, true);
-        
-        showToast(`Game lobby "${gameName}" created successfully!`, 'success');
-        return sessionId;
-    } catch (error) {
-        console.error('Error creating game lobby:', error);
-        showToast('Failed to create game lobby', 'error');
-        updateLobbyUI(false);
-        throw error;
-    }
-}
-
-// Handle URL parameters for joining games
-function handleURLParameters() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameName = urlParams.get('game-name');
-    const gameId = urlParams.get('gameId') || urlParams.get('game-id');
-    
-    if (gameName || gameId) {
-        // We're in a game - make sure we're connecting to the correct game
-        console.log(`Loading game: ${gameName || 'Unknown'} (ID: ${gameId || 'Unknown'})`);
-        
-        // If we have a game ID, try to load it from Firebase
-        if (gameId) {
-            // Set session ID immediately so Firebase listeners can be set up
-            PokerApp.state.sessionId = gameId;
-            PokerApp.state.gameName = gameName || 'Unknown Game';
-            
-            // Make sure Firebase is ready
-            const checkFirebase = () => {
-                if (typeof firebase !== 'undefined' && firebase.database) {
-                    // Firebase is ready, load the game
-                    loadGameFromFirebase(gameId, gameName);
-                } else {
-                    // Firebase not ready yet, wait and try again
-                    console.log('Waiting for Firebase to initialize...');
-                    setTimeout(checkFirebase, 500);
-                }
-            };
-            
-            checkFirebase();
-        }
-    }
-}
-
-// Load game data from Firebase
-function loadGameFromFirebase(gameId, gameName) {
-    console.log(`Loading game data from Firebase for ${gameId}`);
-    
-    firebase.database().ref(`games/${gameId}`).once('value')
-        .then(snapshot => {
-            const gameData = snapshot.val();
-            if (!gameData) {
-                showToast('Game not found or no longer active', 'error');
-                return;
-            }
-            
-            // Update our state with the game data
-            if (gameData.state) {
-                PokerApp.state = {...PokerApp.state, ...gameData.state};
-            }
-            
-            // Ensure the sessionId is set for Firebase listeners
-            PokerApp.state.sessionId = gameId;
-            PokerApp.state.gameName = gameData.name || gameName || 'Unknown Game';
-            PokerApp.state.lobbyActive = true;
-            
-            // Update the UI
-            updatePlayerList();
-            updateEmptyState();
-            updateLobbyUI(true);
-            
-            // Set up Firebase listeners after confirming the game exists
-            setupFirebaseListeners(gameId);
-            
-            showToast(`Connected to game: ${PokerApp.state.gameName}`, 'success');
-        })
-        .catch(error => {
-            console.error('Error loading game:', error);
-            showToast('Error loading game. Please try again.', 'error');
-        });
-}
-
-// Generate QR code for players to join
-function generateQRCode(sessionId, gameName) {
-    const qrWrapper = document.querySelector('#qr-code-container .qr-wrapper');
-    if (!qrWrapper) return;
-    
-    // Clear previous QR code
-    qrWrapper.innerHTML = '';
-    
-    // Create join URL
-    const baseUrl = window.location.origin;
-    const joinUrl = `${baseUrl}/buy-in.html?game-id=${sessionId}&game-name=${encodeURIComponent(gameName)}`;
-    
-    // Generate QR code if library is available
-    if (typeof QRCode !== 'undefined') {
-        new QRCode(qrWrapper, {
-            text: joinUrl,
-            width: 200,
-            height: 200,
-            colorDark: '#000000',
-            colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.H
-        });
-        
-        // Add link below QR code
-        const linkElement = document.createElement('a');
-        linkElement.href = joinUrl;
-        linkElement.target = '_blank';
-        linkElement.textContent = 'Open Join Link';
-        linkElement.className = 'join-link';
-        qrWrapper.appendChild(linkElement);
-
-        // Show the QR code container
-        const qrCodeContainer = document.getElementById('qr-code-container');
-        if (qrCodeContainer) {
-            qrCodeContainer.style.display = 'block';
-        }
-    } else {
-        // Fallback if QR library not loaded
-        qrWrapper.innerHTML = `
-            <div class="qr-fallback">
-                <p>QR code generation failed</p>
-                <a href="${joinUrl}" target="_blank" class="join-link">Open Join Link</a>
-            </div>
-        `;
-    }
-}
-
-// Update the UI based on lobby state
-function updateLobbyUI(isActive) {
-    const lobbyForm = document.getElementById('lobby-form');
-    const qrCodeContainer = document.getElementById('qr-code-container');
-    const submitButton = lobbyForm ? lobbyForm.querySelector('button[type="submit"]') : null;
-    const gameNameInput = document.getElementById('game-name');
-    const lobbyStatusBadge = document.querySelector('#game-lobby .game-status-badge');
-    const lobbyStatusText = document.getElementById('lobby-status');
-    
-    if (isActive) {
-        // Show QR code and update form
-        if (qrCodeContainer) qrCodeContainer.style.display = 'block';
-        if (submitButton) submitButton.textContent = 'Update Lobby';
-        if (gameNameInput) {
-            gameNameInput.value = PokerApp.state.gameName || '';
-            gameNameInput.disabled = false;
-        }
-        
-        // Update lobby status badge
-        if (lobbyStatusBadge) {
-            lobbyStatusBadge.classList.remove('inactive');
-            lobbyStatusBadge.classList.add('active');
-        }
-        
-        // Update lobby status text
-        if (lobbyStatusText) {
-            lobbyStatusText.textContent = 'Lobby Active';
-        }
-        
-        // Display game status
-        updateGameStatus('Lobby Active', true);
-    } else {
-        // Hide QR code and reset form
-        if (qrCodeContainer) qrCodeContainer.style.display = 'none';
-        if (submitButton) {
-            submitButton.textContent = 'Create Game Lobby';
-            submitButton.disabled = false;
-        }
-        if (gameNameInput) {
-            gameNameInput.value = '';
-            gameNameInput.disabled = false;
-        }
-        
-        // Update lobby status badge
-        if (lobbyStatusBadge) {
-            lobbyStatusBadge.classList.remove('active');
-            lobbyStatusBadge.classList.add('inactive');
-        }
-        
-        // Update lobby status text
-        if (lobbyStatusText) {
-            lobbyStatusText.textContent = 'No active game';
-        }
-        
-        // Reset game status
-        updateGameStatus(PokerApp.state.gameInProgress ? 'Game in progress' : 'No active game', PokerApp.state.gameInProgress);
-        
-        // Reset state
-        PokerApp.state.sessionId = null;
-        PokerApp.state.gameName = null;
-        PokerApp.state.lobbyActive = false;
-    }
-}
-
-// Update game status badge and text
-function updateGameStatus(statusText, isActive = false) {
-    const gameStatusBadge = document.querySelector('#game-controls .game-status-badge');
-    const gameStatusText = document.getElementById('game-status');
-    
-    if (gameStatusBadge) {
-        if (isActive) {
-            gameStatusBadge.classList.remove('inactive');
-            gameStatusBadge.classList.add('active');
-        } else {
-            gameStatusBadge.classList.remove('active');
-            gameStatusBadge.classList.add('inactive');
-        }
-    }
-    
-    if (gameStatusText) {
-        gameStatusText.textContent = statusText;
-    }
-}
-
-// Theme handling
-document.addEventListener('DOMContentLoaded', function() {
-    const themeSelector = document.getElementById('theme-selector');
-    
-    // Set initial theme
-    const savedTheme = localStorage.getItem('theme') || 'doginme';
-    if (themeSelector) {
-        // Set the value first
-        themeSelector.value = savedTheme;
-        
-        // Force text color and visibility
-        themeSelector.style.color = 'white';
-        themeSelector.style.webkitTextFillColor = 'white';
-        themeSelector.style.opacity = '1';
-        themeSelector.style.backgroundColor = '#1a1a1a';
-        
-        // Force text display for mobile
-        if (window.innerWidth <= 480) {
-            themeSelector.style.textIndent = '0';
-            themeSelector.style.appearance = 'menulist';
-            themeSelector.style.webkitAppearance = 'menulist';
-        }
-        
-        // Force text color for options
-        Array.from(themeSelector.options).forEach(option => {
-            option.style.color = 'white';
-            option.style.webkitTextFillColor = 'white';
-            option.style.opacity = '1';
-            option.style.backgroundColor = '#1a1a1a';
-        });
-        
-        // Force text color for selected option
-        const selectedOption = themeSelector.options[themeSelector.selectedIndex];
-        if (selectedOption) {
-            selectedOption.style.color = 'white';
-            selectedOption.style.webkitTextFillColor = 'white';
-            selectedOption.style.opacity = '1';
-            selectedOption.style.backgroundColor = '#333';
-            selectedOption.style.fontWeight = 'bold';
-        }
-    }
-    
-    // Set the theme
-    setTheme(savedTheme);
-
-    // Handle theme changes
-    if (themeSelector) {
-        themeSelector.addEventListener('change', function(e) {
-            const theme = e.target.value;
-            setTheme(theme);
-            
-            // Force text color and visibility
-            themeSelector.style.color = 'white';
-            themeSelector.style.webkitTextFillColor = 'white';
-            themeSelector.style.opacity = '1';
-            themeSelector.style.backgroundColor = '#1a1a1a';
-            
-            // Force text display for mobile
-            if (window.innerWidth <= 480) {
-                themeSelector.style.textIndent = '0';
-                themeSelector.style.appearance = 'menulist';
-                themeSelector.style.webkitAppearance = 'menulist';
-            }
-            
-            // Force text color for options
-            Array.from(themeSelector.options).forEach(option => {
-                option.style.color = 'white';
-                option.style.webkitTextFillColor = 'white';
-                option.style.opacity = '1';
-                option.style.backgroundColor = '#1a1a1a';
-            });
-            
-            // Force text color for selected option
-            const selectedOption = themeSelector.options[themeSelector.selectedIndex];
-            if (selectedOption) {
-                selectedOption.style.color = 'white';
-                selectedOption.style.webkitTextFillColor = 'white';
-                selectedOption.style.opacity = '1';
-                selectedOption.style.backgroundColor = '#333';
-                selectedOption.style.fontWeight = 'bold';
-            }
-        });
-    }
-});
-
-// Setup Firebase listeners for real-time player updates
-function setupFirebaseListeners(gameIdOverride, forceRefresh = false) {
-    // Use the override if provided, otherwise use the state
-    const gameId = gameIdOverride || PokerApp.state.sessionId;
-    
-    if (!gameId) {
-        console.error('[FIREBASE] No game ID provided for Firebase listeners');
-        return;
-    }
-    
-    if (typeof firebase === 'undefined' || !firebase.database) {
-        console.error('[FIREBASE] Firebase not initialized yet');
-        return;
-    }
-    
-    console.log(`[FIREBASE] Setting up Firebase listeners for game: ${gameId}`);
-    
-    // Test if the gameId exists first
-    firebase.database().ref(`games/${gameId}`).once('value')
-        .then(snapshot => {
-            if (!snapshot.exists()) {
-                console.error(`[FIREBASE] Game with ID ${gameId} does not exist in the database`);
-                showToast(`Game with ID ${gameId} not found in database`, 'error');
-                return;
-            }
-            
-            console.log(`[FIREBASE] Game data exists:`, snapshot.val());
-            
-            // Immediately check if there are players
-            const gameData = snapshot.val();
-            if (gameData && gameData.state) {
-                // Process lastPlayer if it exists
-                if (gameData.state.lastPlayer) {
-                    console.log('[FIREBASE] Found lastPlayer in initial game data, processing immediately');
-                    handleLastPlayerUpdate(gameData.state.lastPlayer);
-                }
-                
-                // Also process any players in the players array
-                if (gameData.state.players && gameData.state.players.length > 0) {
-                    console.log('[FIREBASE] Found existing players in state, processing immediately');
-                    handlePlayerDataUpdate(gameData.state.players);
-                }
-            }
-            
-            // Game exists, so set up listeners
-            setupPlayerListener(gameId, forceRefresh);
-            setupGameListener(gameId, forceRefresh);
-            
-            // Set up notification listener for real-time player joins
-            setupNotificationListener(gameId);
-            
-            // Force an immediate refresh of player data
-            console.log('[FIREBASE] Forcing immediate player data refresh');
-            firebase.database().ref(`games/${gameId}/state/players`).once('value')
-                .then(playersSnapshot => {
-                    console.log('[FIREBASE] Immediate player data refresh:', playersSnapshot.val());
-                    handlePlayerDataUpdate(playersSnapshot.val());
-                })
-                .catch(error => {
-                    console.error('[FIREBASE] Error in immediate player refresh:', error);
-                });
-        })
-        .catch(error => {
-            console.error(`[FIREBASE] Error checking game existence:`, error);
-        });
-}
-
-// Set up the player list listener separately
-function setupPlayerListener(gameId, forceRefresh = false) {
-    // Listen for player list changes
-    const playersRef = firebase.database().ref(`games/${gameId}/state/players`);
-    
-    // Remove any existing listeners first to avoid duplicates
-    if (forceRefresh) {
-        console.log(`[FIREBASE] Force refreshing player listener for game: ${gameId}`);
-        playersRef.off('value');
-    }
-    
-    console.log(`[FIREBASE] Setting up player listener for path: games/${gameId}/state/players`);
-    
-    // First, get the current players to handle any players that were added before we set up the listener
-    playersRef.once('value')
-        .then(snapshot => {
-            const currentPlayers = snapshot.val();
-            if (currentPlayers) {
-                console.log('[FIREBASE] Found existing players, processing...');
-                handlePlayerDataUpdate(currentPlayers);
-            }
-            
-            // Set up the ongoing listener with error handling
-            playersRef.on('value', 
-                // Success callback
-                (snapshot) => {
-                    console.log(`[FIREBASE] Received player data update for game ${gameId}:`, snapshot.val());
-                    handlePlayerDataUpdate(snapshot.val());
-                }, 
-                // Error callback
-                (error) => {
-                    console.error(`[FIREBASE] Error in player listener:`, error);
-                    showToast(`Error syncing player data: ${error.message}`, 'error');
-                }
-            );
-        })
-        .catch(error => {
-            console.error('[FIREBASE] Error getting current players:', error);
-            
-            // Still try to set up the listener for future changes
-            playersRef.on('value', 
-                (snapshot) => {
-                    console.log(`[FIREBASE] Received player data update for game ${gameId}:`, snapshot.val());
-                    handlePlayerDataUpdate(snapshot.val());
-                }, 
-                (error) => {
-                    console.error(`[FIREBASE] Error in player listener:`, error);
-                    showToast(`Error syncing player data: ${error.message}`, 'error');
-                }
-            );
-        });
-    
-    // Also listen for lastUpdate changes which can trigger a refresh
-    const lastUpdateRef = firebase.database().ref(`games/${gameId}/state/lastUpdate`);
-    lastUpdateRef.on('value', (snapshot) => {
-        const timestamp = snapshot.val();
-        if (timestamp) {
-            console.log(`[FIREBASE] Detected state update at ${new Date(timestamp).toLocaleTimeString()}`);
-            
-            // Refresh player data explicitly
-            playersRef.once('value').then(snapshot => {
-                console.log(`[FIREBASE] Explicitly refreshing player data after lastUpdate:`, snapshot.val());
-                handlePlayerDataUpdate(snapshot.val());
-            }).catch(error => {
-                console.error(`[FIREBASE] Error refreshing player data:`, error);
-            });
-        }
-    });
-}
-
-// Set up the game state listener separately
-function setupGameListener(gameId, forceRefresh = false) {
-    // Listen for game state changes
-    const gameRef = firebase.database().ref(`games/${gameId}`);
-    
-    // Remove any existing listeners first to avoid duplicates
-    if (forceRefresh) {
-        console.log(`[FIREBASE] Force refreshing game listener for game: ${gameId}`);
-        gameRef.off('value');
-    }
-    
-    console.log(`[FIREBASE] Setting up game listener for path: games/${gameId}`);
-    
-    // Set up the listener with error handling
-    gameRef.on('value', 
-        // Success callback
-        (snapshot) => {
-            console.log(`[FIREBASE] Received game data update for game ${gameId}:`, snapshot.val());
-            handleGameDataUpdate(snapshot.val());
-        }, 
-        // Error callback
-        (error) => {
-            console.error(`[FIREBASE] Error in game listener:`, error);
-            showToast(`Error syncing game data: ${error.message}`, 'error');
-        }
-    );
-}
-
-// Handle player data updates separately for better error handling
-function handlePlayerDataUpdate(playersData) {
-    // Only update if we have valid player data
-    if (!playersData) {
-        console.log('[FIREBASE] No player data received or empty data');
-        return;
-    }
-    
-    try {
-        // Handle both array and object formats from Firebase
-        let playersList = [];
-        
-        if (Array.isArray(playersData)) {
-            console.log('[FIREBASE] Players data is an array with length:', playersData.length);
-            playersList = playersData.filter(p => p !== null && p !== undefined);
-        } else if (typeof playersData === 'object') {
-            console.log('[FIREBASE] Players data is an object, converting to array');
-            playersList = Object.values(playersData).filter(p => p !== null && p !== undefined);
-        }
-        
-        if (playersList.length > 0) {
-            console.log('[FIREBASE] Processing player list with length:', playersList.length);
-            
-            // Log the first player for debugging
-            if (playersList[0]) {
-                console.log('[FIREBASE] Sample player data:', playersList[0]);
-            }
-            
-            // Update the local state with the new player data
-            PokerApp.state.players = playersList.map(player => ({
-                id: parseInt(player.id || 0),
-                name: player.name || 'Unknown Player',
-                initial_chips: parseInt(player.initial_chips || 0),
-                current_chips: parseInt(player.current_chips || 0)
-            }));
-            
-            // Log the updated state
-            console.log('[FIREBASE] Updated player state:', PokerApp.state.players);
-            
-            // Update UI with new players
-            updatePlayerList();
-            updateEmptyState();
-            
-            // Update hand animation if it exists
-            if (window.handAnimation) {
-                window.handAnimation.setPlayers(PokerApp.state.players);
-            }
-            
-            // Only show toast for new players to avoid flooding
-            updatePlayerCountNotification(playersList.length);
-        } else {
-            console.log('[FIREBASE] Player list is empty after processing');
-        }
-    } catch (error) {
-        console.error('[FIREBASE] Error processing player data:', error);
-    }
-}
-
-// Handle game data updates separately
-function handleGameDataUpdate(gameData) {
-    if (!gameData) {
-        console.log('[FIREBASE] No game data received or empty data');
-        return;
-    }
-    
-    try {
-        console.log('[FIREBASE] Processing game data update');
-        
-        // Update ratio if it exists
-        if (gameData.ratio) {
-            const ratio = parseFloat(gameData.ratio);
-            PokerApp.state.chipRatio = ratio;
-            
-            // Update ratio display
-            const ratioDisplay = document.getElementById('ratio-display');
-            if (ratioDisplay) {
-                ratioDisplay.textContent = `Each chip is worth $${ratio.toFixed(2)}`;
-                console.log('[FIREBASE] Updated chip ratio to:', ratio);
-            }
-        }
-        
-        // Check game active status
-        if (gameData.active === false) {
-            console.log('[FIREBASE] Game is no longer active');
-            showToast('Game is no longer active', 'error');
-            
-            // Clean up all listeners for this game
-            firebase.database().ref(`games/${gameData.id}`).off();
-            
-            // Update UI to reflect inactive game
-            updateLobbyUI(false);
-        }
-    } catch (error) {
-        console.error('[FIREBASE] Error processing game data:', error);
-    }
-}
-
-// Track player count for notifications
-window._lastPlayerCount = 0;
-function updatePlayerCountNotification(currentCount) {
-    // If this is our first update or we have new players
-    if (!window._lastPlayerCount || currentCount > window._lastPlayerCount) {
-        const diff = currentCount - window._lastPlayerCount;
-        
-        if (diff > 0) {
-            console.log(`[FIREBASE] ${diff} new player(s) joined`);
-            showToast(`${diff} new player${diff > 1 ? 's' : ''} joined`, 'success');
-        }
-    }
-    
-    // Update the counter
-    window._lastPlayerCount = currentCount;
-}
-
-function resetGame() {
-    console.log('Resetting game...');
-    
-    // End current game if in progress
-    if (PokerApp.state.gameInProgress) {
-        endGame();
-    }
-    
-    // First clean up any Firebase connections
-    if (PokerApp.state.sessionId) {
-        // Update game status to inactive in Firebase
-        try {
-            firebase.database().ref(`games/${PokerApp.state.sessionId}`).update({
-                active: false,
-                status: 'reset'
-            });
-            
-            // Remove all Firebase listeners
-            firebase.database().ref(`games/${PokerApp.state.sessionId}`).off();
-            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).off();
-            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastUpdate`).off();
-            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastPlayer`).off();
-            
-            console.log('Cleaned up all Firebase listeners and connections');
-        } catch (error) {
-            console.error('Error cleaning up Firebase connections:', error);
-        }
-    }
-    
-    // Reset game state
-    PokerApp.state.players = [];
-    PokerApp.state.dealerId = null;
-    PokerApp.state.nextPlayerId = 1;
-    PokerApp.state.gameInProgress = false;
-    PokerApp.state.sessionId = null;
-    PokerApp.state.gameName = null;
-    PokerApp.state.lobbyActive = false;
-    
-    // Reset player counter
-    window._lastPlayerCount = 0;
-    
-    // Update UI
-    updatePlayerList();
-    updateEmptyState();
-    updateLobbyUI(false);
-    
-    // Clear QR code container
-    const qrCodeContainer = document.getElementById('qr-code-container');
-    if (qrCodeContainer) {
-        qrCodeContainer.style.display = 'none';
-        const qrWrapper = qrCodeContainer.querySelector('.qr-wrapper');
-        if (qrWrapper) {
-            qrWrapper.innerHTML = '';
-        }
-    }
-    
-    // Clear game name input and enable it
+    // Clear game name input
     const gameNameInput = document.getElementById('game-name');
     if (gameNameInput) {
         gameNameInput.value = '';
         gameNameInput.disabled = false;
     }
     
-    // Reset lobby submit button
-    const submitButton = document.querySelector('#lobby-form button[type="submit"]');
-    if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Create Game Lobby';
+    // Enable create lobby button
+    const createLobbyBtn = document.querySelector('.create-lobby-btn');
+    if (createLobbyBtn) {
+        createLobbyBtn.disabled = false;
     }
     
-    // Reset lobby status badge
-    const lobbyStatusBadge = document.querySelector('.lobby-status-badge');
-    if (lobbyStatusBadge) {
-        lobbyStatusBadge.classList.remove('active');
-        lobbyStatusBadge.classList.add('inactive');
+    // Hide QR code section
+    const qrCodeSection = document.querySelector('.qr-code-section');
+    if (qrCodeSection) {
+        qrCodeSection.style.display = 'none';
     }
     
-    // Reset lobby status text
-    const lobbyStatusText = document.getElementById('lobby-status-text');
-    if (lobbyStatusText) {
-        lobbyStatusText.textContent = 'No active game';
-    }
+    // Update UI
+    updatePlayerList();
+    updateEmptyState();
+    PokerApp.UI.updateGameStatus('Game reset', false);
+    PokerApp.UI.updateLobbyUI(false);
     
-    // Update status badges
-    updateGameStatus('Game reset', false);
-    
-    // Clear localStorage to ensure no state is persisted
-    localStorage.removeItem('pokerAppState');
-    
-    // Save the fresh state
+    // Save the reset state
     saveState();
-    
-    showToast('Game reset successfully', 'success');
 }
 
+// Add function to update UI based on current state
+function updateUIFromState() {
+    // Update player list
+    updatePlayerList();
+    
+    // Update empty state
+    updateEmptyState();
+    
+    // Update game status
+    PokerApp.UI.updateGameStatus(
+                PokerApp.state.gameInProgress ? 'Game in progress' : 'Game not active', 
+                PokerApp.state.gameInProgress
+            );
+            
+    // Update lobby UI
+    PokerApp.UI.updateLobbyUI(PokerApp.state.lobbyActive);
+    
+    // Initialize HandAnimation only if container exists
+    const container = document.getElementById('dealer-wheel');
+    if (container && typeof HandAnimation !== 'undefined') {
+        window.handAnimation = new HandAnimation(container);
+        if (PokerApp.state.theme) {
+            window.handAnimation.setTheme(themes[PokerApp.state.theme]);
+        }
+    }
+}
+
+// Make initialize function available globally
+window.initialize = initialize;
+
+// Initialize when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Load saved theme first
+    const savedTheme = localStorage.getItem('theme') || 'Classic';
+    if (themes[savedTheme]) {
+        setTheme(savedTheme);
+    } else {
+        setTheme('Classic'); // Default theme
+    }
+    
+    // Set up theme selector
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.value = savedTheme || 'Classic';
+        
+        // Single event listener for theme changes
+        themeSelector.addEventListener('change', (e) => {
+            const selectedTheme = e.target.value;
+            if (themes[selectedTheme]) {
+                setTheme(selectedTheme);
+                PokerApp.UI.showToast(`Theme set to ${selectedTheme}`, 'success');
+            } else {
+                PokerApp.UI.showToast('Invalid theme selected', 'error');
+                setTheme('Classic');
+            }
+        });
+    }
+    
+    // Initialize rest of the app
+    initialize();
+});
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', initialize);
+
+// Export core functions for use in other modules
+window.PokerApp = {
+    ...window.PokerApp,
+    initialize,
+    addPlayer,
+    removePlayer,
+    updatePlayerList,
+    resetGame,
+    saveState,
+    loadSavedState,
+    UI: {
+        showToast: PokerApp.UI.showToast,
+        createToastContainer: PokerApp.UI.createToastContainer,
+        updateGameStatus: PokerApp.UI.updateGameStatus,
+        updateLobbyUI: PokerApp.UI.updateLobbyUI
+    }
+};
+
+// Function to generate a unique game ID
+function generateGameId() {
+    // Create a random string of characters for the game ID
+    const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    
+    // Add timestamp component for uniqueness
+    const timestamp = Date.now().toString(36);
+    
+    // Add 10 random characters
+    for (let i = 0; i < 10; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    
+    return timestamp + result;
+}
+
+// Get the join URL for a game
+function getJoinUrl(gameId, gameName) {
+    const baseUrl = window.location.origin;
+    const path = window.location.pathname.replace('index.html', '');
+    const encodedName = encodeURIComponent(gameName || 'Poker Game');
+    return `${baseUrl}${path}buy-in.html?gameId=${gameId}&game-name=${encodedName}`;
+}
+
+// Generate a QR code for the game join URL
+function generateQrCode(url) {
+    console.log('[QR] Generating QR code for URL:', url);
+    
+    // Find QR container
+    const qrWrapper = document.querySelector('.qr-wrapper');
+    if (!qrWrapper) {
+        console.error('[QR] QR wrapper element not found');
+        return;
+    }
+    
+    // Clear any existing content
+    qrWrapper.innerHTML = '';
+    
+    // Make sure QR code container is visible
+    const qrCodeContainer = document.getElementById('qr-code-container');
+    if (qrCodeContainer) {
+        qrCodeContainer.style.display = 'block';
+        console.log('[QR] Set QR container display to:', qrCodeContainer.style.display);
+    }
+    
+    // Make sure QRCode library is loaded
+    if (typeof QRCode === 'undefined') {
+        console.error('[QR] QRCode library not loaded');
+        qrWrapper.innerHTML = '<div style="padding: 20px; color: #ff4757;">QR Code library not loaded</div>';
+        return;
+    }
+    
+    try {
+        // Generate new QR code
+        new QRCode(qrWrapper, {
+            text: url,
+            width: 180,
+            height: 180,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+        
+        console.log('[QR] QR code generated successfully');
+        
+        // Add the join URL text display
+        const joinUrlElement = document.getElementById('join-url-text');
+        if (joinUrlElement) {
+            joinUrlElement.textContent = url;
+            console.log('[QR] Updated join URL text');
+        }
+        
+        // Add click-to-copy functionality
+        const clickToCopy = document.querySelector('.click-to-copy');
+        if (clickToCopy) {
+            clickToCopy.addEventListener('click', function() {
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast('URL copied to clipboard', 'success');
+                }).catch(err => {
+                    console.error('Could not copy text: ', err);
+                });
+            });
+        }
+    } catch (error) {
+        console.error('[QR] Error generating QR code:', error);
+        qrWrapper.innerHTML = '<div style="padding: 20px; color: #ff4757;">Could not generate QR code: ' + error.message + '</div>';
+    }
+}
+
+// Add a helper function to ensure QR code is visible
+function ensureQrCodeVisible() {
+    console.log('[QR] Ensuring QR code is visible');
+    
+    // Make sure QR code container is visible
+    const qrCodeContainer = document.getElementById('qr-code-container');
+    if (qrCodeContainer) {
+        qrCodeContainer.style.display = 'block';
+        console.log('[QR] QR container display style:', qrCodeContainer.style.display);
+    }
+    
+    // Regenerate QR code if we have session info
+    if (PokerApp.state.sessionId && PokerApp.state.gameName) {
+        const joinUrl = getJoinUrl(PokerApp.state.sessionId, PokerApp.state.gameName);
+        
+        // Find and clear the QR wrapper
+        const qrWrapper = document.querySelector('.qr-wrapper');
+        if (qrWrapper) {
+            qrWrapper.innerHTML = '';
+            qrWrapper.style.background = 'white';
+            qrWrapper.style.padding = '16px';
+            qrWrapper.style.borderRadius = '16px';
+            qrWrapper.style.display = 'inline-block';
+            
+            console.log('[QR] Regenerating QR code with URL:', joinUrl);
+            generateQrCode(joinUrl);
+        }
+        
+        // Update the join URL text
+        const joinUrlElement = document.getElementById('join-url-text');
+        if (joinUrlElement) {
+            joinUrlElement.textContent = joinUrl;
+        }
+    }
+}
+
+// Call this function at the end of createGameSession
+async function createGameSession(gameName, password = null, includeLocalPlayers = true) {
+    console.log('[GAME] Creating game session with name:', gameName);
+    
+    // Check for database
+    if (!window.database) {
+        console.error('[FIREBASE] No database reference available');
+        PokerApp.UI.showToast('Firebase database not available', 'error');
+        
+        // Re-enable form
+        const submitButton = document.querySelector('#create-lobby-form button[type="submit"]');
+        if (submitButton) submitButton.disabled = false;
+        return;
+    }
+    
+    try {
+        // Disable form inputs while we process
+        console.log('[GAME] Disabling form inputs');
+        const gameNameInput = document.getElementById('game-name');
+        const createLobbyBtn = document.querySelector('.create-lobby-btn');
+        if (gameNameInput) gameNameInput.disabled = true;
+        if (createLobbyBtn) createLobbyBtn.disabled = true;
+        
+        // Generate a unique ID for the game
+        const gameId = generateGameId();
+        console.log('[FIREBASE] Generated gameId:', gameId);
+        
+        // Set up game object with initial state
+        const ratio = PokerApp.state.ratio || 1.0;
+        const gameObj = {
+            id: gameId,
+            name: gameName,
+            created: Date.now(),
+            ratio: ratio,
+            active: true,
+            state: {
+                theme: PokerApp.state.theme || 'Classic',
+                ratio: ratio,
+                gameInProgress: false,
+                dealerId: null,
+                players: includeLocalPlayers ? PokerApp.state.players : []
+            }
+        };
+        
+        console.log('[FIREBASE] Saving game to database:', gameObj);
+        
+        // Save to Firebase
+        await window.database.ref(`games/${gameId}`).set(gameObj);
+        console.log('[FIREBASE] Game saved to database successfully');
+        
+        // Update application state
+        PokerApp.state.sessionId = gameId;
+        PokerApp.state.gameName = gameName;
+        PokerApp.state.lobbyActive = true;
+        
+        // Force the QR code to be visible immediately
+        const qrCodeContainer = document.getElementById('qr-code-container');
+        if (qrCodeContainer) {
+            qrCodeContainer.style.display = 'block';
+            console.log('[UI] Forced QR code container to display:block');
+        }
+        
+        // Set up listener for game state changes
+        setupGameStateListener(gameId);
+        
+        // Update UI
+        PokerApp.UI.updateLobbyUI(true);
+        
+        // Generate QR code for players to join
+        const joinUrl = getJoinUrl(gameId, gameName);
+        generateQrCode(joinUrl);
+        
+        const joinUrlElement = document.getElementById('join-url-text');
+        if (joinUrlElement) {
+            joinUrlElement.textContent = joinUrl;
+        }
+        
+        // Show toast notification
+        PokerApp.UI.showToast('Game lobby created! Share the QR code or link.', 'success');
+        
+        // Save state
+        saveState();
+        
+        return gameId;
+    } catch (error) {
+        console.error('[FIREBASE] Error creating game session:', error);
+        PokerApp.UI.showToast('Failed to create game session: ' + error.message, 'error');
+        
+        // Re-enable form
+        const gameNameInput = document.getElementById('game-name');
+        const createLobbyBtn = document.querySelector('.create-lobby-btn');
+        if (gameNameInput) gameNameInput.disabled = false;
+        if (createLobbyBtn) createLobbyBtn.disabled = false;
+        
+        throw error;
+    }
+}
+
+// Helper function to update player data in Firebase
+function updatePlayersInFirebase() {
+    try {
+        if (!PokerApp.state.sessionId || !appDatabase) {
+            console.error('[FIREBASE] Cannot update players: No session ID or database');
+            return;
+        }
+
+        console.log('[FIREBASE] Updating players:', PokerApp.state.players);
+        
+        // Create a clean players array without any null values
+        const cleanPlayers = PokerApp.state.players.filter(p => p !== null);
+        
+        const updates = {
+            [`games/${PokerApp.state.sessionId}/state/players`]: cleanPlayers,
+            [`games/${PokerApp.state.sessionId}/state/nextPlayerId`]: PokerApp.state.nextPlayerId,
+            [`games/${PokerApp.state.sessionId}/updatedAt`]: Date.now()
+        };
+        
+        return appDatabase.ref().update(updates)
+            .then(() => {
+                console.log('[FIREBASE] Players updated successfully');
+            })
+            .catch(error => {
+                console.error('[FIREBASE] Error updating players:', error);
+                PokerApp.UI.showToast('Failed to sync player data', 'error');
+            });
+    } catch (error) {
+        console.error('[FIREBASE] Error updating players:', error);
+        PokerApp.UI.showToast('Failed to update data: ' + error.message, 'error');
+    }
+}
+
+// Helper function to update multiple game state properties in Firebase
+function updateGameStateInFirebase(stateUpdates) {
+    try {
+        if (PokerApp.state.sessionId && appDatabase) {
+            const updates = {};
+            
+            // For each property in the state updates, create a Firebase update
+            Object.keys(stateUpdates).forEach(key => {
+                updates[`games/${PokerApp.state.sessionId}/state/${key}`] = stateUpdates[key];
+            });
+            
+            // Add timestamp
+            updates[`games/${PokerApp.state.sessionId}/updatedAt`] = new Date().toISOString();
+            
+            // Update Firebase
+            return appDatabase.ref().update(updates);
+        }
+    } catch (error) {
+        console.error('[FIREBASE] Error updating game state:', error);
+        PokerApp.UI.showToast(`Failed to update data: ${error.message}`, 'error');
+    }
+}
+
+// Make sure key functions are exported to the window scope
+window.saveState = saveState;
+window.updatePlayerList = updatePlayerList;
+window.updateEmptyState = updateEmptyState;
+window.removePlayer = removePlayer;
+window.resetGame = resetGame;
+
+// Add a cleanup function to handle all Firebase listeners
+function cleanupFirebaseListeners() {
+    if (PokerApp.state.sessionId && window.database) {
+        try {
+            // Clean up all listeners
+            window.database.ref(`games/${PokerApp.state.sessionId}`).off();
+            window.database.ref(`games/${PokerApp.state.sessionId}/state`).off();
+            window.database.ref(`games/${PokerApp.state.sessionId}/state/players`).off();
+            window.database.ref(`games/${PokerApp.state.sessionId}/state/theme`).off();
+            window.database.ref(`games/${PokerApp.state.sessionId}/active`).off();
+            
+            console.log('[FIREBASE] Successfully cleaned up all listeners');
+        } catch (error) {
+            console.error('[FIREBASE] Error cleaning up listeners:', error);
+        }
+    }
+}
+
+// Update the endGame function to properly cleanup
 function endGame() {
+    if (!PokerApp.state.gameInProgress) {
+        PokerApp.UI.showToast('No active game to end', 'error');
+        return;
+    }
+    
     PokerApp.state.gameInProgress = false;
     updateEmptyState();
     
     // Update UI elements
-    const startGameBtn = document.getElementById('start-game');
-    const simulateHandBtn = document.getElementById('simulate-hand');
-    const endGameBtn = document.getElementById('end-game');
+    document.getElementById('start-game').disabled = false;
+    document.getElementById('simulate-hand').disabled = true;
+    document.getElementById('end-game').disabled = true;
     
-    if (startGameBtn) startGameBtn.disabled = false;
-    if (simulateHandBtn) simulateHandBtn.disabled = true;
-    if (endGameBtn) endGameBtn.disabled = true;
-    
-    const gameStatusText = document.getElementById('game-status');
-    if (gameStatusText) {
-        gameStatusText.textContent = 'Game ended';
-        gameStatusText.classList.remove('active');
-    }
+    // Update game status
+    PokerApp.UI.updateGameStatus('Game ended', false);
     
     // Clean up Firebase
-    if (PokerApp.state.sessionId) {
+    if (PokerApp.state.sessionId && appDatabase) {
         try {
             // Update game status to ended
-            firebase.database().ref(`games/${PokerApp.state.sessionId}`).update({
+            const updates = {
+                active: false,
                 status: 'ended',
-                active: false
-            });
+                endedAt: Date.now(),
+                'state/gameInProgress': false
+            };
             
-            // Remove all listeners
-            firebase.database().ref(`games/${PokerApp.state.sessionId}`).off();
-            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).off();
-            firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastUpdate`).off();
+            appDatabase.ref(`games/${PokerApp.state.sessionId}`).update(updates)
+                .then(() => {
+                    console.log('[FIREBASE] Game ended successfully');
+                    // Clean up listeners after successful update
+                    cleanupFirebaseListeners();
+                })
+                .catch(error => {
+                    console.error('[FIREBASE] Error ending game:', error);
+                });
             
             // Reset session info
             PokerApp.state.sessionId = null;
             PokerApp.state.gameName = null;
             PokerApp.state.lobbyActive = false;
-            
-            // Update lobby UI
-            updateLobbyUI(false);
         } catch (error) {
-            console.error('Error ending game in Firebase:', error);
+            console.error('[FIREBASE] Error cleaning up Firebase in endGame:', error);
         }
     }
+    
+    // Update lobby UI
+    PokerApp.UI.updateLobbyUI(false);
     
     // Save state
     saveState();
 }
 
-// Helper function to handle lastPlayer updates
-function handleLastPlayerUpdate(lastPlayer) {
-    if (!lastPlayer) {
-        console.log(`[FIREBASE] No lastPlayer data to process`);
+// Update the resetGame function to properly cleanup
+function resetGame() {
+    if (window.confirm('Are you sure you want to reset the game? This will clear all players and game data.')) {
+        // Clean up Firebase first
+        if (PokerApp.state.sessionId && appDatabase) {
+            try {
+                const updates = {
+                    active: false,
+                    status: 'ended',
+                    endedAt: Date.now()
+                };
+                
+                appDatabase.ref(`games/${PokerApp.state.sessionId}`).update(updates)
+                    .then(() => {
+                        console.log('[FIREBASE] Game reset successfully');
+                        cleanupFirebaseListeners();
+                    })
+                    .catch(error => {
+                        console.error('[FIREBASE] Error resetting game:', error);
+                    });
+            } catch (error) {
+                console.error('[FIREBASE] Error cleaning up Firebase in resetGame:', error);
+            }
+        }
+        
+        // Reset state and UI
+        resetGameState();
+        
+        // Show confirmation
+        PokerApp.UI.showToast('Game has been reset', 'success');
+    }
+}
+
+// Add calculatePayouts function
+function calculatePayouts() {
+    if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
+        PokerApp.UI.showToast('No players to calculate payouts for', 'error');
         return;
     }
+
+    const players = PokerApp.state.players;
+    const payouts = [];
+    let totalDifference = 0;
+
+    // Calculate differences from initial chips
+    players.forEach(player => {
+        const difference = player.current_chips - player.initial_chips;
+        totalDifference += difference;
+        payouts.push({
+            name: player.name,
+            difference: difference,
+            amount: Math.abs(difference * PokerApp.state.chipRatio)
+        });
+    });
+
+    // Verify the total difference sums to zero (or close to it due to rounding)
+    if (Math.abs(totalDifference) > 0.01) {
+        PokerApp.UI.showToast('Error: Chip counts don\'t balance. Please check the numbers.', 'error');
+        return;
+    }
+
+    // Sort payouts by difference (winners to losers)
+    payouts.sort((a, b) => b.difference - a.difference);
+
+    // Display results
+    const payoutResults = document.getElementById('payout-results');
+    if (!payoutResults) return;
+
+    let html = '<div class="payout-list">';
+    payouts.forEach(payout => {
+        const amountText = payout.difference > 0 
+            ? `Receives $${payout.amount.toFixed(2)}` 
+            : payout.difference < 0 
+                ? `Pays $${payout.amount.toFixed(2)}`
+                : 'Break even';
+
+        html += `
+            <div class="payout-item ${payout.difference > 0 ? 'winner' : payout.difference < 0 ? 'loser' : 'neutral'}">
+                <span class="player-name">${payout.name}</span>
+                <span class="amount">${amountText}</span>
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    payoutResults.innerHTML = html;
+    payoutResults.style.display = 'block';
+}
+
+// Add removePlayer function
+function removePlayer(playerId) {
+    if (!PokerApp.state.players) return;
     
-    console.log(`[FIREBASE] Processing lastPlayer:`, lastPlayer);
+    const index = PokerApp.state.players.findIndex(p => p.id === playerId);
+    if (index === -1) return;
     
-    // Check if this player already exists in our state
-    const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
-        (p.id && p.id === parseInt(lastPlayer.id)) || 
-        (p.name && lastPlayer.name && 
-            p.name.toLowerCase() === lastPlayer.name.toLowerCase())
-    );
+    PokerApp.state.players.splice(index, 1);
+    updatePlayerList();
+    updateEmptyState();
+    saveState();
     
-    if (existingPlayerIndex === -1) {
-        // New player - add them
-        const playerData = {
-            id: parseInt(lastPlayer.id),
-            name: lastPlayer.name,
-            initial_chips: parseInt(lastPlayer.initial_chips),
-            current_chips: parseInt(lastPlayer.current_chips)
-        };
-        
-        console.log(`[FIREBASE] Adding new player to state:`, playerData);
-        PokerApp.state.players.push(playerData);
-        
-        // Update UI
-        updatePlayerList();
-        updateEmptyState();
-        
-        // Update hand animation if it exists
-        if (window.handAnimation) {
-            window.handAnimation.setPlayers(PokerApp.state.players);
-        }
-        
-        // Show toast notification
-        showToast(`New player joined: ${lastPlayer.name}`, 'success');
-        
-        // Save state to localStorage
-        saveState();
-        
-        return true;
-    } else {
-        console.log(`[FIREBASE] Player already exists in state, skipping:`, lastPlayer.name);
-        return false;
+    if (PokerApp.state.sessionId) {
+        updatePlayersInFirebase();
     }
 }
 
-// Set up notification listener for real-time player joins
-function setupNotificationListener(gameId) {
-    // Instead of using playerNotifications, we'll listen for changes to lastPlayer
-    const lastPlayerRef = firebase.database().ref(`games/${gameId}/state/lastPlayer`);
-    
-    // Remove any existing listeners
-    lastPlayerRef.off('value');
-    
-    console.log(`[FIREBASE] Setting up lastPlayer listener for game: ${gameId}`);
-    
-    // First, get the current lastPlayer value to handle any player that joined before we set up the listener
-    lastPlayerRef.once('value')
-        .then(snapshot => {
-            const currentLastPlayer = snapshot.val();
-            if (currentLastPlayer) {
-                console.log('[FIREBASE] Found existing lastPlayer, processing...');
-                handleLastPlayerUpdate(currentLastPlayer);
+// Add setupGameStateListener function
+function setupGameStateListener(gameId) {
+    if (!gameId) return;
+
+    try {
+        // Clean up any existing listeners first
+        cleanupFirebaseListeners();
+        
+        // Get database reference
+        const database = window.database;
+        if (!database) {
+            throw new Error('Firebase database is not available');
+        }
+        
+        console.log('[FIREBASE] Setting up new state listener for game:', gameId);
+        
+        // Listen for game state changes
+        const stateRef = database.ref(`games/${gameId}/state`);
+        stateRef.on('value', snapshot => {
+            if (!snapshot.exists()) {
+                console.warn('[FIREBASE] Game state not found for:', gameId);
+                PokerApp.state.lobbyActive = false;
+                PokerApp.UI.updateLobbyUI(false);
+                return;
+            }
+
+            const gameState = snapshot.val();
+            console.log('[FIREBASE] Received game state update:', gameState);
+
+            // Ensure players array is clean and properly formatted
+            let players = [];
+            if (gameState.players) {
+                // Convert to array if it's an object
+                if (!Array.isArray(gameState.players)) {
+                    players = Object.values(gameState.players);
+                } else {
+                    players = [...gameState.players];
+                }
+                // Filter out null/undefined entries and ensure required fields
+                players = players.filter(p => p && p.id && p.name && p.initial_chips && p.current_chips);
+                // Sort by join time if available
+                players.sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+            }
+            console.log('[FIREBASE] Processed players:', players);
+
+            // Update local state with Firebase state
+            PokerApp.state = {
+                ...PokerApp.state,
+                players: players,
+                gameInProgress: gameState.gameInProgress || false,
+                dealerId: gameState.dealerId || null,
+                nextPlayerId: gameState.nextPlayerId || Math.max(...players.map(p => p.id), 0) + 1,
+                chipRatio: gameState.chipRatio || 1.0,
+                theme: gameState.theme || PokerApp.state.theme,
+                lobbyActive: true,  // If we have game state, lobby is active
+                sessionId: gameId,  // Ensure we maintain the session ID
+                gameName: PokerApp.state.gameName  // Maintain the game name
+            };
+
+            // Update UI
+            updateUIFromState();
+            updatePlayerList(); // Explicitly update player list
+            PokerApp.UI.updateLobbyUI(true);
+            
+            console.log('[FIREBASE] State updated successfully:', PokerApp.state);
+        }, error => {
+            console.error('[FIREBASE] Error listening to game state:', error);
+            PokerApp.UI.showToast('Error syncing with game state', 'error');
+        });
+
+        // Listen for game active status
+        const activeRef = database.ref(`games/${gameId}/active`);
+        activeRef.on('value', snapshot => {
+            const isActive = snapshot.val();
+            console.log('[FIREBASE] Game active status:', isActive);
+            
+            if (!isActive) {
+                // Game was deactivated
+                PokerApp.state.lobbyActive = false;
+                PokerApp.UI.updateLobbyUI(false);
+                PokerApp.UI.showToast('Game session ended', 'info');
+                
+                // Clean up listeners
+                cleanupFirebaseListeners();
+            } else {
+                PokerApp.state.lobbyActive = true;
+                PokerApp.UI.updateLobbyUI(true);
+            }
+        });
+
+        // Listen specifically for player changes
+        const playersRef = database.ref(`games/${gameId}/state/players`);
+        playersRef.on('value', snapshot => {
+            if (!snapshot.exists()) return;
+            
+            let players = [];
+            const playersData = snapshot.val();
+            
+            if (Array.isArray(playersData)) {
+                players = [...playersData];
+            } else if (typeof playersData === 'object') {
+                players = Object.values(playersData);
             }
             
-            // Now set up the listener for future changes
-            setupLastPlayerListener(lastPlayerRef);
-        })
-        .catch(error => {
-            console.error('[FIREBASE] Error getting current lastPlayer:', error);
-            // Still try to set up the listener for future changes
-            setupLastPlayerListener(lastPlayerRef);
-        });
-}
-
-// Helper function to set up the lastPlayer listener
-function setupLastPlayerListener(lastPlayerRef) {
-    // Set up a listener for lastPlayer changes
-    lastPlayerRef.on('value', 
-        (snapshot) => {
-            const lastPlayer = snapshot.val();
-            console.log(`[FIREBASE] Received lastPlayer update:`, lastPlayer);
+            // Filter and sort players
+            players = players
+                .filter(p => p && p.id && p.name && p.initial_chips && p.current_chips)
+                .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
             
-            // Use the common handler function
-            handleLastPlayerUpdate(lastPlayer);
-        },
-        (error) => {
-            console.error('[FIREBASE] Error in lastPlayer listener:', error);
-        }
-    );
-    
-    console.log(`[FIREBASE] lastPlayer listener set up`);
+            console.log('[FIREBASE] Players updated:', players);
+            
+            // Update state and UI
+            PokerApp.state.players = players;
+            PokerApp.state.nextPlayerId = Math.max(...players.map(p => p.id), 0) + 1;
+            
+            updatePlayerList();
+        });
+
+    } catch (error) {
+        console.error('[FIREBASE] Error setting up game state listener:', error);
+        PokerApp.UI.showToast('Error connecting to game session', 'error');
+    }
 }
 
-// Update the applyTheme function to ensure all themes have proper color-matched gradients
-function applyTheme(themeName) {
-    // Get theme from themes object
+function updateThemeElements(themeName) {
     const theme = themes[themeName];
     if (!theme) return;
     
-    // Apply all theme properties to CSS variables
-    Object.keys(theme).forEach(prop => {
-        if (prop !== 'icon' && prop !== 'tableImage') {
-            document.documentElement.style.setProperty(prop, theme[prop]);
-        }
+    // Update any theme-specific elements here
+    const root = document.documentElement;
+    Object.entries(theme).forEach(([property, value]) => {
+        root.style.setProperty(property, value);
     });
-    
-    // Update gradient for card hover effects
-    document.documentElement.style.setProperty('--accent-gradient', theme['--accent-gradient'] || 
-        `linear-gradient(45deg, ${theme['--main-color']}, ${theme['--secondary-color']})`);
-    
-    // Add vibrant gradient if not set
-    if (!theme['--vibrant-gradient']) {
-        document.documentElement.style.setProperty('--vibrant-gradient', 
-            `linear-gradient(135deg, ${theme['--main-color']}, ${theme['--secondary-color']})`);
-    }
-    
-    // Update data-theme attribute for CSS selectors
-    document.documentElement.setAttribute('data-theme', themeName);
-    
-    // Save theme preference
-    localStorage.setItem('selected-theme', themeName);
-    
-    // Update theme-specific elements
-    updateThemeElements(themeName);
-    
-    // If we're in a game, update the theme in Firebase
-    if (gameState.sessionId) {
-        console.log(`[THEME] Saving theme ${themeName} to Firebase for game ${gameState.sessionId}`);
-        database.ref(`games/${gameState.sessionId}/state/theme`).set(themeName);
-    }
-    
-    console.log(`Theme updated to ${themeName}`);
 }
-
-// Function to update theme-specific elements
-function updateThemeElements(themeName) {
-    // Update theme icons visibility
-    const themeIcons = document.querySelectorAll('.theme-icon');
-    themeIcons.forEach(icon => {
-        icon.style.display = 'none';
-    });
-    
-    if (themeName === 'doginme') {
-        const doginmeIcon = document.querySelector('.doginme-icon');
-        if (doginmeIcon) doginmeIcon.style.display = 'block';
-    } else if (themeName === 'rizzler') {
-        const rizzlerIcon = document.querySelector('.rizzler-icon');
-        if (rizzlerIcon) rizzlerIcon.style.display = 'block';
-    }
-    
-    // Update any other theme-specific elements here
-}
-
-// Update the add player form validation to prevent redundant toast notifications
-document.getElementById('add-player-form')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const playerName = document.getElementById('player-name').value.trim();
-    const initialChips = parseInt(document.getElementById('initial-chips').value);
-    
-    // Remove this validation since the HTML 'required' attribute will handle it
-    // and it's causing unnecessary error messages
-    /*
-    if (!playerName) {
-        showToast('Please enter a player name', 'error');
-        return;
-    }
-    */
-    
-    if (isNaN(initialChips) || initialChips <= 0) {
-        showToast('Please enter a valid chip amount', 'error');
-        return;
-    }
-    
-    // Add the player directly using our addPlayer function
-    addPlayer(playerName, initialChips);
-    
-    // Reset the form
-    this.reset();
-    document.getElementById('player-name').focus();
-});

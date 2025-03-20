@@ -1,11 +1,6 @@
 class HandAnimation {
     constructor(container) {
-        if (!container || !(container instanceof HTMLElement)) {
-            console.error('Invalid container element provided to HandAnimation');
-            return;
-        }
-        
-        // Initialize properties
+        // Initialize properties first
         this.container = null;
         this.players = [];
         this.currentTheme = null;
@@ -20,8 +15,12 @@ class HandAnimation {
         // Bind methods to preserve context
         this.bindMethods();
         
-        // Initialize with the provided container
-        this.initialize(container);
+        // Only initialize if container is valid
+        if (container && container instanceof HTMLElement) {
+            this.initialize(container);
+        } else {
+            console.log('[ANIMATION] No valid container provided, HandAnimation will be inactive');
+        }
     }
 
     initialize(container) {
@@ -242,8 +241,14 @@ class HandAnimation {
             return;
         }
         
-        if (!this.players || this.players.length < 2) {
-            showToast('Need at least 2 players to start', 'error');
+        if (this.players.length < 2) {
+            console.error('Need at least 2 players for animation');
+            // Use the proper namespace for showToast
+            if (window.PokerApp && window.PokerApp.UI && window.PokerApp.UI.showToast) {
+                window.PokerApp.UI.showToast('Need at least 2 players to start', 'error');
+            } else {
+                console.error('showToast function not available');
+            }
             return;
         }
         
@@ -319,8 +324,13 @@ class HandAnimation {
             }
             
         } catch (error) {
-            console.error('Error during animation:', error);
-            showToast('Error during animation', 'error');
+            console.error('Animation error:', error);
+            // Use the proper namespace for showToast
+            if (window.PokerApp && window.PokerApp.UI && window.PokerApp.UI.showToast) {
+                window.PokerApp.UI.showToast('Error during animation', 'error');
+            } else {
+                console.error('showToast function not available');
+            }
         } finally {
         this.isAnimating = false;
         }

@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Poker Home Game Manager</title>
-    <meta name="description" content="A modern poker home game manager to track chips, select dealers, and calculate payouts">
+    <title>Kapoker</title>
+    <meta name="description" content="A modern poker game manager to track chips, select dealers, and calculate payouts">
     <meta name="theme-color" content="#2E8B57">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Poker Game">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%232E8B57' d='M256 512c141.4 0 256-114.6 256-256S397.4 0 256 0 0 114.6 0 256s114.6 256 256 256z'/><path fill='white' d='M135.6 240.8l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8zm96 0l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8zm96 0l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8z'/></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -389,61 +390,108 @@
         [data-theme="rizzler"] .rizzler-icon {
             display: block;
         }
+
+        /* Modern Header Styles */
+        header {
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            padding: 1rem;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            letter-spacing: -0.01em;
+        }
+
+        .title-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            object-fit: contain;
+        }
+
+        #theme-selector {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 2rem 0.5rem 1rem;
+            border-radius: 8px;
+            color: white !important;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            min-width: 120px;
+            transition: all 0.2s ease;
+        }
+
+        #theme-selector:hover {
+            background: rgba(0, 0, 0, 0.4) !important;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        #theme-selector:focus {
+            outline: none;
+            border-color: var(--main-color);
+        }
+
+        #theme-selector option {
+            background: #1a1a1a !important;
+            color: white !important;
+            padding: 8px;
+        }
     </style>
 </head>
 <body>
-    <header>
-        <div class="header-title">
-            <img src="images/doginme-icon.png" alt="Theme Icon" class="title-icon left-icon theme-icon doginme-icon">
-            <span>Poker Home Game Manager</span>
-            <img src="images/rizzler-icon.png" alt="Theme Icon" class="title-icon right-icon theme-icon rizzler-icon">
-        </div>
+    <header class="app-header">
+        <h1 class="header-title">
+            <span class="title-icon">��</span>
+            Kapoker
+        </h1>
         <div class="header-controls">
-            <select id="theme-selector" aria-label="Theme">
-                <option value="classic-green">Classic Green Theme</option>
-                <option value="royal-blue">Royal Blue Theme</option>
-                <option value="crimson-red">Crimson Red Theme</option>
-                <option value="midnight-black">Midnight Black Theme</option>
-                <option value="ocean-breeze">Ocean Breeze Theme</option>
-                <option value="firestorm">Firestorm Theme</option>
-                <option value="purple-haze">Purple Haze Theme</option>
-                <option value="neon-nights">Neon Nights Theme</option>
-                <option value="rizzler">Rizzler Theme</option>
-                <option value="doginme">Dog in Me Theme</option>
+            <select id="theme-selector" class="theme-selector">
+                <option value="Classic">Classic Theme</option>
+                <option value="Royal">Royal Theme</option>
+                <option value="Crimson">Crimson Theme</option>
+                <option value="Midnight">Midnight Theme</option>
+                <option value="Ocean">Ocean Theme</option>
+                <option value="Fire">Fire Theme</option>
+                <option value="Purple">Purple Theme</option>
+                <option value="Neon">Neon Theme</option>
+                <option value="Rizzler">Rizzler Theme</option>
+                <option value="Doginme">Doginme Theme</option>
             </select>
         </div>
     </header>
-    <main>
-        <section id="players" class="poker-card">
-            <h2>Players</h2>
-            <div class="table-container">
-                <table id="player-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Initial Chips</th>
-                            <th>Current Chips</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <div class="empty-state" id="no-players-message">
-                <p>No players added yet. Add players to start your game.</p>
-            </div>
-        </section>
-        
+
+    <main class="app-content">
         <section id="game-lobby" class="poker-card">
-            <h2>Game Lobby</h2>
-            <div class="game-status-badge inactive">
-                <span></span>
-                <div id="lobby-status">No active game</div>
+            <div class="card-header">
+                <h2>Game Lobby</h2>
+                <div class="game-status-badge inactive">
+                    <span></span>
+                    <div id="lobby-status">No active game</div>
+                </div>
             </div>
-            <div class="lobby-setup">
-                <form id="lobby-form" class="setup-form">
+            
+            <div class="lobby-content">
+                <form id="create-lobby-form" class="setup-form">
                     <div class="form-group">
-                        <label for="game-name">Game Name:</label>
+                        <label for="game-name">Game Name</label>
                         <input 
                             type="text" 
                             id="game-name" 
@@ -452,330 +500,273 @@
                             required
                         >
                     </div>
-                    <button type="submit" class="poker-button create-lobby-btn">Create Game Lobby</button>
+                    <button type="submit" class="poker-button create-lobby-btn">
+                        Create Game Lobby
+                    </button>
                 </form>
-            </div>
-            <div id="qr-code-container" class="qr-code-section">
-                <h3>Join Game QR Code</h3>
-                <div class="qr-wrapper"></div>
-                <p>Players can scan this QR code to join the game</p>
-                <button id="refresh-firebase" class="poker-button" style="margin-top: 1rem; background: linear-gradient(135deg, #ff9966, #ff5e62);">
-                    <span class="button-icon">🔄</span> Refresh Player Data
-                </button>
+                
+                <div id="qr-code-container" class="qr-code-section" style="display: none;">
+                    <h3>Join the Game</h3>
+                    <div class="qr-wrapper" style="background-color: white; padding: 15px; border-radius: 8px; display: inline-block;"></div>
+                    <div class="join-url" style="margin-top: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; cursor: pointer;">
+                        <span id="join-url-text" style="word-break: break-all;"></span>
+                        <div class="click-to-copy" style="font-size: 0.8rem; opacity: 0.8; margin-top: 5px;">Click to copy</div>
+                    </div>
+                </div>
             </div>
         </section>
 
         <section id="add-player" class="poker-card">
-            <h2>Manual Player Entry</h2>
-            <p class="manual-entry-note">Note: Players can join automatically by scanning the QR code during the game. Use this form only if manual entry is needed.</p>
-            <form id="player-form" class="setup-form">
-                <div class="form-group">
-                    <label for="player-name">Player Name:</label>
-                    <input 
-                        type="text" 
-                        id="player-name" 
-                        name="player-name" 
-                        autocomplete="name"
-                        placeholder="Enter player name"
-                        required
-                    >
+            <div class="card-header">
+                <h2>Add Player</h2>
+            </div>
+
+            <div class="card-content">
+                <div class="info-message">
+                    <span class="info-icon">ℹ️</span>
+                    <p>Players can join automatically by scanning the QR code during the game. Use this form only if manual entry is needed.</p>
                 </div>
-                <div class="form-group">
-                    <label for="initial-chips">Initial Chips:</label>
-                    <input 
-                        type="number" 
-                        id="initial-chips" 
-                        name="initial-chips"
-                        autocomplete="off"
-                        placeholder="Enter chip amount"
-                        min="0"
-                        step="1"
-                        required
-                    >
+
+                <form id="player-form" class="setup-form">
+                    <div class="form-group">
+                        <label for="player-name">Player Name</label>
+                        <input 
+                            type="text" 
+                            id="player-name" 
+                            name="player-name" 
+                            placeholder="Enter player name"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="initial-chips">Initial Chips</label>
+                        <input 
+                            type="number" 
+                            id="initial-chips" 
+                            name="initial-chips"
+                            placeholder="Enter chip amount"
+                            min="0"
+                            step="1"
+                            required
+                        >
+                    </div>
+                    <button type="submit" class="poker-button">Add Player</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="players" class="poker-card">
+            <div class="card-header">
+                <h2>Players</h2>
+                <div class="card-actions">
+                    <button id="add-player-btn" class="poker-button">
+                        <span class="button-icon">+</span> Add Player
+                    </button>
                 </div>
-                <button type="submit" class="poker-button">Add Player</button>
-            </form>
+            </div>
+
+            <div class="table-container">
+                <table id="player-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Starting</th>
+                            <th>Current</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="empty-state" id="no-players-message">
+                <div class="empty-state-icon">👥</div>
+                <p>No players added yet</p>
+                <span>Add players to start your game</span>
+            </div>
         </section>
         
         <section id="game-controls" class="poker-card">
-            <h2>Game Controls</h2>
-            <div class="game-status-badge inactive">
-                <span></span>
-                <div id="game-status">Game not started</div>
+            <div class="card-header">
+                <h2>Game Controls</h2>
             </div>
-            <div class="game-control-buttons">
-                <button id="start-game-btn" class="action-button start-button poker-button">
-                    <span>Start Game</span>
-                </button>
-                <button id="simulate-hand" class="action-button simulate-button poker-button" disabled>
-                    <span>🎲</span> Simulate Hand
-                </button>
-                <button id="end-game-btn" class="action-button end-button poker-button" disabled>
-                    <span>⏹</span> End Game
-                </button>
-                <button id="reset-btn" class="action-button reset-button poker-button">
-                    <span>↺</span> Reset Game
-                </button>
+
+            <div class="card-content">
+                <div class="game-control-buttons">
+                    <button id="reset-btn" class="poker-button reset-button">
+                        <span class="button-icon">↺</span> Reset Game
+                    </button>
+                    <!-- Hidden buttons - kept for JS functionality -->
+                    <button id="start-game" class="poker-button start-button" style="display: none;">
+                        <span class="button-icon">▶️</span> Start Game
+                    </button>
+                    <button id="simulate-hand" class="poker-button simulate-button" style="display: none;" disabled>
+                        <span class="button-icon">🎲</span> Next Hand
+                    </button>
+                    <button id="end-game" class="poker-button end-button" style="display: none;" disabled>
+                        <span class="button-icon">⏹️</span> End Game
+                    </button>
+                </div>
             </div>
         </section>
         
-        <section id="payouts" class="poker-card">
-            <h2>Payout Instructions</h2>
-            <p id="payout-instructions">Update the current chip counts and click 'Calculate Payouts' to see the settlement.</p>
-            <button id="calculate-payouts" class="poker-button">Calculate Payouts</button>
-            <div id="payout-list" class="payout-results"></div>
-        </section>
-
         <section id="money-to-chip-ratio" class="poker-card">
-            <h2>Money to Chip Ratio</h2>
-            <div id="ratio-content">
-                <div id="ratio-form-container">
-                    <form id="ratio-form" class="setup-form">
-                        <div class="form-group">
-                            <label for="money-amount">Money Amount ($):</label>
-                            <input 
-                                type="number" 
-                                id="money-amount" 
-                                name="money-amount"
-                                autocomplete="off"
-                                placeholder="Enter money amount"
-                                min="0"
-                                step="0.01"
-                                required
-                            >
-                        </div>
-                        <div class="form-group">
-                            <label for="chip-amount">Chip Amount:</label>
-                            <input 
-                                type="number" 
-                                id="chip-amount" 
-                                name="chip-amount"
-                                autocomplete="off"
-                                placeholder="Enter chip amount"
-                                min="0"
-                                step="1"
-                                required
-                            >
-                        </div>
-                        <button type="submit" class="poker-button">Set Ratio</button>
-                    </form>
-                </div>
-                <div class="ratio-result">
+            <div class="card-header">
+                <h2>Money to Chip Ratio</h2>
+            </div>
+
+            <div class="card-content">
+                <form id="ratio-form" class="setup-form">
+                    <div class="form-group">
+                        <label for="money-amount">Money Amount ($)</label>
+                        <input 
+                            type="number" 
+                            id="money-amount" 
+                            name="money-amount"
+                            placeholder="Enter money amount"
+                            min="0"
+                            step="0.01"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="chip-amount">Chip Amount</label>
+                        <input 
+                            type="number" 
+                            id="chip-amount" 
+                            name="chip-amount"
+                            placeholder="Enter chip amount"
+                            min="0"
+                            step="1"
+                            required
+                        >
+                    </div>
+                    <button type="submit" class="poker-button">Set Ratio</button>
+                </form>
+                <div class="ratio-display">
                     <p id="ratio-display">Each chip is worth $1.00</p>
                 </div>
             </div>
         </section>
         
-        <section id="animation" class="poker-card">
-            <h2>Dealer Selection</h2>
-            <div id="dealer-wheel" class="poker-table"></div>
+        <section id="payout-calculator" class="poker-card">
+            <div class="card-header">
+                <h2>Payout Calculator</h2>
+            </div>
+            <div class="card-content">
+                <div class="payout-info">
+                    <p>Calculate optimal payouts based on final chip counts.</p>
+                </div>
+                <div class="payout-results" id="payout-results">
+                    <div class="no-payouts-message">
+                        <p>No payouts calculated yet</p>
+                        <span>Update final chip counts and click calculate</span>
+                    </div>
+                </div>
+                <button id="calculate-payouts" class="poker-button">
+                    <span class="button-icon">💰</span> Calculate Payouts
+                </button>
+            </div>
         </section>
     </main>
 
-    <!-- Core Dependencies -->
-    <script src="hand-animation.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Reset Animation Elements -->
+    <div class="reset-curtain">
+        <div class="particles"></div>
+        <div class="reset-splash"></div>
+        <div class="reset-text">Resetting Game...</div>
+    </div>
 
-    <!-- Firebase SDK -->
+    <div class="flying-cards-container">
+        <div class="reset-card"></div>
+        <div class="reset-card"></div>
+        <div class="reset-card"></div>
+        <div class="reset-card"></div>
+        <div class="reset-card"></div>
+        <div class="reset-card"></div>
+        <div class="reset-card"></div>
+        <div class="reset-card"></div>
+    </div>
+
+    <div class="shuffle-effect">
+        <div class="deck-card"></div>
+        <div class="deck-card"></div>
+        <div class="deck-card"></div>
+        <div class="deck-card"></div>
+    </div>
+
+    <div class="confetti-container"></div>
+
+    <!-- Audio Elements -->
+    <audio id="card-shuffle-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-poker-cards-falling-on-table-1992.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Firebase SDK - MUST BE LOADED FIRST -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 
-    <!-- Firebase Config -->
-    <script>
-        // Initialize Firebase with config
-        const firebaseConfig = {
-            apiKey: "AIzaSyBOrgiU5qkneWp8Flgbrx2eTPYLoTi7Uhc",
-            authDomain: "poker-home-game-699e7.firebaseapp.com",
-            databaseURL: "https://poker-home-game-699e7-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "poker-home-game-699e7",
-            storageBucket: "poker-home-game-699e7.firebasestorage.app",
-            messagingSenderId: "192105659517",
-            appId: "1:192105659517:web:cc9da7339c2098dd09c514",
-            measurementId: "G-6WT21VPL0S"
-        };
+    <!-- Firebase Configuration - MUST BE LOADED SECOND -->
+    <script src="firebase-config.js"></script>
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const analytics = firebase.analytics();
-        const database = firebase.database();
-    </script>
+    <!-- Core Dependencies -->
+    <script src="hand-animation.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <!-- Application Code -->
     <script src="game-core.js"></script>
     <script src="app.js"></script>
 
-    <!-- Initialization Script -->
+    <!-- Initialize -->
     <script>
-        // Initialize as soon as DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM Content Loaded, starting initialization...');
+            if (typeof initialize === 'function') {
+                initialize();
+            }
             
-            // Check if dependencies are loaded
-            function checkDependencies() {
-                const dependencies = {
-                    firebase: typeof firebase !== 'undefined',
-                    database: typeof firebase !== 'undefined' && typeof firebase.database === 'function',
-                    qrcode: typeof QRCode !== 'undefined',
-                    pokerApp: typeof window.PokerApp !== 'undefined'
-                };
-
-                console.log('Checking dependencies:', dependencies);
-                return Object.values(dependencies).every(dep => dep);
-            }
-
-            function initializeApp() {
-                if (!checkDependencies()) {
-                    console.warn('Dependencies not loaded yet, retrying in 100ms...');
-                    setTimeout(initializeApp, 100);
-                    return;
-                }
-
-                try {
-                    console.log('All dependencies loaded, initializing PokerApp...');
-                    window.PokerApp.initialize();
-                    
-                    // Test Firebase connection
-                    testFirebase();
-                } catch (error) {
-                    console.error('Error during initialization:', error);
-                    if (window.PokerApp?.UI?.showToast) {
-                        window.PokerApp.UI.showToast('Error initializing application. Please refresh the page.', 'error');
+            // Set up theme selector
+            const themeSelector = document.getElementById('theme-selector');
+            if (themeSelector) {
+                themeSelector.addEventListener('change', function(e) {
+                    if (typeof setTheme === 'function') {
+                        setTheme(e.target.value);
                     }
-                }
-            }
-
-            // Test database connection
-            function testFirebase() {
-                const testRef = database.ref('test');
-                testRef.set({
-                    timestamp: Date.now(),
-                    message: 'Test connection successful'
-                })
-                .then(() => {
-                    console.log('Firebase test write successful');
-                    window.PokerApp.UI.showToast('Firebase connection test successful!', 'success');
-                })
-                .catch((error) => {
-                    console.error('Firebase test error:', error);
-                    window.PokerApp.UI.showToast('Firebase test failed: ' + error.message, 'error');
                 });
             }
 
-            // Start initialization
-            initializeApp();
+            // Set up join URL copy functionality
+            const joinUrlContainer = document.querySelector('.join-url');
+            if (joinUrlContainer) {
+                joinUrlContainer.addEventListener('click', function() {
+                    const urlText = document.getElementById('join-url-text');
+                    const clickToCopy = document.querySelector('.click-to-copy');
+                    
+                    if (urlText && urlText.textContent) {
+                        navigator.clipboard.writeText(urlText.textContent)
+                            .then(() => {
+                                if (window.PokerApp && window.PokerApp.UI) {
+                                    window.PokerApp.UI.showToast('Join URL copied to clipboard', 'success');
+                                }
+                                if (clickToCopy) {
+                                    const originalText = clickToCopy.textContent;
+                                    clickToCopy.textContent = 'Copied!';
+                                    setTimeout(() => {
+                                        clickToCopy.textContent = originalText;
+                                    }, 2000);
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Failed to copy:', err);
+                                if (window.PokerApp && window.PokerApp.UI) {
+                                    window.PokerApp.UI.showToast('Failed to copy URL', 'error');
+                                }
+                            });
+                    }
+                });
+            }
         });
-    </script>
-
-    <script>
-        const themes = {
-            'classic-green': {
-                '--main-color': '#2E8B57',
-                '--main-color-rgb': '46, 139, 87',
-                '--secondary-color': '#3CB371',
-                '--secondary-color-rgb': '60, 179, 113',
-                '--accent-gradient': 'linear-gradient(45deg, #2E8B57, #3CB371)'
-            },
-            'royal-blue': {
-                '--main-color': '#4169E1',
-                '--main-color-rgb': '65, 105, 225',
-                '--secondary-color': '#1E90FF',
-                '--secondary-color-rgb': '30, 144, 255',
-                '--accent-gradient': 'linear-gradient(45deg, #4169E1, #1E90FF)'
-            },
-            'crimson-red': {
-                '--main-color': '#DC143C',
-                '--main-color-rgb': '220, 20, 60',
-                '--secondary-color': '#FF4500',
-                '--secondary-color-rgb': '255, 69, 0',
-                '--accent-gradient': 'linear-gradient(45deg, #DC143C, #FF4500)'
-            },
-            'midnight-black': {
-                '--main-color': '#2F4F4F',
-                '--main-color-rgb': '47, 79, 79',
-                '--secondary-color': '#696969',
-                '--secondary-color-rgb': '105, 105, 105',
-                '--accent-gradient': 'linear-gradient(45deg, #2F4F4F, #696969)'
-            },
-            'ocean-breeze': {
-                '--main-color': '#20B2AA',
-                '--main-color-rgb': '32, 178, 170',
-                '--secondary-color': '#5F9EA0',
-                '--secondary-color-rgb': '95, 158, 160',
-                '--accent-gradient': 'linear-gradient(45deg, #20B2AA, #5F9EA0)'
-            },
-            'firestorm': {
-                '--main-color': '#FF6347',
-                '--main-color-rgb': '255, 99, 71',
-                '--secondary-color': '#FF4500',
-                '--secondary-color-rgb': '255, 69, 0',
-                '--accent-gradient': 'linear-gradient(45deg, #FF6347, #FF4500)'
-            },
-            'purple-haze': {
-                '--main-color': '#9370DB',
-                '--main-color-rgb': '147, 112, 219',
-                '--secondary-color': '#8A2BE2',
-                '--secondary-color-rgb': '138, 43, 226',
-                '--accent-gradient': 'linear-gradient(45deg, #9370DB, #8A2BE2)'
-            },
-            'neon-nights': {
-                '--main-color': '#00FFFF',
-                '--main-color-rgb': '0, 255, 255',
-                '--secondary-color': '#00CED1',
-                '--secondary-color-rgb': '0, 206, 209',
-                '--accent-gradient': 'linear-gradient(45deg, #00FFFF, #00CED1)'
-            },
-            'rizzler': {
-                '--main-color': '#ff00ff',
-                '--main-color-rgb': '255, 0, 255',
-                '--secondary-color': '#bf00ff',
-                '--secondary-color-rgb': '191, 0, 255',
-                '--accent-gradient': 'linear-gradient(45deg, #ff00ff, #bf00ff)'
-            },
-            'doginme': {
-                '--main-color': '#1e90ff',
-                '--main-color-rgb': '30, 144, 255',
-                '--secondary-color': '#4169e1',
-                '--secondary-color-rgb': '65, 105, 225',
-                '--accent-gradient': 'linear-gradient(45deg, #1e90ff, #4169e1)'
-            }
-        };
-
-        function applyTheme(themeName) {
-            const theme = themes[themeName];
-            if (!theme) return;
-            
-            Object.keys(theme).forEach(prop => {
-                document.documentElement.style.setProperty(prop, theme[prop]);
-            });
-            
-            // Update data-theme attribute for CSS selectors
-            document.documentElement.setAttribute('data-theme', themeName);
-            
-            // Save theme preference
-            localStorage.setItem('selected-theme', themeName);
-            
-            // Handle theme-specific adjustments
-            updateThemeIcons(themeName);
-            
-            console.log(`Theme updated to ${themeName}`);
-        }
-        
-        function updateThemeIcons(themeName) {
-            // Show/hide theme-specific icons
-            const themeIcons = document.querySelectorAll('.theme-icon');
-            themeIcons.forEach(icon => {
-                icon.style.display = 'none';
-            });
-            
-            // Only show relevant icons
-            if (themeName === 'doginme') {
-                document.querySelector('.doginme-icon').style.display = 'block';
-            } else if (themeName === 'rizzler') {
-                document.querySelector('.rizzler-icon').style.display = 'block';
-            }
-        }
     </script>
 </body>
 </html>
