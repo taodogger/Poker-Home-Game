@@ -549,17 +549,17 @@ function setupEventListeners() {
     // Set up reset button
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) {
-        // First, remove any existing listeners
+        // Remove any existing listeners by cloning and replacing the button
         const oldBtn = resetBtn;
         const newBtn = oldBtn.cloneNode(true);
         oldBtn.parentNode.replaceChild(newBtn, oldBtn);
         
-        // Add the new listener
+        // Add a single new listener
         newBtn.addEventListener('click', function() {
             if (confirm('Are you sure you want to reset the game? This will clear all players and game data.')) {
                 resetGame();
             }
-        });
+        }, { once: true }); // Add once: true to ensure it only fires once
     }
 
     // Set up calculate payouts button
@@ -1768,89 +1768,87 @@ function endGame() {
 
 // Update the resetGame function to properly cleanup and show animation
 function resetGame() {
-    if (window.confirm('Are you sure you want to reset the game? This will clear all players and game data.')) {
-        // Show reset animation
-        const resetCurtain = document.querySelector('.reset-curtain');
-        const flyingCards = document.querySelector('.flying-cards-container');
-        const shuffleEffect = document.querySelector('.shuffle-effect');
+    // Show reset animation
+    const resetCurtain = document.querySelector('.reset-curtain');
+    const flyingCards = document.querySelector('.flying-cards-container');
+    const shuffleEffect = document.querySelector('.shuffle-effect');
+    
+    if (resetCurtain) {
+        resetCurtain.classList.add('active');
         
-        if (resetCurtain) {
-            resetCurtain.classList.add('active');
+        // Play card shuffle sound if available
+        const shuffleSound = document.getElementById('card-shuffle-sound');
+        if (shuffleSound) {
+            shuffleSound.currentTime = 0;
+            shuffleSound.play().catch(e => console.log('Audio play error:', e));
+        }
+        
+        // Animate flying cards
+        if (flyingCards) {
+            flyingCards.classList.add('active');
             
-            // Play card shuffle sound if available
-            const shuffleSound = document.getElementById('card-shuffle-sound');
-            if (shuffleSound) {
-                shuffleSound.currentTime = 0;
-                shuffleSound.play().catch(e => console.log('Audio play error:', e));
-            }
-            
-            // Animate flying cards
-            if (flyingCards) {
-                flyingCards.classList.add('active');
+            // Add random animation to each card
+            document.querySelectorAll('.reset-card').forEach(card => {
+                const randomX = Math.random() * 100 - 50;
+                const randomY = Math.random() * 100 - 50;
+                const randomRotate = Math.random() * 360;
                 
-                // Add random animation to each card
-                document.querySelectorAll('.reset-card').forEach(card => {
-                    const randomX = Math.random() * 100 - 50;
-                    const randomY = Math.random() * 100 - 50;
-                    const randomRotate = Math.random() * 360;
-                    
-                    card.style.transform = `translate(${randomX}vw, ${randomY}vh) rotate(${randomRotate}deg)`;
-                    card.style.animationDelay = `${Math.random() * 0.5}s`;
-                    card.classList.add('active');
-                });
-            }
-            
-            // Animate shuffle effect
-            if (shuffleEffect) {
-                shuffleEffect.classList.add('active');
+                card.style.transform = `translate(${randomX}vw, ${randomY}vh) rotate(${randomRotate}deg)`;
+                card.style.animationDelay = `${Math.random() * 0.5}s`;
+                card.classList.add('active');
+            });
+        }
+        
+        // Animate shuffle effect
+        if (shuffleEffect) {
+            shuffleEffect.classList.add('active');
+        }
+    }
+    
+    // Wait for animation to complete before resetting game state
+    setTimeout(() => {
+        // Clean up Firebase first
+        if (PokerApp.state.sessionId && appDatabase) {
+            try {
+                const updates = {
+                    active: false,
+                    status: 'ended',
+                    endedAt: Date.now()
+                };
+                
+                appDatabase.ref(`games/${PokerApp.state.sessionId}`).update(updates)
+                    .then(() => {
+                        console.log('[FIREBASE] Game reset successfully');
+                        cleanupFirebaseListeners();
+                    })
+                    .catch(error => {
+                        console.error('[FIREBASE] Error resetting game:', error);
+                    });
+            } catch (error) {
+                console.error('[FIREBASE] Error cleaning up Firebase in resetGame:', error);
             }
         }
         
-        // Wait for animation to complete before resetting game state
+        // Reset state and UI
+        resetGameState();
+        
+        // Show confirmation
+        PokerApp.UI.showToast('Game has been reset', 'success');
+        
+        // Hide animation elements after delay
         setTimeout(() => {
-            // Clean up Firebase first
-            if (PokerApp.state.sessionId && appDatabase) {
-                try {
-                    const updates = {
-                        active: false,
-                        status: 'ended',
-                        endedAt: Date.now()
-                    };
-                    
-                    appDatabase.ref(`games/${PokerApp.state.sessionId}`).update(updates)
-                        .then(() => {
-                            console.log('[FIREBASE] Game reset successfully');
-                            cleanupFirebaseListeners();
-                        })
-                        .catch(error => {
-                            console.error('[FIREBASE] Error resetting game:', error);
-                        });
-                } catch (error) {
-                    console.error('[FIREBASE] Error cleaning up Firebase in resetGame:', error);
-                }
+            if (resetCurtain) resetCurtain.classList.remove('active');
+            if (flyingCards) {
+                flyingCards.classList.remove('active');
+                document.querySelectorAll('.reset-card').forEach(card => {
+                    card.classList.remove('active');
+                    card.style.transform = '';
+                });
             }
-            
-            // Reset state and UI
-            resetGameState();
-            
-            // Show confirmation
-            PokerApp.UI.showToast('Game has been reset', 'success');
-            
-            // Hide animation elements after delay
-            setTimeout(() => {
-                if (resetCurtain) resetCurtain.classList.remove('active');
-                if (flyingCards) {
-                    flyingCards.classList.remove('active');
-                    document.querySelectorAll('.reset-card').forEach(card => {
-                        card.classList.remove('active');
-                        card.style.transform = '';
-                    });
-                }
-                if (shuffleEffect) shuffleEffect.classList.remove('active');
-            }, 500);
-            
-        }, 1500); // Animation time before reset completes
-    }
+            if (shuffleEffect) shuffleEffect.classList.remove('active');
+        }, 500);
+        
+    }, 1500); // Animation time before reset completes
 }
 
 // Add calculatePayouts function
