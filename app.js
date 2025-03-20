@@ -1956,30 +1956,23 @@ function calculatePayouts() {
     // Sort players by performance (winners first, then losers)
     const sortedPlayers = [...playerDiffs].sort((a, b) => b.difference - a.difference);
     
-    // Create a player card for each player
+    // Create a player card for each player - simplified display
     sortedPlayers.forEach(player => {
         const isWinner = player.difference > 0;
         const isLoser = player.difference < 0;
         const isNeutral = player.difference === 0;
         
         const statusClass = isWinner ? 'winner' : isLoser ? 'loser' : 'neutral';
-        const statusIcon = isWinner ? '🔼' : isLoser ? '🔽' : '➖';
-        const amountText = player.difference > 0 ? '+' : '';
+        const statusIcon = isWinner ? '💰' : isLoser ? '💸' : '🔄';
         const cashValue = (player.difference * PokerApp.state.chipRatio).toFixed(2);
+        const cashDisplay = isWinner ? `+$${cashValue}` : isLoser ? `-$${Math.abs(cashValue)}` : `$0.00`;
         
         html += `
             <div class="player-result-card ${statusClass}">
                 <div class="player-status-indicator">${statusIcon}</div>
                 <div class="player-card-content">
                     <div class="player-name">${player.name}</div>
-                    <div class="chip-change">
-                        <span class="chip-label">Chips:</span> 
-                        <span class="chips-start">${player.initial}</span>
-                        <span class="arrow">→</span>
-                        <span class="chips-end">${player.current}</span>
-                        <span class="chip-diff">(${amountText}${player.difference})</span>
-                    </div>
-                    <div class="cash-value ${statusClass}">$${Math.abs(cashValue)}</div>
+                    <div class="cash-value ${statusClass}">${cashDisplay}</div>
                 </div>
             </div>`;
     });
@@ -2123,42 +2116,14 @@ function calculatePayouts() {
             
             .player-name {
                 font-weight: 600;
-                font-size: 1.1rem;
-                margin-bottom: 4px;
+                font-size: 1.2rem;
+                margin-bottom: 8px;
                 color: white;
-            }
-            
-            .chip-change {
-                color: rgba(255, 255, 255, 0.75);
-                font-size: 0.9rem;
-                margin-bottom: 4px;
-                display: flex;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 4px;
-            }
-            
-            .chip-label {
-                opacity: 0.7;
-            }
-            
-            .chips-start, .chips-end {
-                font-family: monospace;
-            }
-            
-            .arrow {
-                opacity: 0.7;
-                margin: 0 2px;
-            }
-            
-            .chip-diff {
-                font-weight: 600;
-                margin-left: 4px;
             }
             
             .cash-value {
                 font-weight: 700;
-                font-size: 1.2rem;
+                font-size: 1.5rem;
                 color: #666;
             }
             
