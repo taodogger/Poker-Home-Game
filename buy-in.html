@@ -314,14 +314,46 @@
             }
         }
 
-        @media (max-width: 480px) {
+        /* iOS/Mobile-specific fixes */
+        @media screen and (max-width: 480px) {
             .container {
                 padding: 1.5rem;
                 border-radius: 8px;
+                width: 100%;
+                box-sizing: border-box;
+                max-width: 100%;
             }
 
             h1 {
                 font-size: 2rem;
+            }
+            
+            input, button {
+                -webkit-appearance: none; /* Remove iOS default styling */
+                border-radius: 8px;
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
+            
+            .poker-button {
+                width: 100%;
+                padding: 14px;
+            }
+        }
+        
+        /* iOS-specific fixes */
+        @supports (-webkit-touch-callout: none) {
+            /* Set proper body height for iOS */
+            body {
+                min-height: -webkit-fill-available;
+            }
+            
+            html {
+                height: -webkit-fill-available;
+            }
+            
+            /* Fix for input zoom on iOS */
+            input {
+                font-size: 16px;
             }
         }
     </style>

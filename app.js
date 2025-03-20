@@ -533,6 +533,9 @@ function initialize() {
         .then(() => console.log('[FIREBASE] Test write successful'))
         .catch(error => console.error('[FIREBASE] Test write failed:', error));
     }
+
+    // Set up mobile compatibility
+    setupMobileCompatibility();
 }
 
 // Make core functions available globally
@@ -1882,3 +1885,30 @@ function updatePlayerChips(playerId, newValue) {
 
 // Add to global scope
 window.updatePlayerChips = updatePlayerChips;
+
+// Add this function near the initialize function
+function setupMobileCompatibility() {
+    // Check if we're on iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    if (isIOS) {
+        // Add iOS-specific class to body
+        document.body.classList.add('ios-device');
+        
+        // Fix for iOS height issues with vh units
+        const appContent = document.querySelector('.app-content');
+        if (appContent) {
+            // Set initial height
+            function setAppContentHeight() {
+                const windowHeight = window.innerHeight;
+                const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+                appContent.style.height = `${windowHeight - headerHeight}px`;
+            }
+            
+            // Set height on load and resize
+            window.addEventListener('resize', setAppContentHeight);
+            window.addEventListener('orientationchange', setAppContentHeight);
+            setAppContentHeight();
+        }
+    }
+}
