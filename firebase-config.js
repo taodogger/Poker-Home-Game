@@ -20,54 +20,76 @@ if (typeof firebase !== 'undefined') {
         firebase.apps.forEach(app => app.delete());
     }
 
-    // Initialize Firebase
+    // Initialize Firebase with configuration
     try {
-        console.log('[FIREBASE] Initializing Firebase with configuration');
-        const app = firebase.initializeApp(firebaseConfig);
-        console.log('[FIREBASE] Firebase app initialized successfully');
-        
-        // Create database reference and make it globally available
+        if (!firebase.apps.length) {
+            console.log('[FIREBASE] Initializing Firebase with configuration');
+            firebase.initializeApp(firebaseConfig);
+            console.log('[FIREBASE] Firebase app initialized successfully');
+        }
+
+        // Get database reference
         window.database = firebase.database();
-        window.firebase = firebase; // Make firebase object also globally available
-        
         console.log('[FIREBASE] Database reference created');
-        console.log('[FIREBASE] Database URL:', firebaseConfig.databaseURL);
-        
-        // Test connection and log status changes
-        window.database.ref('.info/connected').on('value', (snapshot) => {
-            const connected = snapshot.val();
-            if (connected) {
+        console.log('[FIREBASE] Database URL:', window.database.ref().toString());
+
+        // Set up connection state monitoring
+        const connectedRef = window.database.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+            if (snap.val() === true) {
                 console.log('[FIREBASE] ✅ Connected to database!');
+                // Add connection timestamp for debugging
+                console.log('[FIREBASE] Connection established at:', new Date().toISOString());
+                
+                // Test write to verify connection is working
+                window.database.ref('.info/connectionTest').set({
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    client: navigator.userAgent
+                })
+                .then(() => {
+                    console.log('[FIREBASE] Test write successful');
+                })
+                .catch(err => {
+                    console.error('[FIREBASE] Test write failed:', err);
+                });
+                
+                // Dispatch connection event
+                window.dispatchEvent(new Event('firebase-connected'));
             } else {
                 console.log('[FIREBASE] ❌ Disconnected from database');
+                console.log('[FIREBASE] Disconnection at:', new Date().toISOString());
+                // Attempt reconnection
+                window.database.goOnline();
             }
         });
-        
-        // Set log level based on URL params
-        const urlParams = new URLSearchParams(window.location.search);
-        const debug = urlParams.get('debug');
-        if (debug === 'true' || debug === '1') {
-            firebase.database.enableLogging(true);
-            console.log('[FIREBASE] Verbose logging enabled');
-        }
-        
+
+        // Set up reconnection handling
+        window.database.ref('.info/connected').on('value', (snap) => {
+            if (!snap.val()) {
+                // Set up reconnection timeout
+                setTimeout(() => {
+                    if (!window.database.ref('.info/connected').key) {
+                        console.log('[FIREBASE] Attempting to reconnect...');
+                        window.database.goOnline();
+                    }
+                }, 2000);
+            }
+        });
+
+        // Dispatch ready event
+        window.dispatchEvent(new Event('firebase-ready'));
         console.log('[FIREBASE] Initialization complete');
+
     } catch (error) {
         console.error('[FIREBASE] Initialization error:', error);
-        // Show an error message on the page
-        document.addEventListener('DOMContentLoaded', () => {
-            const errorDiv = document.createElement('div');
-            errorDiv.style.position = 'fixed';
-            errorDiv.style.bottom = '10px';
-            errorDiv.style.left = '10px';
-            errorDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
-            errorDiv.style.color = 'white';
-            errorDiv.style.padding = '10px';
-            errorDiv.style.borderRadius = '5px';
-            errorDiv.style.zIndex = '9999';
-            errorDiv.textContent = 'Firebase Error: ' + error.message;
-            document.body.appendChild(errorDiv);
-        });
+        // Attempt recovery
+        try {
+            if (window.database) {
+                window.database.goOnline();
+            }
+        } catch (e) {
+            console.error('[FIREBASE] Recovery failed:', e);
+        }
     }
 } else {
     console.error('[FIREBASE] Firebase SDK not loaded yet. Initialization delayed.');

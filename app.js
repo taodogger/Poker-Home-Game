@@ -520,16 +520,109 @@ function initialize() {
 
     window.appInitialized = true;
     
+    // Create a connection status indicator
+    const header = document.querySelector('.app-header');
+    if (header) {
+        const connectionStatus = document.createElement('div');
+        connectionStatus.id = 'connection-status';
+        connectionStatus.style.display = 'inline-block';
+        connectionStatus.style.padding = '4px 8px';
+        connectionStatus.style.borderRadius = '4px';
+        connectionStatus.style.fontSize = '12px';
+        connectionStatus.style.marginRight = '10px';
+        connectionStatus.style.backgroundColor = '#555';
+        connectionStatus.style.color = 'white';
+        connectionStatus.textContent = 'Connecting...';
+        
+        // Insert before theme selector
+        const themeSelector = document.querySelector('#theme-selector');
+        if (themeSelector && themeSelector.parentNode) {
+            themeSelector.parentNode.insertBefore(connectionStatus, themeSelector);
+        } else {
+            header.appendChild(connectionStatus);
+        }
+    }
+    
+    // Listen for Firebase connection events
+    window.addEventListener('firebase-connected', () => {
+        console.log('[INIT] Firebase connection established');
+        
+        // Update connection status indicator
+        const connectionStatus = document.getElementById('connection-status');
+        if (connectionStatus) {
+            connectionStatus.textContent = 'Connected';
+            connectionStatus.style.backgroundColor = '#4caf50';
+        }
+        
+        PokerApp.UI.showToast('Connected to server', 'success');
+        
+        // If we have an active session, ensure our data is synced
+        if (PokerApp.state.sessionId) {
+            updatePlayersInFirebase();
+        }
+    });
+    
     // Check if Firebase is available and wait for it if necessary
     ensureFirebaseInitialized()
         .then(() => {
             // Continue with normal initialization
             initializeApp(true);
+            
+            // Set up automatic reconnection handling
+            window.database.ref('.info/connected').on('value', (snap) => {
+                if (!snap.val()) {
+                    console.log('[FIREBASE] Connection lost, waiting for reconnect...');
+                    
+                    // Update connection status indicator
+                    const connectionStatus = document.getElementById('connection-status');
+                    if (connectionStatus) {
+                        connectionStatus.textContent = 'Reconnecting...';
+                        connectionStatus.style.backgroundColor = '#ff9800';
+                    }
+                    
+                    PokerApp.UI.showToast('Connection lost. Reconnecting...', 'error');
+                }
+            });
+            
+            // Test write function to verify connection
+            window.testFirebaseConnection = function() {
+                if (window.database) {
+                    const testRef = window.database.ref('.info/connectionTest');
+                    testRef.set({
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        manual: true,
+                        userAgent: navigator.userAgent
+                    })
+                    .then(() => {
+                        console.log('[FIREBASE] Manual test write successful');
+                        PokerApp.UI.showToast('Database connection verified', 'success');
+                    })
+                    .catch(error => {
+                        console.error('[FIREBASE] Manual test write failed:', error);
+                        PokerApp.UI.showToast('Database connection failed', 'error');
+                    });
+                } else {
+                    console.error('[FIREBASE] Database not available for test');
+                    PokerApp.UI.showToast('Database not available', 'error');
+                }
+            };
+            
+            // Expose the test function globally
+            window.testConnection = window.testFirebaseConnection;
         })
         .catch(error => {
             console.error('[FIREBASE] Error initializing Firebase:', error);
+            
+            // Update connection status indicator
+            const connectionStatus = document.getElementById('connection-status');
+            if (connectionStatus) {
+                connectionStatus.textContent = 'Offline';
+                connectionStatus.style.backgroundColor = '#f44336';
+            }
+            
             // Initialize app anyway but without Firebase features
             initializeApp(false);
+            PokerApp.UI.showToast('Offline mode - some features unavailable', 'error');
         });
 }
 
@@ -715,19 +808,102 @@ window.initialize = initialize;
 
 // Add this function near the initialize function
 function setupMobileCompatibility() {
-    // Check if we're on iOS
+    // Check if we're on iOS or mobile device
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    if (isIOS) {
-        // Add iOS-specific class to body
-        document.body.classList.add('ios-device');
+    console.log('[MOBILE] Device detection:', { isIOS, isMobile, userAgent: navigator.userAgent });
+    
+    if (isIOS || isMobile) {
+        // Add device-specific class to body
+        document.body.classList.add(isIOS ? 'ios-device' : 'mobile-device');
+        console.log('[MOBILE] Applied mobile class to body:', isIOS ? 'ios-device' : 'mobile-device');
         
-        // Fix potential scroll issues
-        document.addEventListener('DOMContentLoaded', () => {
-            // Fix potential scroll issues on page load
-            window.scrollTo(0, 1);
-            setTimeout(() => window.scrollTo(0, 0), 100);
-        });
+        // Force main app content to stack vertically
+        const appContent = document.querySelector('.app-content');
+        if (appContent) {
+            // Log the state before changes
+            console.log('[MOBILE] App content before styling:', {
+                display: appContent.style.display,
+                flexDirection: appContent.style.flexDirection,
+                width: appContent.style.width
+            });
+            
+            // Apply mobile-friendly styles with !important to override any conflicting styles
+            appContent.setAttribute('style', 'display: flex !important; flex-direction: column !important; width: 100% !important;');
+            
+            // Add a debug outline to see the container boundaries
+            appContent.style.outline = '1px dashed rgba(255,0,0,0.3)';
+            
+            // Make all sections full width
+            document.querySelectorAll('section, .poker-card').forEach(section => {
+                // Save original styles for debugging
+                const originalStyles = {
+                    width: section.style.width,
+                    maxWidth: section.style.maxWidth,
+                    margin: section.style.margin
+                };
+                
+                // Apply crucial mobile styles with !important
+                section.setAttribute('style', 
+                    'width: 100% !important; ' +
+                    'max-width: none !important; ' +
+                    'margin: 0 0 15px 0 !important; ' +
+                    'box-sizing: border-box !important; ' +
+                    'display: block !important; ' +
+                    'outline: 1px dashed rgba(0,0,255,0.3);'
+                );
+                
+                console.log('[MOBILE] Applied mobile styling to section:', section.id || 'unnamed section');
+            });
+            
+            // Fix iOS height issues
+            function updateLayout() {
+                const windowHeight = window.innerHeight;
+                const windowWidth = window.innerWidth;
+                const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+                
+                console.log('[MOBILE] Updating layout:', { windowHeight, windowWidth, headerHeight });
+                
+                // Set layout to vertical stacking
+                if (windowWidth <= 768) {
+                    // Ensure we're using flex column layout
+                    appContent.style.display = 'flex';
+                    appContent.style.flexDirection = 'column';
+                    
+                    // Set proper height based on device
+                    appContent.style.height = isIOS ? `${windowHeight - headerHeight}px` : 'auto';
+                    appContent.style.overflowY = 'auto';
+                    appContent.style.overflowX = 'hidden';
+                    
+                    // Log the applied layout
+                    console.log('[MOBILE] Mobile layout applied:', {
+                        display: appContent.style.display,
+                        flexDirection: appContent.style.flexDirection,
+                        height: appContent.style.height,
+                        overflow: appContent.style.overflowY
+                    });
+                }
+            }
+            
+            // Update on various events
+            window.addEventListener('resize', updateLayout);
+            window.addEventListener('orientationchange', updateLayout);
+            document.addEventListener('DOMContentLoaded', updateLayout);
+            
+            // Run layout update immediately
+            updateLayout();
+            
+            // Additional check after a delay to handle any delayed rendering
+            setTimeout(updateLayout, 500);
+            
+            // Add a global function to force update layout (for testing)
+            window.forceUpdateMobileLayout = updateLayout;
+        } else {
+            console.error('[MOBILE] Could not find app-content element');
+        }
+    } else {
+        console.log('[MOBILE] Not a mobile device, skipping mobile compatibility setup');
     }
 }
 
