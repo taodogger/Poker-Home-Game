@@ -512,6 +512,14 @@ function setupEventListeners() {
 function initialize() {
     console.log('Initializing poker app...');
     
+    // Set a flag to prevent multiple initializations
+    if (window.appInitialized) {
+        console.log('[INIT] App already initialized, skipping');
+        return;
+    }
+
+    window.appInitialized = true;
+    
     // Check if Firebase is available and wait for it if necessary
     ensureFirebaseInitialized()
         .then(() => {
@@ -1912,6 +1920,8 @@ window.calculatePayouts = calculatePayouts;
 
 // Initialize when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[INIT] DOMContentLoaded triggered');
+    
     // Load saved theme first
     const savedTheme = localStorage.getItem('theme') || 'Classic';
     if (themes[savedTheme]) {
@@ -1942,9 +1952,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Load saved state before initializing
-    loadSavedState();
+    // First load the saved state
+    const savedStateResult = loadSavedState();
+    console.log('[INIT] Loaded saved state result:', savedStateResult);
     
-    // Initialize the app (this is now async and will handle Firebase properly)
-    initialize();
+    // Only initialize if we need to (state loading failed)
+    if (!savedStateResult) {
+        console.log('[INIT] No saved state, initializing app');
+        initialize();
+    } else {
+        console.log('[INIT] Using saved state, updating UI');
+        // Make sure the UI is updated with the current state
+        updateUIFromState();
+        
+        // Connect to Firebase if needed but don't reinitialize the app
+        if (PokerApp.state.sessionId) {
+            ensureFirebaseInitialized()
+                .then(() => {
+                    console.log('[FIREBASE] Reconnecting to session:', PokerApp.state.sessionId);
+                    setupGameStateListener(PokerApp.state.sessionId);
+                })
+                .catch(error => {
+                    console.error('[FIREBASE] Error reconnecting to Firebase:', error);
+                });
+        }
+        
+        // Set up event listeners without reinitializing
+        setupEventListeners();
+        setupMobileCompatibility();
+    }
 });
