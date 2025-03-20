@@ -5,22 +5,65 @@
 // Ensure we have access to Firebase database
 // Use window.gameDatabase to avoid conflicts with global database variable
 let gameDatabase;
-try {
-    // Try to get database from window.firebase first (from firebase-config.js)
-    if (window.firebase && window.firebase.database) {
-        gameDatabase = window.firebase.database();
-        console.log('[FIREBASE] Using firebase.database() reference in game-core.js');
-    } 
-    // Fall back to window.database (exported from firebase-config.js)
-    else if (window.database) {
-        gameDatabase = window.database;
-        console.log('[FIREBASE] Using window.database reference in game-core.js');
-    } else {
-        console.warn('[FIREBASE] Firebase database reference not available in game-core.js!');
-    }
-} catch (error) {
-    console.error('[FIREBASE] Error initializing database reference in game-core.js:', error);
+
+// Helper function to access Firebase database safely
+function getFirebaseDatabase() {
+    return new Promise((resolve, reject) => {
+        // If we already have the database reference, return it
+        if (gameDatabase) {
+            resolve(gameDatabase);
+            return;
+        }
+        
+        // Check if Firebase is already available
+        if (window.firebase && window.firebase.database) {
+            gameDatabase = window.firebase.database();
+            console.log('[FIREBASE] Using firebase.database() reference in game-core.js');
+            resolve(gameDatabase);
+            return;
+        }
+        
+        // Check if window.database is available (from firebase-config.js)
+        if (window.database) {
+            gameDatabase = window.database;
+            console.log('[FIREBASE] Using window.database reference in game-core.js');
+            resolve(gameDatabase);
+            return;
+        }
+        
+        // Listen for the firebase-ready event
+        window.addEventListener('firebase-ready', () => {
+            if (window.firebase && window.firebase.database) {
+                gameDatabase = window.firebase.database();
+                console.log('[FIREBASE] Database available after firebase-ready event');
+                resolve(gameDatabase);
+            } else if (window.database) {
+                gameDatabase = window.database;
+                console.log('[FIREBASE] Using window.database after firebase-ready event');
+                resolve(gameDatabase);
+            } else {
+                reject(new Error('Firebase still not available after firebase-ready event'));
+            }
+        }, { once: true });
+        
+        // Also set a timeout to avoid hanging forever
+        setTimeout(() => {
+            if (!gameDatabase) {
+                console.warn('[FIREBASE] Timed out waiting for Firebase in game-core.js');
+                reject(new Error('Timed out waiting for Firebase'));
+            }
+        }, 5000);
+    });
 }
+
+// Initialize database access
+getFirebaseDatabase()
+    .then(db => {
+        console.log('[FIREBASE] Successfully initialized database in game-core.js');
+    })
+    .catch(error => {
+        console.error('[FIREBASE] Error initializing database reference in game-core.js:', error);
+    });
 
 // Function to simulate a poker hand (dealer selection)
 function simulateHand() {
@@ -144,21 +187,25 @@ function endGame() {
     // Update game status with the new status function
     PokerApp.UI.updateGameStatus('Game ended', false);
     
-    // Clean up Firebase
-    if (PokerApp.state.sessionId && gameDatabase) {
-        try {
-            // Update game status to ended
-            gameDatabase.ref(`games/${PokerApp.state.sessionId}`).update({
-                status: 'ended',
-                active: false
-            });
-            
-            // Remove all listeners
-            gameDatabase.ref(`games/${PokerApp.state.sessionId}`).off();
-            gameDatabase.ref(`games/${PokerApp.state.sessionId}/state/players`).off();
-        } catch (error) {
-            console.error('[FIREBASE] Error cleaning up Firebase in endGame:', error);
-        }
+    // Clean up Firebase safely
+    if (PokerApp.state.sessionId) {
+        getFirebaseDatabase().then(db => {
+            try {
+                // Update game status to ended
+                db.ref(`games/${PokerApp.state.sessionId}`).update({
+                    status: 'ended',
+                    active: false
+                });
+                
+                // Remove all listeners
+                db.ref(`games/${PokerApp.state.sessionId}`).off();
+                db.ref(`games/${PokerApp.state.sessionId}/state/players`).off();
+            } catch (error) {
+                console.error('[FIREBASE] Error cleaning up Firebase in endGame:', error);
+            }
+        }).catch(error => {
+            console.error('[FIREBASE] Could not access database in endGame:', error);
+        });
         
         // Reset session info
         PokerApp.state.sessionId = null;

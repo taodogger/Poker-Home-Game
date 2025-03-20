@@ -445,7 +445,7 @@ function initialize() {
     ensureFirebaseInitialized()
         .then(() => {
             // Continue with normal initialization
-            initializeApp();
+            initializeApp(true);
         })
         .catch(error => {
             console.error('[FIREBASE] Error initializing Firebase:', error);
@@ -458,7 +458,7 @@ function initialize() {
 function ensureFirebaseInitialized() {
     return new Promise((resolve, reject) => {
         // Check if Firebase and database are already available
-        if (typeof window.database !== 'undefined') {
+        if (typeof window.database !== 'undefined' && window.database) {
             console.log('[FIREBASE] Using existing database reference from window.database');
             resolve(window.database);
             return;
@@ -491,8 +491,30 @@ function ensureFirebaseInitialized() {
                 reject(error);
             }
         } else {
-            // Firebase libraries not loaded
-            reject(new Error('Firebase libraries not loaded'));
+            // Firebase libraries not loaded, listen for the firebase-ready event
+            console.log('[FIREBASE] Waiting for Firebase libraries to load...');
+            
+            // Listen for firebase-ready event with timeout
+            const firebaseReadyPromise = new Promise((resolveEvent, rejectEvent) => {
+                window.addEventListener('firebase-ready', () => {
+                    console.log('[FIREBASE] Received firebase-ready event');
+                    if (window.database) {
+                        resolveEvent(window.database);
+                    } else if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                        window.database = firebase.database();
+                        resolveEvent(window.database);
+                    } else {
+                        rejectEvent(new Error('Firebase still not properly initialized after firebase-ready event'));
+                    }
+                }, { once: true });
+                
+                // Set a timeout to avoid hanging indefinitely
+                setTimeout(() => {
+                    rejectEvent(new Error('Timed out waiting for Firebase to load'));
+                }, 8000);
+            });
+            
+            firebaseReadyPromise.then(resolve).catch(reject);
         }
     });
 }
@@ -533,10 +555,12 @@ function initializeApp(firebaseAvailable = true) {
     } else {
         console.log('[FIREBASE] Firebase initialized successfully');
         
-        // Clean up any existing Firebase listeners
+        // Safely clean up any existing Firebase listeners
         try {
-            firebase.database().ref().off();
-            console.log('[FIREBASE] Cleaned up existing listeners');
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                firebase.database().ref().off();
+                console.log('[FIREBASE] Cleaned up existing listeners');
+            }
         } catch (error) {
             console.error('[FIREBASE] Error cleaning up listeners:', error);
         }
@@ -584,12 +608,16 @@ function initializeApp(firebaseAvailable = true) {
     
     // Run a quick Firebase test
     if (firebaseAvailable && typeof firebase !== 'undefined' && firebase.database) {
-        firebase.database().ref('test').set({
-            timestamp: Date.now(),
-            message: 'Initialization test'
-        })
-        .then(() => console.log('[FIREBASE] Test write successful'))
-        .catch(error => console.error('[FIREBASE] Test write failed:', error));
+        try {
+            firebase.database().ref('test').set({
+                timestamp: Date.now(),
+                message: 'Initialization test'
+            })
+            .then(() => console.log('[FIREBASE] Test write successful'))
+            .catch(error => console.error('[FIREBASE] Test write failed:', error));
+        } catch (error) {
+            console.error('[FIREBASE] Error during test write:', error);
+        }
     }
     
     // Set up mobile compatibility
