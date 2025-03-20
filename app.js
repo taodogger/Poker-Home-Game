@@ -382,9 +382,7 @@ function setupEventListeners() {
                 })
                 .catch(error => {
                     console.error('[FIREBASE] Error saving game:', error);
-                    PokerApp.UI.showToast('Error creating game: ' + error.message, 'error');
-                    
-                    // Re-enable the button
+                    PokerApp.UI.showToast('Error creating game lobby: ' + error.message, 'error');
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Create Game Lobby';
@@ -392,47 +390,120 @@ function setupEventListeners() {
                 });
         });
     }
-
-    // Add player form
+    
+    // Set up player form
     const playerForm = document.getElementById('player-form');
     if (playerForm) {
-        playerForm.addEventListener('submit', function(e) {
+        // First, remove any existing listeners
+        const oldForm = playerForm;
+        const newForm = oldForm.cloneNode(true);
+        oldForm.parentNode.replaceChild(newForm, oldForm);
+        
+        // Add the new listener
+        newForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            const name = document.getElementById('player-name').value.trim();
+            const chips = parseInt(document.getElementById('initial-chips').value);
             
-            const playerName = document.getElementById('player-name').value.trim();
-            const initialChips = parseInt(document.getElementById('initial-chips').value);
+            addPlayer(name, chips);
             
-            // Don't validate the player name - form required attribute will handle this
-            // and prevents redundant toast messages
+            // Reset form
+            document.getElementById('player-name').value = '';
+            document.getElementById('initial-chips').value = '';
+        });
+    }
+    
+    // Set up ratio form
+    const ratioForm = document.getElementById('ratio-form');
+    if (ratioForm) {
+        // First, remove any existing listeners
+        const oldForm = ratioForm;
+        const newForm = oldForm.cloneNode(true);
+        oldForm.parentNode.replaceChild(newForm, oldForm);
+        
+        // Add the new listener
+        newForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const moneyAmount = parseFloat(document.getElementById('money-amount').value);
+            const chipAmount = parseInt(document.getElementById('chip-amount').value);
             
-            if (isNaN(initialChips) || initialChips <= 0) {
-                showToast('Please enter a valid chip amount', 'error');
+            if (isNaN(moneyAmount) || moneyAmount <= 0) {
+                PokerApp.UI.showToast('Please enter a valid money amount', 'error');
                 return;
             }
             
-            // Add the player directly using our addPlayer function
-            addPlayer(playerName, initialChips);
+            if (isNaN(chipAmount) || chipAmount <= 0) {
+                PokerApp.UI.showToast('Please enter a valid chip amount', 'error');
+                return;
+            }
             
-            // Reset the form
-            this.reset();
-            document.getElementById('player-name').focus();
+            const ratio = moneyAmount / chipAmount;
+            PokerApp.state.chipRatio = ratio;
+            
+            // Update the ratio display
+            const ratioDisplay = document.getElementById('ratio-display');
+            if (ratioDisplay) {
+                ratioDisplay.innerText = `Each chip is worth $${ratio.toFixed(2)}`;
+            }
+            
+            // Save state
+            saveState();
+            PokerApp.UI.showToast(`Set ratio to $${ratio.toFixed(2)} per chip`, 'success');
+            
+            // Update ratio in Firebase if in a session
+            if (PokerApp.state.sessionId && window.firebase && window.firebase.database) {
+                window.firebase.database().ref(`games/${PokerApp.state.sessionId}/ratio`).set(ratio)
+                    .then(() => {
+                        console.log('[FIREBASE] Updated chip ratio in Firebase');
+                    })
+                    .catch(error => {
+                        console.error('[FIREBASE] Error updating ratio:', error);
+                    });
+                
+                // Also update in the state object
+                window.firebase.database().ref(`games/${PokerApp.state.sessionId}/state/chipRatio`).set(ratio)
+                    .then(() => {
+                        console.log('[FIREBASE] Updated chip ratio in game state');
+                    })
+                    .catch(error => {
+                        console.error('[FIREBASE] Error updating ratio in state:', error);
+                    });
+            }
+            
+            // Reset form
+            document.getElementById('money-amount').value = '';
+            document.getElementById('chip-amount').value = '';
+        });
+    }
+    
+    // Set up reset button
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+        // First, remove any existing listeners
+        const oldBtn = resetBtn;
+        const newBtn = oldBtn.cloneNode(true);
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+        
+        // Add the new listener
+        newBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to reset the game? This will clear all players and game data.')) {
+                resetGame();
+            }
         });
     }
 
-    // Reset game button
-    const resetBtn = document.getElementById('reset-btn');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetGame);
-    }
-
-    // Theme selector
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        themeSelector.addEventListener('change', (e) => {
-            const selectedTheme = e.target.value;
-            if (themes[selectedTheme]) {
-                setTheme(selectedTheme);
-            }
+    // Set up calculate payouts button
+    const calculatePayoutsBtn = document.getElementById('calculate-payouts');
+    if (calculatePayoutsBtn) {
+        // First, remove any existing listeners
+        const oldBtn = calculatePayoutsBtn;
+        const newBtn = oldBtn.cloneNode(true);
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+        
+        // Add the new listener
+        newBtn.addEventListener('click', function() {
+            console.log('[UI] Calculate payouts button clicked');
+            calculatePayouts();
         });
     }
 }
@@ -1552,6 +1623,7 @@ function resetGame() {
 
 // Add calculatePayouts function
 function calculatePayouts() {
+    console.log('[PAYOUT] Calculating payouts');
     if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
         PokerApp.UI.showToast('No players to calculate payouts for', 'error');
         return;
@@ -1560,6 +1632,8 @@ function calculatePayouts() {
     const players = PokerApp.state.players;
     const payouts = [];
     let totalDifference = 0;
+
+    console.log('[PAYOUT] Processing players:', players.length);
 
     // Calculate differences from initial chips
     players.forEach(player => {
@@ -1570,10 +1644,12 @@ function calculatePayouts() {
             difference: difference,
             amount: Math.abs(difference * PokerApp.state.chipRatio)
         });
+        console.log(`[PAYOUT] Player ${player.name}: diff=${difference}, amount=${Math.abs(difference * PokerApp.state.chipRatio)}`);
     });
 
     // Verify the total difference sums to zero (or close to it due to rounding)
     if (Math.abs(totalDifference) > 0.01) {
+        console.warn(`[PAYOUT] Total difference doesn't balance: ${totalDifference}`);
         PokerApp.UI.showToast('Error: Chip counts don\'t balance. Please check the numbers.', 'error');
         return;
     }
@@ -1583,7 +1659,10 @@ function calculatePayouts() {
 
     // Display results
     const payoutResults = document.getElementById('payout-results');
-    if (!payoutResults) return;
+    if (!payoutResults) {
+        console.error('[PAYOUT] Payout results element not found');
+        return;
+    }
 
     let html = '<div class="payout-list">';
     payouts.forEach(payout => {
@@ -1604,6 +1683,11 @@ function calculatePayouts() {
 
     payoutResults.innerHTML = html;
     payoutResults.style.display = 'block';
+    
+    console.log('[PAYOUT] Payout results updated');
+    
+    // Show a toast notification
+    PokerApp.UI.showToast('Payouts calculated successfully', 'success');
 }
 
 // Add removePlayer function
@@ -1812,8 +1896,12 @@ window.PokerApp = {
     resetGame,
     saveState,
     loadSavedState,
-    UI: PokerApp.UI
+    UI: PokerApp.UI,
+    calculatePayouts  // Add calculatePayouts to PokerApp object
 };
+
+// Export calculatePayouts to the global window object
+window.calculatePayouts = calculatePayouts;
 
 // Initialize when the page loads
 document.addEventListener('DOMContentLoaded', () => {
