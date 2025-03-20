@@ -1880,37 +1880,53 @@ function calculatePayouts() {
         return;
     }
 
-    // Split players into winners and losers
+    // Split into winners and losers
     const winners = playerDiffs.filter(p => p.difference > 0);
     const losers = playerDiffs.filter(p => p.difference < 0);
     
-    // Generate all direct player-to-player transactions
+    // Sort by amount (descending for absolute values)
+    winners.sort((a, b) => b.difference - a.difference);
+    losers.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
+    
+    // Create simplified transactions
     const transactions = [];
     
-    // For each loser, calculate how much they owe to each winner
-    for (const loser of losers) {
-        const totalLoss = Math.abs(loser.difference);
+    // Clone the arrays to work with
+    const remainingWinners = [...winners];
+    const remainingLosers = [...losers];
+    
+    // Process losers one by one
+    while (remainingLosers.length > 0 && remainingWinners.length > 0) {
+        const loser = remainingLosers[0];
+        const winner = remainingWinners[0];
         
-        // Get total winnings to calculate proportions
-        const totalWinnings = winners.reduce((sum, w) => sum + w.difference, 0);
+        // How much this loser still needs to pay
+        const lossAmount = Math.abs(loser.difference);
+        // How much this winner still needs to receive
+        const winAmount = winner.difference;
         
-        // For each winner, calculate their share from this loser
-        for (const winner of winners) {
-            // Calculate proportion this winner gets from this loser
-            const proportion = winner.difference / totalWinnings;
-            const chipsToReceive = totalLoss * proportion;
-            
-            // Only add transaction if there are chips to transfer
-            if (chipsToReceive > 0.01) {
-                const cashAmount = (chipsToReceive * PokerApp.state.chipRatio).toFixed(2);
-                
-                transactions.push({
-                    from: loser.name,
-                    to: winner.name,
-                    chips: chipsToReceive.toFixed(2),
-                    cash: cashAmount
-                });
-            }
+        // Determine transaction amount (min of what loser owes and winner is owed)
+        const transactionAmount = Math.min(lossAmount, winAmount);
+        
+        // Create transaction (round to whole number)
+        transactions.push({
+            from: loser.name,
+            to: winner.name,
+            chips: Math.round(transactionAmount),
+            cash: (Math.round(transactionAmount) * PokerApp.state.chipRatio).toFixed(2)
+        });
+        
+        // Update remaining amounts
+        loser.difference += transactionAmount; // Reduce debt (negative becomes less negative)
+        winner.difference -= transactionAmount; // Reduce credit
+        
+        // Remove players if they're settled
+        if (Math.abs(loser.difference) < 0.5) { // Use small threshold to account for rounding
+            remainingLosers.shift();
+        }
+        
+        if (winner.difference < 0.5) { // Use small threshold to account for rounding
+            remainingWinners.shift();
         }
     }
 
@@ -1932,7 +1948,7 @@ function calculatePayouts() {
     playerDiffs.forEach(player => {
         const resultClass = player.difference > 0 ? 'winner' : player.difference < 0 ? 'loser' : 'neutral';
         const prefix = player.difference > 0 ? '+' : '';
-        const chipDiff = prefix + player.difference.toFixed(2);
+        const chipDiff = prefix + player.difference;
         const cashValue = player.difference * PokerApp.state.chipRatio;
         const cashDiff = prefix + '$' + Math.abs(cashValue).toFixed(2);
         
@@ -1953,7 +1969,7 @@ function calculatePayouts() {
     
     // Payment instructions section
     html += '<div class="payment-instructions">';
-    html += '<h3>Direct Payment Instructions</h3>';
+    html += '<h3>Simplified Payment Instructions</h3>';
     
     if (transactions.length === 0) {
         html += '<p class="no-transactions">No payments needed - all players are even!</p>';
