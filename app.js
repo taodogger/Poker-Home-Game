@@ -1893,10 +1893,9 @@ function setupMobileCompatibility() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isIOS || isMobile) {
-        // Add mobile class to body
+        // Add mobile class to body to assist with CSS targeting
         document.body.classList.add('mobile-device');
         
-        // Fix iOS-specific issues with viewport
         if (isIOS) {
             document.body.classList.add('ios-device');
             

@@ -1303,22 +1303,24 @@ button,
 
 /* Fix background color bleeding */
 @media screen and (orientation: portrait) {
-    html, body {
-        background: #0a0a0a;
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-    }
+    /* This was causing the scrolling issues - we're removing all of it */
+}
 
-    .container {
+/* Add a properly implemented portrait mode styling that allows scrolling */
+@media screen and (orientation: portrait) {
+    html, body {
+        /* Allow normal document flow and scrolling */
+        position: static;
         overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        height: auto;
+        width: 100%;
+    }
+    
+    /* Allow scrollable content */
+    .app-content, .container {
+        height: auto;
+        overflow-y: visible;
+        position: static;
     }
 }
 
