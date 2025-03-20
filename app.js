@@ -1888,27 +1888,48 @@ window.updatePlayerChips = updatePlayerChips;
 
 // Add this function near the initialize function
 function setupMobileCompatibility() {
-    // Check if we're on iOS
+    // Check if we're on iOS or mobile device
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    if (isIOS) {
-        // Add iOS-specific class to body
-        document.body.classList.add('ios-device');
+    if (isIOS || isMobile) {
+        // Add device-specific class to body
+        document.body.classList.add(isIOS ? 'ios-device' : 'mobile-device');
         
-        // Fix for iOS height issues with vh units
+        // Force main app content to stack vertically
         const appContent = document.querySelector('.app-content');
         if (appContent) {
-            // Set initial height
-            function setAppContentHeight() {
+            // Apply mobile-friendly styles
+            appContent.style.display = 'flex';
+            appContent.style.flexDirection = 'column';
+            appContent.style.width = '100%';
+            
+            // Make all sections full width
+            document.querySelectorAll('section, .poker-card').forEach(section => {
+                section.style.width = '100%';
+                section.style.maxWidth = 'none';
+                section.style.margin = '0 0 15px 0';
+                section.style.boxSizing = 'border-box';
+            });
+            
+            // Fix iOS height issues
+            function updateLayout() {
                 const windowHeight = window.innerHeight;
                 const headerHeight = document.querySelector('header')?.offsetHeight || 0;
-                appContent.style.height = `${windowHeight - headerHeight}px`;
+                
+                // Set layout to vertical stacking
+                if (window.innerWidth <= 768) {
+                    appContent.style.height = isIOS ? `${windowHeight - headerHeight}px` : 'auto';
+                    appContent.style.overflowY = 'auto';
+                }
             }
             
-            // Set height on load and resize
-            window.addEventListener('resize', setAppContentHeight);
-            window.addEventListener('orientationchange', setAppContentHeight);
-            setAppContentHeight();
+            // Update on various events
+            window.addEventListener('resize', updateLayout);
+            window.addEventListener('orientationchange', updateLayout);
+            document.addEventListener('DOMContentLoaded', updateLayout);
+            setTimeout(updateLayout, 500); // Additional check after a delay
+            updateLayout();
         }
     }
 }
