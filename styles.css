@@ -61,9 +61,6 @@
     font-feature-settings: "tnum" on, "lnum" on;
 }
 
-/* Import elegant font */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-
 /* Reset & Base Styles */
 * {
     box-sizing: border-box;
