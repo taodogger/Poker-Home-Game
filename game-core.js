@@ -81,6 +81,22 @@ function simulateHand() {
     }
 }
 
+// Helper function to highlight the current dealer
+function highlightDealer(dealerId) {
+    // Remove all dealer highlights first
+    document.querySelectorAll('.player-card').forEach(card => {
+        card.classList.remove('dealer');
+    });
+    
+    // Add highlight to the new dealer
+    if (dealerId) {
+        const dealerCard = document.querySelector(`.player-card[data-player-id="${dealerId}"]`);
+        if (dealerCard) {
+            dealerCard.classList.add('dealer');
+        }
+    }
+}
+
 // Game management functions
 function startGame() {
     if (PokerApp.state.players.length < 2) {
@@ -157,7 +173,19 @@ function endGame() {
     saveState();
 }
 
-// resetGame function was moved to app.js to prevent duplicate implementations
+// Helper function to save state
+function saveState() {
+    if (typeof window.saveState === 'function') {
+        window.saveState();
+    }
+}
+
+// Helper function for updateEmptyState
+function updateEmptyState() {
+    if (typeof window.updateEmptyState === 'function') {
+        window.updateEmptyState();
+    }
+}
 
 // Export game functions
 window.startGame = startGame;

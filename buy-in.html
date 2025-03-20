@@ -5,8 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buy-in | Kapoker</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%232E8B57' d='M256 512c141.4 0 256-114.6 256-256S397.4 0 256 0 0 114.6 0 256s114.6 256 256 256z'/><path fill='white' d='M135.6 240.8l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8zm96 0l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8zm96 0l24-36c2.5-3.7 8.7-3.7 11.2 0l24 36c1.6 2.4 1.6 5.6 0 8l-24 36c-2.5 3.7-8.7 3.7-11.2 0l-24-36c-1.6-2.4-1.6-5.6 0-8z'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
+        :root {
+            --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
         body {
             min-height: 100vh;
             display: flex;
@@ -14,6 +21,7 @@
             justify-content: center;
             padding: 1rem;
             background: var(--body-background, linear-gradient(135deg, #1a1a1a, #2d2d2d));
+            font-family: var(--font-family);
         }
 
         .container {

@@ -3,13 +3,13 @@ let buyInDatabase;
 try {
     if (window.database) {
         buyInDatabase = window.database;
-        console.log('[FIREBASE] Using existing database reference');
+        console.log('[FIREBASE] Using existing database reference from window.database');
     } else if (window.firebaseConfig) {
         if (!firebase.apps.length) {
             firebase.initializeApp(window.firebaseConfig);
         }
         buyInDatabase = firebase.database();
-        console.log('[FIREBASE] Created new database connection');
+        console.log('[FIREBASE] Created new database connection using window.firebaseConfig');
     } else {
         throw new Error('Firebase configuration not found');
     }
@@ -290,21 +290,57 @@ if (gameId && buyInDatabase) {
 
                         // Update game state with transaction
                         await buyInDatabase.ref(`games/${gameId}/state`).transaction((currentState) => {
-                            if (!currentState) return null;
+                            console.log('[BUY-IN] Transaction started with current state:', currentState);
+                            
+                            if (!currentState) {
+                                console.error('[BUY-IN] No current state found in transaction');
+                                return null;
+                            }
                             
                             const currentPlayers = currentState.players || [];
+                            console.log('[BUY-IN] Current players in transaction:', currentPlayers);
+                            
                             // Double-check name isn't taken
                             if (currentPlayers.some(p => p && p.name && p.name.toLowerCase().trim() === normalizedNewName)) {
+                                console.log('[BUY-IN] Player name already taken, aborting transaction');
                                 return; // Abort transaction
                             }
                             
-                            return {
+                            console.log('[BUY-IN] Adding new player to game state:', newPlayer);
+                            
+                            // Check if we need to convert from object to array
+                            let updatedPlayers;
+                            if (Array.isArray(currentPlayers)) {
+                                console.log('[BUY-IN] Current players is an array, appending player');
+                                updatedPlayers = [...currentPlayers, newPlayer];
+                            } else {
+                                // If it's an object with numeric keys, convert to array
+                                console.log('[BUY-IN] Current players is an object, converting to array');
+                                const playerArray = Object.values(currentPlayers).filter(p => p !== null);
+                                updatedPlayers = [...playerArray, newPlayer];
+                            }
+                            
+                            console.log('[BUY-IN] Updated players list:', updatedPlayers);
+                            
+                            // Ensure we return a complete state object with all properties
+                            const newState = {
                                 ...currentState,
-                                players: [...currentPlayers, newPlayer],
+                                players: updatedPlayers,
                                 nextPlayerId: nextId + 1,
                                 lastUpdate: Date.now(),
-                                lastPlayer: newPlayer
+                                lastPlayer: newPlayer  // This property is used by the main app to show notifications
                             };
+                            
+                            console.log('[BUY-IN] Returning new state from transaction:', newState);
+                            return newState;
+                        }, (error, committed, snapshot) => {
+                            if (error) {
+                                console.error('[BUY-IN] Transaction failed:', error);
+                            } else if (!committed) {
+                                console.log('[BUY-IN] Transaction not committed (possibly aborted)');
+                            } else {
+                                console.log('[BUY-IN] Transaction completed successfully:', snapshot.val());
+                            }
                         });
 
                         // Show success message
