@@ -2447,6 +2447,18 @@ button,
 
 /* Improved Mobile Responsiveness - iOS Fix */
 @media screen and (max-width: 768px) {
+    /* Basic elements */
+    html, body {
+        position: static !important;
+        overflow-x: hidden;
+        overflow-y: auto;
+        height: auto !important;
+        min-height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    
     /* Force main grid to stack vertically */
     main.app-content {
         display: flex !important;
@@ -2455,6 +2467,13 @@ button,
         grid-template-columns: 1fr !important;
         grid-auto-flow: row !important;
         grid-gap: 15px !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: calc(100vh - 60px) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
     }
 
     /* Ensure each section takes full width */
@@ -2465,17 +2484,38 @@ button,
         max-width: none !important;
         padding: 15px !important;
         box-sizing: border-box !important;
+        margin-bottom: 20px !important;
     }
 
     /* Reset any grid layouts inside the main content */
     main.app-content > * {
         grid-column: 1 / -1 !important;
     }
+    
+    /* Fix header to stay at top */
+    .app-header {
+        position: sticky !important;
+        top: 0;
+        z-index: 1000;
+    }
+
+    /* Reset any fixed positioning inside cards */
+    .poker-card * {
+        position: static;
+    }
 
     /* Make tables scroll horizontally on small screens */
     .table-container {
-        overflow-x: auto;
+        overflow-x: auto !important;
         -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
+        width: 100% !important;
+    }
+    
+    /* Ensure elements inside don't overflow */
+    .player-card, .form-group, .card-content, .card-header {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
 
     /* Adjust form layouts for mobile */
@@ -2529,13 +2569,14 @@ button,
 @supports (-webkit-touch-callout: none) {
     /* CSS specific to iOS devices */
     body {
-        /* Prevent elastic scrolling/bounce effect but allow vertical scrolling */
-        position: relative !important;
+        /* Remove fixed positioning that prevents scrolling */
+        position: static !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
         width: 100%;
         height: auto !important;
         min-height: 100vh;
+        -webkit-overflow-scrolling: touch;
     }
 
     main.app-content {
@@ -2547,6 +2588,13 @@ button,
         -webkit-overflow-scrolling: touch;
         box-sizing: border-box;
         padding: 10px;
+        height: auto !important;
+        max-height: none !important;
+    }
+    
+    /* Prevent focusing issues */
+    input, select, textarea {
+        font-size: 16px !important; /* Prevent zoom on focus */
     }
 }
 

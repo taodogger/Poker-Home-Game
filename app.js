@@ -1896,40 +1896,26 @@ function setupMobileCompatibility() {
         // Add device-specific class to body
         document.body.classList.add(isIOS ? 'ios-device' : 'mobile-device');
         
-        // Force main app content to stack vertically
-        const appContent = document.querySelector('.app-content');
-        if (appContent) {
-            // Apply mobile-friendly styles
-            appContent.style.display = 'flex';
-            appContent.style.flexDirection = 'column';
-            appContent.style.width = '100%';
+        // Force correct scroll behavior
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fix potential scroll issues on page load
+            window.scrollTo(0, 1);
+            setTimeout(() => window.scrollTo(0, 0), 100);
+        });
+        
+        // Override any problematic styles directly
+        if (isIOS) {
+            // iOS-specific fixes
+            document.documentElement.style.setProperty('height', 'auto', 'important');
+            document.body.style.setProperty('position', 'static', 'important');
+            document.body.style.setProperty('overflow-y', 'auto', 'important');
+            document.body.style.setProperty('height', 'auto', 'important');
             
-            // Make all sections full width
-            document.querySelectorAll('section, .poker-card').forEach(section => {
-                section.style.width = '100%';
-                section.style.maxWidth = 'none';
-                section.style.margin = '0 0 15px 0';
-                section.style.boxSizing = 'border-box';
-            });
-            
-            // Fix iOS height issues
-            function updateLayout() {
-                const windowHeight = window.innerHeight;
-                const headerHeight = document.querySelector('header')?.offsetHeight || 0;
-                
-                // Set layout to vertical stacking
-                if (window.innerWidth <= 768) {
-                    appContent.style.height = isIOS ? `${windowHeight - headerHeight}px` : 'auto';
-                    appContent.style.overflowY = 'auto';
-                }
+            // Add proper viewport fix
+            const viewport = document.querySelector("meta[name=viewport]");
+            if (viewport) {
+                viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
             }
-            
-            // Update on various events
-            window.addEventListener('resize', updateLayout);
-            window.addEventListener('orientationchange', updateLayout);
-            document.addEventListener('DOMContentLoaded', updateLayout);
-            setTimeout(updateLayout, 500); // Additional check after a delay
-            updateLayout();
         }
     }
 }
