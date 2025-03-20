@@ -606,18 +606,25 @@ function initializeApp(firebaseAvailable = true) {
         };
     }
     
-    // Reset state to default values
-    PokerApp.state = {
-        players: [],
-        gameInProgress: false,
-        dealerId: null,
-        nextPlayerId: 1,
-        chipRatio: 1.0,
-        theme: localStorage.getItem('theme') || 'Classic',
-        sessionId: null,
-        gameName: null,
-        lobbyActive: false
-    };
+    // Only initialize state if it doesn't already have players and other data
+    // This prevents overwriting state that was loaded from localStorage
+    if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
+        console.log('[INIT] Initializing with default state');
+        // Reset state to default values
+        PokerApp.state = {
+            players: [],
+            gameInProgress: false,
+            dealerId: null,
+            nextPlayerId: 1,
+            chipRatio: 1.0,
+            theme: localStorage.getItem('theme') || 'Classic',
+            sessionId: null,
+            gameName: null,
+            lobbyActive: false
+        };
+    } else {
+        console.log('[INIT] Using existing state with', PokerApp.state.players.length, 'players');
+    }
     
     // Log Firebase availability
     if (!firebaseAvailable) {
