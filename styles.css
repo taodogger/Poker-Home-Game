@@ -59,6 +59,11 @@
     
     /* Enable font features for better number display */
     font-feature-settings: "tnum" on, "lnum" on;
+
+    /* Core layout structure */
+    --header-height: 60px;
+    --content-max-width: 1400px;
+    --content-padding: 24px;
 }
 
 /* Reset & Base Styles */
@@ -103,208 +108,306 @@ body::before {
     pointer-events: none;
 }
 
-/* Main layout improvements */
+/* Main layout */
 main {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 20px;
+    padding: 8px 24px 24px;
     max-width: 1400px;
     margin: 0 auto;
-    padding: var(--spacing-xl);
-    display: grid;
-    gap: var(--spacing-lg);
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    align-items: start;
+    margin-top: 70px;
 }
 
-/* Card styling improvements */
+/* Card styling */
 .poker-card {
-    background: var(--card-bg);
-    border-radius: var(--border-radius-lg);
-    padding: var(--spacing-xl);
-    box-shadow: var(--card-shadow);
-    border: 1px solid var(--surface-border);
-    backdrop-filter: var(--blur-effect);
-    -webkit-backdrop-filter: var(--blur-effect);
-    transition: all var(--transition-standard);
-    position: relative;
-    overflow: hidden;
+    background: rgba(20, 20, 40, 0.5);
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    height: auto;
+    margin: 0;
 }
 
 .poker-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Header with accent */
-.poker-card h2 {
-    font-size: 1.75rem;
-    font-weight: 800;
-    margin: 0 0 var(--spacing-lg);
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.02em;
-    position: relative;
+/* Card header */
+.card-header {
+    margin-bottom: 24px;
 }
 
-.poker-card h2::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: -8px;
-    width: 40px;
-    height: 4px;
-    background: var(--accent-gradient);
-    border-radius: 2px;
-    transition: width var(--transition-standard);
-}
-
-.poker-card:hover h2::after {
-    width: 60px;
-}
-
-/* Button styles */
-.poker-button, 
-button[id="reset-btn"], 
-button[id="calculate-payouts"],
-button[type="submit"],
-.action-button {
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-weight: 500;
-    font-size: 0.95rem;
-    text-transform: none;
-    letter-spacing: 0.02em;
-    border-radius: 10px;
-    padding: 12px 20px;
-    background: var(--vibrant-gradient);
+.card-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
     color: white;
-    border: none;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
 }
 
-.poker-button:hover,
-button[id="reset-btn"]:hover,
-button[id="calculate-payouts"]:hover,
-button[type="submit"]:hover,
-.action-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+/* Grid layout */
+#game-lobby {
+    grid-column: 1 / 9;
+    grid-row: 1;
+    margin: 0;
 }
 
-.poker-button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
+#add-player {
+    grid-column: 1 / 9;
+    grid-row: 2;
+    margin: 0;
+}
+
+#game-controls {
+    grid-column: 17 / 25;
+    grid-row: 2;
+    margin: 0;
+}
+
+#game-controls .poker-card {
+    padding: 12px;
+    min-height: 0;
+    height: auto;
+}
+
+#game-controls button {
     width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.2),
-        transparent
-    );
-    transition: 0.5s;
+    margin: 0;
 }
 
-.poker-button:hover::before {
-    left: 100%;
+/* Players section - extended */
+#players {
+    grid-column: 9 / 17;
+    grid-row: 1 / 4;
+    margin: 0;
 }
 
-/* Form improvements */
-.form-group {
-    margin-bottom: var(--spacing-lg);
+#players .poker-card {
+    flex: 1;
 }
 
-input[type="text"],
-input[type="number"] {
-    width: 100%;
-    background: rgba(0, 0, 0, 0.2);
-    border: 2px solid var(--surface-border);
-    color: white;
-    padding: 1rem;
-    border-radius: var(--border-radius-md);
-    font-size: 1rem;
-    transition: all var(--transition-standard);
+#players .table-container {
+    flex: 1;
+    overflow-y: auto;
+    margin-top: 24px;
 }
 
-input:focus {
-    outline: none;
-    border-color: var(--main-color);
-    box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.2);
-    background: rgba(0, 0, 0, 0.3);
+/* Right column */
+#money-to-chip-ratio {
+    grid-column: 17 / 25;
+    grid-row: 1;
+    margin: 0;
+}
+
+#payout-calculator {
+    grid-column: 17 / 25;
+    grid-row: 3;
+    margin: 0;
 }
 
 /* Table improvements */
 .table-container {
     background: rgba(0, 0, 0, 0.2);
-    border-radius: var(--border-radius-lg);
-    padding: var(--spacing-md);
-    margin-top: var(--spacing-lg);
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 table {
     width: 100%;
     border-collapse: separate;
-    border-spacing: 0 8px;
+    border-spacing: 0;
 }
 
 thead th {
-    color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    font-size: 0.85rem;
     font-weight: 600;
     text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 1px;
-    padding: var(--spacing-md) var(--spacing-lg);
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.7);
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
-tbody tr {
-    background: rgba(255, 255, 255, 0.05);
-    transition: all var(--transition-standard);
-    transform: scale(1);
+tbody td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-tbody tr:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.02);
+/* Form improvements */
+.form-group {
+    margin-bottom: 16px;
 }
 
-td {
-    padding: var(--spacing-lg);
+input[type="text"],
+input[type="number"] {
+    width: 100%;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
     color: white;
+    font-size: 0.95rem;
+}
+
+/* Button improvements */
+.poker-button {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: var(--vibrant-gradient);
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.poker-button:hover {
+    transform: translateY(-2px);
+}
+
+/* Mobile adjustments */
+@media (max-width: 1200px) {
+    main {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    #game-lobby,
+    #add-player {
+        grid-column: 1;
+    }
+
+    #players {
+        grid-column: 2;
+        grid-row: 1 / span 3;
+    }
+
+    #money-to-chip-ratio,
+    #game-controls,
+    #payout-calculator {
+        grid-column: 1;
+        grid-row: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --content-padding: 16px;
+    }
+
+    main {
+        grid-template-columns: 1fr;
+    }
+
+    #players,
+    #money-to-chip-ratio,
+    #game-controls,
+    #payout-calculator {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .poker-card {
+        margin-bottom: 1rem;
+    }
+
+    .header-content {
+        padding: 0 16px;
+    }
+}
+
+/* Header styling */
+.app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.header-logo {
+    height: 40px;
+}
+
+#theme-selector {
+    height: 36px;
+    padding: 0 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    min-width: 140px;
 }
 
 /* Status badge */
 .game-status-badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--surface-border);
-    margin-bottom: var(--spacing-lg);
-}
-
-.game-status-badge span {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: var(--spacing-sm);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .game-status-badge.active span {
     background: #4caf50;
-    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
 }
 
 .game-status-badge.inactive span {
     background: #ff5252;
-    box-shadow: 0 0 10px rgba(255, 82, 82, 0.5);
+}
+
+/* Empty state */
+.empty-message {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
 }
 
 /* QR code section */
@@ -332,22 +435,6 @@ td {
 @keyframes float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    main {
-        padding: var(--spacing-md);
-        grid-template-columns: 1fr;
-    }
-    
-    .poker-card {
-        padding: var(--spacing-lg);
-    }
-    
-    .poker-button {
-        width: 100%;
-    }
 }
 
 /* Player avatar styling */
@@ -390,13 +477,6 @@ tr.totals-row td {
     font-size: 0.9rem;
 }
 
-/* Game Lobby content area */
-.lobby-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
 /* Active status badge styling */
 .game-status-badge.active {
     background: rgba(76, 175, 80, 0.2);
@@ -424,297 +504,6 @@ tr.totals-row td {
     background: rgba(255, 82, 82, 1);
     transform: translateY(-1px);
     box-shadow: 0 3px 6px rgba(255, 82, 82, 0.4);
-}
-
-/* Scrollable content areas */
-.table-container {
-    flex: 1;
-    overflow-y: auto;
-    max-height: 400px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--main-color) rgba(255, 255, 255, 0.1);
-}
-
-.table-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-.table-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-}
-
-.table-container::-webkit-scrollbar-thumb {
-    background: var(--main-color);
-    border-radius: 3px;
-}
-
-/* Card content spacing */
-.poker-card > *:not(:last-child) {
-    margin-bottom: 1rem;
-}
-
-/* Status badges positioning */
-.game-status-badge {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    display: inline-flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    background: rgba(30, 30, 30, 0.7);
-    border-radius: 50px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Indicator dot styling */
-.game-status-badge span {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
-}
-
-.game-status-badge.inactive span {
-    background: #ff5252;
-    box-shadow: 0 0 8px rgba(255, 82, 82, 0.7);
-}
-
-.game-status-badge.active span {
-    background: #4caf50;
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
-}
-
-/* Form layouts */
-.setup-form {
-    display: grid;
-    gap: 1rem;
-}
-
-@media (min-width: 1024px) {
-    .setup-form {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    }
-}
-
-/* Animation section full width styling */
-#animation {
-    min-height: 400px;
-    background: linear-gradient(135deg, 
-        rgba(var(--main-color-rgb), 0.1), 
-        rgba(var(--secondary-color-rgb), 0.05)
-    );
-}
-
-/* Kahoot-style buttons */
-.action-button {
-    background: var(--vibrant-gradient);
-    color: white;
-    font-size: 1rem;
-    font-weight: 600;
-    padding: 0.875rem 1.5rem;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.action-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
-}
-
-.action-button:active {
-    transform: translateY(1px);
-}
-
-/* Game control buttons container */
-.game-control-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    flex-wrap: wrap;
-}
-
-/* Style for reset button - make it more prominent */
-.reset-button {
-    background: linear-gradient(135deg, #ff5252, #ff7675) !important;
-    box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
-    font-size: 1.1rem;
-    padding: 0.8rem 2rem;
-}
-
-.reset-button span {
-    margin-right: 0.5rem;
-    font-size: 1.2rem;
-}
-
-/* Button states */
-.action-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* Form improvements */
-.form-group {
-    margin-bottom: 1.25rem;
-}
-
-.manual-entry-note {
-    background: var(--glass-effect);
-    backdrop-filter: var(--blur-effect);
-    -webkit-backdrop-filter: var(--blur-effect);
-    border: 1px solid var(--surface-border);
-    border-radius: var(--border-radius-md);
-    padding: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
-    color: white !important;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    text-align: center;
-}
-
-label {
-    display: block;
-    font-size: 1.4rem;
-    font-weight: 700;
-    margin-bottom: var(--spacing-sm);
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    transition: transform var(--transition-standard);
-    color: white !important;
-}
-
-input[type="text"],
-input[type="number"],
-input[type="email"],
-input[type="password"],
-select,
-textarea {
-    width: 100%;
-    background: rgba(20, 20, 20, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: all 0.2s ease;
-}
-
-input:focus {
-    outline: none;
-    border-color: var(--main-color);
-    box-shadow: 0 0 0 2px rgba(var(--main-color-rgb), 0.2);
-    background: rgba(25, 25, 25, 0.7);
-}
-
-/* Table improvements */
-.table-container {
-    width: 100%;
-    overflow-x: auto;
-    border-radius: 16px;
-    background: rgba(0, 0, 0, 0.2);
-    margin-top: 1.5rem;
-}
-
-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin-bottom: 0.5rem;
-}
-
-thead th {
-    color: rgba(255, 255, 255, 0.6);
-    font-weight: 500;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 1px;
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-tbody tr {
-    background: rgba(30, 30, 30, 0.4);
-    margin-bottom: 0.5rem;
-    transition: all 0.2s ease;
-}
-
-tbody tr:hover {
-    background: rgba(40, 40, 40, 0.6);
-}
-
-td {
-    padding: 0.75rem 1rem;
-    color: white;
-}
-
-/* First and last columns rounded corners */
-tbody tr td:first-child {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
-}
-
-tbody tr td:last-child {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
-}
-
-/* Status badges */
-.game-status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    background: rgba(0, 0, 0, 0.2);
-    font-weight: 600;
-    font-size: 0.9rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-/* Empty state message */
-.empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 1.1rem;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    main {
-        padding: 1rem;
-    }
-    
-    .poker-card {
-        padding: 1.5rem;
-    }
-    
-    .game-control-buttons {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .action-button {
-        width: 100%;
-    }
 }
 
 /* Modern Card-style Sections */
@@ -1983,715 +1772,75 @@ button,
     top: 0;
     left: 0;
     right: 0;
-    width: 100%;
-    padding: 1rem var(--container-padding);
-    background: rgba(10, 10, 10, 0.95);
+    z-index: 100;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 1000;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
 }
 
 .header-content {
-    max-width: 1400px;
-    margin: 0 auto;
     display: flex;
+    align-items: center;
     justify-content: space-between;
+    width: 100%;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.header-right {
+    display: flex;
     align-items: center;
 }
 
 .header-logo {
     height: 40px;
-    width: auto;
-    object-fit: contain;
-}
-
-.header-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
 }
 
 #theme-selector {
+    height: 36px;
+    padding: 0 12px;
     background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 0.5rem 2rem 0.5rem 1rem;
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
     color: white;
-    font-size: 0.9rem;
-    font-weight: 500;
     cursor: pointer;
-    min-width: 120px;
-    transition: all 0.2s ease;
-    margin-left: auto;
+    min-width: 140px;
 }
 
-#theme-selector:hover {
-    background: rgba(0, 0, 0, 0.4);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-#theme-selector:focus {
-    outline: none;
-    border-color: var(--main-color);
-}
-
-#theme-selector option {
-    background: #1a1a1a;
-    color: white;
-    padding: 8px;
-}
-
-/* Adjust main content to account for fixed header */
+/* Adjust main content spacing */
 main.app-content {
-    padding-top: calc(72px + var(--spacing-xl));
-}
-
-/* Mobile header adjustments */
-@media (max-width: 768px) {
-    .app-header {
-        padding: 0.75rem var(--container-padding);
-    }
-    
-    .header-logo {
-        height: 32px;
-    }
-    
-    #theme-selector {
-        font-size: 0.85rem;
-        padding: 0.4rem 1.5rem 0.4rem 0.75rem;
-        min-width: 100px;
-    }
-}
-
-/* Desktop optimizations - maximize function and form */
-@media (min-width: 1024px) {
-    body {
-        overflow-y: auto;
-        min-height: 100vh;
-        padding-bottom: 0;
-        margin: 0;
-    }
-    
-    main {
-        display: grid;
-        grid-template-columns: repeat(24, 1fr);
-        grid-auto-rows: auto;
-        gap: 0.75rem;
-        padding: 0.75rem;
-        max-width: 100%;
-        margin: 0 auto;
-        overflow: visible;
-    }
-
-    /* First row - most important elements */
-    #game-lobby {
-        grid-column: 1 / 13;
-        grid-row: 1;
-    }
-    
-    #players {
-        grid-column: 13 / 25;
-        grid-row: 1 / 3;
-        max-height: none;
-    }
-
-    /* Second row */
-    #add-player {
-        grid-column: 1 / 7;
-        grid-row: 2;
-    }
-    
-    #game-controls {
-        grid-column: 7 / 13;
-        grid-row: 2;
-    }
-
-    /* Third row */
-    #money-to-chip-ratio {
-        grid-column: 1 / 13;
-        grid-row: 3;
-        min-height: 300px;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    #money-to-chip-ratio .card-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    #money-to-chip-ratio .setup-form {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    #money-to-chip-ratio .form-group {
-        margin: 0;
-    }
-
-    #money-to-chip-ratio input {
-        width: 100%;
-        height: 48px;
-        font-size: 1rem;
-    }
-
-    #money-to-chip-ratio button {
-        width: 100%;
-        height: 48px;
-        margin-top: 1rem;
-    }
-
-    .ratio-display {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: var(--border-radius-md);
-        padding: 1rem;
-        text-align: center;
-        margin-top: auto;
-    }
-
-    .ratio-display p {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--text-color);
-        margin: 0;
-    }
-
-    /* Fourth row */
-    #animation {
-        grid-column: 9 / 25;
-        grid-row: 3;
-    }
-
-    /* Card styling */
-    .poker-card {
-        padding: 1rem;
-        margin-bottom: 0;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: visible;
-        border-radius: 12px;
-    }
-
-    .poker-card h2 {
-        font-size: 1.25rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .card-header {
-        margin-bottom: 0.75rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .card-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
-
-    /* Table optimization */
-    .table-container {
-        overflow-y: auto;
-        max-height: 65vh;
-        flex: 1;
-    }
-    
-    table {
-        width: 100%;
-    }
-    
-    td, th {
-        padding: 0.75rem 1rem;
-    }
-
-    /* Reset button */
-    #reset-btn {
-        padding: 0.75rem;
-        font-size: 1.1rem;
-        width: 100%;
-        margin-top: auto;
-    }
-    
-    /* Hide unnecessary buttons */
-    #start-game, #simulate-hand, #end-game {
-        display: none;
-    }
-
-    /* QR code section enhancement */
-    .qr-code-section {
-        margin-top: 1rem;
-        padding: 1rem;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        text-align: center;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .qr-wrapper {
-        background: white;
-        padding: 10px;
-        border-radius: 10px;
-        display: inline-block;
-        margin: 0.5rem 0;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
-        transition: all 0.3s ease;
-    }
-    
-    .qr-wrapper:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-    }
-    
-    /* Fix join URL for copying */
-    .join-url {
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 6px;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.9);
-        margin: 0.5rem 0;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        max-width: 100%;
-        width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        position: relative;
-    }
-    
-    .join-url:hover {
-        background: rgba(0, 0, 0, 0.4);
-        transform: translateY(-2px);
-        color: white;
-    }
-    
-    .click-to-copy {
-        font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.6);
-        margin-top: 0.25rem;
-    }
-    
-    #join-url-text {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        width: 100%;
-        text-align: center;
-    }
-    
-    #refresh-firebase {
-        margin-top: 0.5rem;
-        font-size: 0.9rem;
-        padding: 0.5rem 1rem;
-    }
-
-    /* Form layout optimization */
-    .setup-form {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    /* Horizontal ratio form */
-    #ratio-form {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        align-items: flex-end;
-    }
-    
-    #ratio-form .form-group {
-        flex: 1;
-        min-width: 120px;
-        margin: 0;
-    }
-    
-    #ratio-form button {
-        height: 40px;
-        margin: 0;
-    }
-    
-    .form-group {
-        margin-bottom: 0.5rem;
-    }
-    
-    label {
-        margin-bottom: 0.25rem;
-        font-size: 0.9rem;
-    }
-    
-    input {
-        padding: 0.5rem 0.75rem;
-        height: auto;
-    }
-    
-    /* Lobby content */
-    .lobby-content {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-    }
-    
-    /* Game status badge */
-    .game-status-badge {
-        padding: 0.25rem 0.75rem;
-        font-size: 0.8rem;
-        margin: 0;
-    }
-    
-    /* Dealer wheel */
-    #dealer-wheel {
-        flex: 1;
-        min-height: 250px;
-    }
-    
-    /* Buttons optimization */
-    .poker-button {
-        padding: 0.5rem 1rem;
-        margin-top: 0.5rem;
-    }
-    
-    .card-actions .poker-button {
-        margin-top: 0;
-        padding: 0.4rem 0.75rem;
-        font-size: 0.9rem;
-    }
-}
-
-/* Make sure URL is clickable/copyable */
-.join-url {
-    cursor: pointer;
-    user-select: all;
-}
-
-#join-url-text {
-    user-select: all;
-    cursor: copy;
-}
-
-/* Fix the clickable area of QR code section */
-.qr-wrapper img {
-    display: block;
+    padding-top: 60px;
+    width: 100%;
     max-width: 100%;
-    height: auto;
+    box-sizing: border-box;
 }
 
-/* Medium screen optimization */
-@media (min-width: 1024px) and (max-width: 1500px) {
-    main {
-        grid-template-columns: repeat(12, 1fr);
-    }
-    
-    #game-lobby {
-        grid-column: 1 / 7;
-        grid-row: 1;
-    }
-    
-    #add-player {
-        grid-column: 7 / 13;
-        grid-row: 1;
-    }
-    
-    #players {
-        grid-column: 1 / 9;
-        grid-row: 2;
-    }
-    
-    #game-controls {
-        grid-column: 9 / 13;
-        grid-row: 2;
-    }
-    
-    #money-to-chip-ratio {
-        grid-column: 1 / 7;
-        grid-row: 3;
-    }
-    
-    #animation {
-        grid-column: 7 / 13;
-        grid-row: 3;
-    }
+/* Ensure proper spacing between sections */
+.poker-card + .poker-card {
+    margin-top: var(--content-padding);
 }
 
-#payout-calculator {
-    grid-column: 13 / 25;
-    grid-row: 3;
-    min-height: 300px;
-    display: flex;
-    flex-direction: column;
-}
-
-#payout-calculator .card-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.payout-info {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: var(--border-radius-md);
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.payout-info p {
-    margin: 0;
-    color: var(--text-color);
-    font-size: 1rem;
-}
-
-.payout-results {
-    flex: 1;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: var(--border-radius-md);
-    padding: 1rem;
-    margin-bottom: 1rem;
-    min-height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.no-payouts-message {
+/* Empty state message */
+.empty-message {
     text-align: center;
-}
-
-.no-payouts-message p {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem;
-}
-
-.no-payouts-message span {
-    font-size: 0.9rem;
+    padding: 2rem;
     color: rgba(255, 255, 255, 0.6);
 }
 
-#calculate-payouts {
-    width: 100%;
-    height: 48px;
-    margin: 0;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#calculate-payouts .button-icon {
-    font-size: 1.2rem;
-    margin-right: 0.5rem;
-    position: relative;
-    top: 0;
-}
-
-/* Improved Mobile Responsiveness - iOS Fix */
-@media screen and (max-width: 768px) {
-    /* Basic elements */
-    html, body {
-        position: static;
-        overflow-x: hidden;
-        overflow-y: auto;
-        height: auto;
-        min-height: 100%;
-    }
-    
-    /* Force main grid to stack vertically */
-    main.app-content {
-        display: flex;
-        flex-direction: column;
-        padding: 10px;
-        grid-template-columns: 1fr;
-        width: 100%;
-        height: auto;
-        min-height: calc(100vh - 60px);
-        overflow-y: auto;
-    }
-
-    /* Ensure each section takes full width */
-    section, .poker-card {
-        width: 100%;
-        margin-left: 0;
-        margin-right: 0;
-        max-width: none;
-        padding: 15px;
-        box-sizing: border-box;
-        margin-bottom: 20px;
-    }
-
-    /* Make tables scroll horizontally on small screens */
-    .table-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
-    }
-
-    /* Adjust form layouts for mobile */
-    .form-group {
-        width: 100%;
-    }
-
-    input, select, button {
-        width: 100%;
-        max-width: none;
-        box-sizing: border-box;
-        font-size: 16px; /* Prevent zoom on iOS */
-    }
-
-    /* Increase tap target sizes for better mobile UX */
-    .poker-button {
-        padding: 14px 20px;
-        margin-top: 15px;
-        font-size: 16px;
-    }
-
-    /* Adjust player cards for mobile */
-    .player-card {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 15px;
-    }
-}
-
-/* iOS-specific fixes */
-@supports (-webkit-touch-callout: none) {
-    /* iOS-specific fixes */
-    html {
-        height: -webkit-fill-available;
-    }
-    
-    body {
-        min-height: -webkit-fill-available;
-    }
-}
-
-/* Add a clean mobile-layout class */
-.mobile-layout {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
-.mobile-layout section,
-.mobile-layout .poker-card {
-    width: 100%;
-    max-width: none;
-    margin: 0 0 15px 0;
-    box-sizing: border-box;
-    display: block;
-}
-
-/* Clean up existing mobile media queries */
-@media (max-width: 768px) {
-    html, body {
-        position: static;
-        width: 100%;
-        max-width: 100%;
-        margin: 0;
-        padding: 0;
-        overflow-x: hidden;
-    }
-    
-    main.app-content {
-        flex-direction: column;
-        width: 100%;
-        overflow-x: hidden;
-        padding: 10px;
-    }
-    
-    section, .poker-card {
-        width: 100%;
-        max-width: none;
-        margin: 0 0 15px 0;
-        padding: 10px;
-    }
-    
-    table {
-        width: 100%;
-        overflow-x: auto;
-        display: block;
-    }
-    
-    form {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    button, input, select {
-        padding: 12px;  /* Larger tap targets */
-        margin: 5px 0;
-    }
-}
-
-/* iOS specific fixes */
-.ios-device {
-    -webkit-overflow-scrolling: touch;
-}
-
-.ios-device html, 
-.ios-device body {
-    height: 100%;
-    overflow-y: auto;
-}
-
-/* Header Styles */
-.app-header {
-    background: rgba(0, 0, 0, 0.2);
-    padding: 1rem;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.header-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 1rem;
-}
-
-.header-logo {
-    height: 40px;
-    width: auto;
-    display: block;
-    transition: transform 0.2s ease;
-}
-
-.header-logo:hover {
-    transform: scale(1.05);
-}
-
-/* Mobile adjustments for logo */
-@media screen and (max-width: 768px) {
-    .header-logo {
-        height: 32px;
-    }
-    
-    .header-content {
-        padding: 0 0.5rem;
-    }
+/* Reset button must remain clickable */
+#reset-btn,
+button[id="reset-btn"],
+button[onclick*="resetGame"] {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    background: var(--vibrant-gradient);
+    display: block !important;
 }
 

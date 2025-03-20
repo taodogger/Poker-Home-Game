@@ -549,17 +549,23 @@ function setupEventListeners() {
     // Set up reset button
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) {
-        // Remove any existing listeners by cloning and replacing the button
-        const oldBtn = resetBtn;
-        const newBtn = oldBtn.cloneNode(true);
-        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+        // Remove any existing click listeners
+        resetBtn.replaceWith(resetBtn.cloneNode(true));
         
-        // Add a single new listener
-        newBtn.addEventListener('click', function() {
-            if (confirm('Are you sure you want to reset the game? This will clear all players and game data.')) {
-                resetGame();
-            }
-        }, { once: true }); // Add once: true to ensure it only fires once
+        // Re-get the button after replacing
+        const newResetBtn = document.getElementById('reset-btn');
+        
+        // Add new listener
+        newResetBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[UI] Reset button clicked');
+            resetGame();
+            return false;
+        });
+        
+        // Also add direct onclick attribute as backup
+        newResetBtn.setAttribute('onclick', 'resetGame(); return false;');
     }
 
     // Set up calculate payouts button

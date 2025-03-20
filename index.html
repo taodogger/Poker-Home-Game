@@ -463,8 +463,10 @@
 <body>
     <header class="app-header">
         <div class="header-content">
-            <img src="images/Kapoker-logo.png" alt="Kapoker" class="header-logo" width="160" height="40">
-            <div class="header-controls">
+            <div class="header-left">
+                <img src="images/Kapoker-logo.png" alt="Kapoker" class="header-logo" width="160" height="40">
+            </div>
+            <div class="header-right">
                 <select id="theme-selector" class="theme-selector">
                     <option value="Classic">Classic Theme</option>
                     <option value="Royal">Royal Theme</option>
@@ -594,7 +596,7 @@
 
             <div class="card-content">
                 <div class="game-control-buttons">
-                    <button id="reset-btn" class="poker-button reset-button">
+                    <button id="reset-btn" class="poker-button reset-button" onclick="window.resetGame(); return false;">
                         <span class="button-icon">↺</span> Reset Game
                     </button>
                     <!-- Hidden buttons - kept for JS functionality -->
@@ -858,6 +860,44 @@
                         });
                     }
                 }
+            }
+        });
+    </script>
+
+    <!-- Add this script at the end of the body tag -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fix theme selector position
+            const themeSelector = document.getElementById('theme-selector');
+            if (themeSelector) {
+                themeSelector.style.marginLeft = 'auto';
+                themeSelector.style.position = 'absolute';
+                themeSelector.style.right = '24px';
+            }
+            
+            // Fix game controls height
+            const gameControls = document.getElementById('game-controls');
+            if (gameControls) {
+                const card = gameControls.querySelector('.poker-card');
+                if (card) {
+                    card.style.padding = '12px';
+                    card.style.minHeight = '0';
+                    card.style.height = 'auto';
+                }
+            }
+            
+            // Reduce space between header and content
+            const main = document.querySelector('main');
+            if (main) {
+                main.style.paddingTop = '8px';
+            }
+
+            // Ensure reset button is active
+            const resetButton = document.querySelector('#reset-game, button[onclick*="resetGame"]');
+            if (resetButton) {
+                resetButton.style.opacity = '1';
+                resetButton.style.pointerEvents = 'auto';
+                resetButton.style.cursor = 'pointer';
             }
         });
     </script>
