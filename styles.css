@@ -1,3 +1,6 @@
+/* Font Declarations */
+@import url('https://api.fontshare.com/v2/css?f[]=switzer@600,700,400,800,900,100,200,300,500&display=swap');
+
 :root {
     /* Modern Theme Colors */
     --main-color: #1e90ff;
@@ -30,8 +33,8 @@
     --text-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
     
     /* Font variables */
-    --font-primary: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --font-primary: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    --font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
     
     /* Other variables */
     --border-radius-sm: 12px;
@@ -53,6 +56,9 @@
     --vibrant-gradient: linear-gradient(135deg, var(--main-color), var(--secondary-color));
     --glow-effect: 0 0 20px rgba(var(--main-color-rgb), 0.5);
     --card-bg: rgba(20, 20, 40, 0.5);
+    
+    /* Enable font features for better number display */
+    font-feature-settings: "tnum" on, "lnum" on;
 }
 
 /* Import elegant font */
@@ -64,7 +70,7 @@
     margin: 0;
     padding: 0;
     -webkit-tap-highlight-color: transparent;
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-family);
 }
 
 html {
@@ -2593,5 +2599,48 @@ button,
 .ios-device body {
     height: 100%;
     overflow-y: auto;
+}
+
+/* Header Styles */
+.app-header {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+}
+
+.header-logo {
+    height: 40px;
+    width: auto;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.header-logo:hover {
+    transform: scale(1.05);
+}
+
+/* Mobile adjustments for logo */
+@media screen and (max-width: 768px) {
+    .header-logo {
+        height: 32px;
+    }
+    
+    .header-content {
+        padding: 0 0.5rem;
+    }
 }
 
