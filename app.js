@@ -1880,53 +1880,57 @@ function calculatePayouts() {
         return;
     }
 
-    // Split into winners and losers
-    const winners = playerDiffs.filter(p => p.difference > 0);
-    const losers = playerDiffs.filter(p => p.difference < 0);
-    
-    // Sort by amount (descending for absolute values)
-    winners.sort((a, b) => b.difference - a.difference);
-    losers.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
+    // Split into winners and losers and sort by amount
+    const winners = playerDiffs.filter(p => p.difference > 0)
+        .sort((a, b) => b.difference - a.difference);
+        
+    const losers = playerDiffs.filter(p => p.difference < 0)
+        .sort((a, b) => a.difference - b.difference); // Most negative first
     
     // Create simplified transactions
     const transactions = [];
     
-    // Clone the arrays to work with
-    const remainingWinners = [...winners];
-    const remainingLosers = [...losers];
-    
-    // Process losers one by one
-    while (remainingLosers.length > 0 && remainingWinners.length > 0) {
-        const loser = remainingLosers[0];
-        const winner = remainingWinners[0];
+    // We'll assign each loser to pay primarily to one winner when possible
+    while (losers.length > 0 && winners.length > 0) {
+        // Get the biggest loser and winner
+        const loser = losers.shift();
+        const winner = winners[0];
         
-        // How much this loser still needs to pay
         const lossAmount = Math.abs(loser.difference);
-        // How much this winner still needs to receive
-        const winAmount = winner.difference;
         
-        // Determine transaction amount (min of what loser owes and winner is owed)
-        const transactionAmount = Math.min(lossAmount, winAmount);
-        
-        // Create transaction (round to whole number)
-        transactions.push({
-            from: loser.name,
-            to: winner.name,
-            chips: Math.round(transactionAmount),
-            cash: (Math.round(transactionAmount) * PokerApp.state.chipRatio).toFixed(2)
-        });
-        
-        // Update remaining amounts
-        loser.difference += transactionAmount; // Reduce debt (negative becomes less negative)
-        winner.difference -= transactionAmount; // Reduce credit
-        
-        // Remove players if they're settled
-        if (Math.abs(loser.difference) < 0.5) { // Use small threshold to account for rounding
-            remainingLosers.shift();
-        }
-        
-        if (winner.difference < 0.5) { // Use small threshold to account for rounding
-            remainingWinners.shift();
+        if (lossAmount >= winner.difference) {
+            // This loser can cover the entire winner's amount
+            transactions.push({
+                from: loser.name,
+                to: winner.name,
+                chips: Math.round(winner.difference),
+                cash: (Math.round(winner.difference) * PokerApp.state.chipRatio).toFixed(2)
+            });
+            
+            // If there's any remainder, put the loser back in the list with reduced loss
+            const remainder = lossAmount - winner.difference;
+            if (remainder > 0.5) {  // Only if it's a meaningful amount
+                losers.push({
+                    ...loser,
+                    difference: -remainder
+                });
+                // Re-sort losers
+                losers.sort((a, b) => a.difference - b.difference);
+            }
+            
+            // Remove this winner as they're fully paid
+            winners.shift();
+        } else {
+            // Loser pays their entire amount to this winner
+            transactions.push({
+                from: loser.name,
+                to: winner.name,
+                chips: Math.round(lossAmount),
+                cash: (Math.round(lossAmount) * PokerApp.state.chipRatio).toFixed(2)
+            });
+            
+            // Reduce the winner's amount and keep them in the list
+            winner.difference -= lossAmount;
         }
     }
 
@@ -1969,12 +1973,14 @@ function calculatePayouts() {
     
     // Payment instructions section
     html += '<div class="payment-instructions">';
-    html += '<h3>Simplified Payment Instructions</h3>';
+    html += '<h3>Payment Instructions</h3>';
     
     if (transactions.length === 0) {
         html += '<p class="no-transactions">No payments needed - all players are even!</p>';
     } else {
-        // Group transactions by payer for easier reading
+        html += '<div class="transaction-list">';
+        
+        // Group by payer for clarity
         const payerGroups = {};
         transactions.forEach(t => {
             if (!payerGroups[t.from]) {
@@ -1983,44 +1989,33 @@ function calculatePayouts() {
             payerGroups[t.from].push(t);
         });
         
-        html += '<div class="payer-groups">';
-        
-        // For each payer, show who they need to pay
-        Object.entries(payerGroups).forEach(([payer, payerTransactions]) => {
-            html += `
-                <div class="payer-group">
-                    <div class="payer-name">${payer} pays:</div>
-                    <ul class="payee-list">
-            `;
+        // Create a simple list of who pays whom
+        Object.entries(payerGroups).forEach(([payer, payments]) => {
+            html += `<div class="payer-section">`;
+            html += `<div class="payer-name">${payer} pays:</div>`;
+            html += `<ul class="payment-list">`;
             
-            payerTransactions.forEach(t => {
+            payments.forEach(payment => {
                 html += `
-                    <li class="payee-item">
-                        <span class="payee-name">${t.to}</span>
-                        <span class="payee-amount">
-                            <span class="chip-amount">${t.chips} chips</span>
-                            <strong class="cash-amount">$${t.cash}</strong>
-                        </span>
+                    <li class="payment-item">
+                        <span class="payee">${payment.to}</span>
+                        <span class="amount">$${payment.cash}</span>
                     </li>
                 `;
             });
             
-            html += `
-                    </ul>
-                </div>
-            `;
+            html += `</ul></div>`;
         });
         
-        html += '</div>'; // End payer-groups
+        html += '</div>'; // End transaction-list
     }
     
     html += '</div>'; // End payment-instructions
     html += '</div>'; // End payout-container
     
     payoutResults.innerHTML = html;
-    payoutResults.style.display = 'block';
     
-    // Add some styling for the new layout
+    // Add some styling for the payout display
     const style = document.createElement('style');
     if (!document.querySelector('#payout-styles')) {
         style.id = 'payout-styles';
@@ -2112,10 +2107,8 @@ function calculatePayouts() {
                 color: #ff4757;
             }
             
-            .payer-groups {
-                display: flex;
-                flex-direction: column;
-                gap: 1.5rem;
+            .payer-section {
+                margin-bottom: 1.5rem;
             }
             
             .payer-name {
@@ -2125,42 +2118,30 @@ function calculatePayouts() {
                 margin-bottom: 0.5rem;
             }
             
-            .payee-list {
+            .payment-list {
                 list-style-type: none;
                 padding-left: 1rem;
                 margin: 0;
             }
             
-            .payee-item {
+            .payment-item {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0.5rem;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 0.5rem 0.8rem;
+                background: rgba(0, 0, 0, 0.15);
+                border-radius: 6px;
+                margin-bottom: 0.5rem;
             }
             
-            .payee-item:last-child {
-                border-bottom: none;
-            }
-            
-            .payee-name {
+            .payee {
                 color: #2ed573;
                 font-weight: 600;
             }
             
-            .payee-amount {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-            }
-            
-            .chip-amount {
-                font-size: 0.9rem;
-                color: rgba(255, 255, 255, 0.7);
-            }
-            
-            .cash-amount {
+            .amount {
                 font-weight: 700;
+                font-size: 1.1rem;
                 color: white;
             }
             
@@ -2169,19 +2150,6 @@ function calculatePayouts() {
                 padding: 1rem;
                 color: var(--main-color);
                 font-weight: 600;
-            }
-            
-            @media (max-width: 768px) {
-                .payee-item {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    gap: 0.25rem;
-                }
-                
-                .payee-amount {
-                    align-items: flex-start;
-                    margin-left: 1rem;
-                }
             }
         `;
         document.head.appendChild(style);
