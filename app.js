@@ -1954,35 +1954,7 @@ function calculatePayouts() {
     // Create player result cards
     const sortedPlayers = [...playerDiffs].sort((a, b) => b.chipDifference - a.chipDifference);
     
-    sortedPlayers.forEach(player => {
-        const isWinner = player.chipDifference > 0;
-        const isLoser = player.chipDifference < 0;
-        const isNeutral = player.chipDifference === 0;
-        
-        const statusClass = isWinner ? 'winner' : isLoser ? 'loser' : 'neutral';
-        const statusIcon = isWinner ? '💰' : isLoser ? '💸' : '🔄';
-        
-        const cashValue = Math.abs(player.cashValue).toFixed(2);
-        const cashDisplay = isWinner ? `+$${cashValue}` : isLoser ? `-$${cashValue}` : `$0.00`;
-        
-        html += `
-            <div class="player-result-card ${statusClass}">
-                <div class="player-status-indicator">${statusIcon}</div>
-                <div class="player-card-content">
-                    <div class="player-name">${player.name}</div>
-                    <div class="cash-value ${statusClass}">${cashDisplay}</div>
-                </div>
-            </div>`;
-    });
-
-    // Display results
-    const payoutResults = document.getElementById('payout-results');
-    if (!payoutResults) {
-        console.error('[PAYOUT] Payout results element not found');
-        return;
-    }
-
-    // Calculate fun stats
+    // Calculate fun stats first
     const biggestWinner = playerDiffs.reduce((prev, curr) => 
         (curr.cashValue > prev.cashValue) ? curr : prev
     );
@@ -2004,6 +1976,7 @@ function calculatePayouts() {
         .reduce((sum, p) => sum + p.cashValue, 0) / 
         playerDiffs.filter(p => p.cashValue > 0).length;
 
+    // Build the HTML string
     html = `
         <div class="payout-wrapper">
             <div class="payout-summary-header">
@@ -2088,6 +2061,13 @@ function calculatePayouts() {
             </div>
         </div>`;
     
+    // Display results
+    const payoutResults = document.getElementById('payout-results');
+    if (!payoutResults) {
+        console.error('[PAYOUT] Payout results element not found');
+        return;
+    }
+
     payoutResults.innerHTML = html;
     
     // Add styles for the new display
