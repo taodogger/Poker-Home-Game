@@ -1979,36 +1979,90 @@ button,
 
 /* App Header */
 .app-header {
-    position: sticky;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
     width: 100%;
-    padding: 0.75rem 1.5rem;
+    padding: 1rem var(--container-padding);
     background: rgba(10, 10, 10, 0.95);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     z-index: 1000;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 
-.header-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: white;
+.header-content {
+    max-width: 1400px;
+    margin: 0 auto;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.75rem;
-    letter-spacing: -0.01em;
+}
+
+.header-logo {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
 }
 
 .header-controls {
     display: flex;
     align-items: center;
+    gap: 1rem;
+}
+
+#theme-selector {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 120px;
+    transition: all 0.2s ease;
+    margin-left: auto;
+}
+
+#theme-selector:hover {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+#theme-selector:focus {
+    outline: none;
+    border-color: var(--main-color);
+}
+
+#theme-selector option {
+    background: #1a1a1a;
+    color: white;
+    padding: 8px;
+}
+
+/* Adjust main content to account for fixed header */
+main.app-content {
+    padding-top: calc(72px + var(--spacing-xl));
+}
+
+/* Mobile header adjustments */
+@media (max-width: 768px) {
+    .app-header {
+        padding: 0.75rem var(--container-padding);
+    }
+    
+    .header-logo {
+        height: 32px;
+    }
+    
+    #theme-selector {
+        font-size: 0.85rem;
+        padding: 0.4rem 1.5rem 0.4rem 0.75rem;
+        min-width: 100px;
+    }
 }
 
 /* Desktop optimizations - maximize function and form */
