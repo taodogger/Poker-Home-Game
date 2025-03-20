@@ -1859,17 +1859,27 @@ function calculatePayouts() {
 
     console.log('[PAYOUT] Processing players:', players.length);
 
-    // Calculate initial differences
+    // Calculate initial differences with proper number parsing
     const playerDiffs = players.map(player => {
-        const difference = player.current_chips - player.initial_chips;
+        // Ensure chip values are parsed as integers
+        const initialChips = parseInt(player.initial_chips, 10) || 0;
+        const currentChips = parseInt(player.current_chips, 10) || 0;
+        const difference = currentChips - initialChips;
+        
+        // Add to total difference for verification
         totalDifference += difference;
+        
+        // Calculate monetary value based on chip ratio
+        const monetaryValue = difference * PokerApp.state.chipRatio;
+        
         return {
             id: player.id,
             name: player.name,
             difference: difference,
-            amount: Math.abs(difference * PokerApp.state.chipRatio),
-            initial: player.initial_chips,
-            current: player.current_chips
+            amount: Math.abs(monetaryValue),
+            initial: initialChips,
+            current: currentChips,
+            monetaryValue: monetaryValue
         };
     });
 
@@ -1900,11 +1910,14 @@ function calculatePayouts() {
         
         if (lossAmount >= winner.difference) {
             // This loser can cover the entire winner's amount
+            const paymentChips = Math.round(winner.difference);
+            const paymentCash = (paymentChips * PokerApp.state.chipRatio).toFixed(2);
+            
             transactions.push({
                 from: loser.name,
                 to: winner.name,
-                chips: Math.round(winner.difference),
-                cash: (Math.round(winner.difference) * PokerApp.state.chipRatio).toFixed(2)
+                chips: paymentChips,
+                cash: paymentCash
             });
             
             // If there's any remainder, put the loser back in the list with reduced loss
@@ -1922,11 +1935,14 @@ function calculatePayouts() {
             winners.shift();
         } else {
             // Loser pays their entire amount to this winner
+            const paymentChips = Math.round(lossAmount);
+            const paymentCash = (paymentChips * PokerApp.state.chipRatio).toFixed(2);
+            
             transactions.push({
                 from: loser.name,
                 to: winner.name,
-                chips: Math.round(lossAmount),
-                cash: (Math.round(lossAmount) * PokerApp.state.chipRatio).toFixed(2)
+                chips: paymentChips,
+                cash: paymentCash
             });
             
             // Reduce the winner's amount and keep them in the list
@@ -1964,7 +1980,9 @@ function calculatePayouts() {
         
         const statusClass = isWinner ? 'winner' : isLoser ? 'loser' : 'neutral';
         const statusIcon = isWinner ? '💰' : isLoser ? '💸' : '🔄';
-        const cashValue = (player.difference * PokerApp.state.chipRatio).toFixed(2);
+        
+        // Format cash value with 2 decimal places
+        const cashValue = player.monetaryValue.toFixed(2);
         const cashDisplay = isWinner ? `+$${cashValue}` : isLoser ? `-$${Math.abs(cashValue)}` : `$0.00`;
         
         html += `
@@ -1973,6 +1991,7 @@ function calculatePayouts() {
                 <div class="player-card-content">
                     <div class="player-name">${player.name}</div>
                     <div class="cash-value ${statusClass}">${cashDisplay}</div>
+                    <div class="chip-diff">${player.difference > 0 ? '+' : ''}${player.difference} chips</div>
                 </div>
             </div>`;
     });
@@ -2239,6 +2258,13 @@ function calculatePayouts() {
                 .payment-recipient, .payment-amount {
                     padding: 4px 8px;
                 }
+            }
+            
+            .chip-diff {
+                font-size: 0.85rem;
+                color: rgba(255, 255, 255, 0.7);
+                margin-top: 5px;
+                font-family: monospace;
             }
         `;
         document.head.appendChild(style);
