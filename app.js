@@ -1935,6 +1935,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // Load saved state before initializing
+    loadSavedState();
+    
     // Initialize the app (this is now async and will handle Firebase properly)
     initialize();
 });
