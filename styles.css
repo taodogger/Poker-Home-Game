@@ -2447,154 +2447,139 @@ button,
 
 /* Improved Mobile Responsiveness - iOS Fix */
 @media screen and (max-width: 768px) {
-    /* Basic elements */
-    html, body {
-        position: static !important;
-        overflow-x: hidden;
+    /* Simple mobile layout */
+    body {
+        position: static;
         overflow-y: auto;
-        height: auto !important;
+        overflow-x: hidden;
+        height: auto;
         min-height: 100%;
-        width: 100%;
-        margin: 0;
-        padding: 0;
     }
     
-    /* Force main grid to stack vertically */
     main.app-content {
-        display: flex !important;
-        flex-direction: column !important;
+        display: block;
+        width: 100%;
         padding: 10px;
-        grid-template-columns: 1fr !important;
-        grid-auto-flow: row !important;
-        grid-gap: 15px !important;
-        width: 100% !important;
-        height: auto !important;
-        min-height: calc(100vh - 60px) !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch;
+        height: auto;
+        overflow-y: visible;
+    }
+    
+    section, .poker-card {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        margin-bottom: 20px;
+        padding: 15px;
         box-sizing: border-box;
     }
-
-    /* Ensure each section takes full width */
-    section, .poker-card {
-        width: 100% !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        max-width: none !important;
-        padding: 15px !important;
-        box-sizing: border-box !important;
-        margin-bottom: 20px !important;
-    }
-
-    /* Reset any grid layouts inside the main content */
-    main.app-content > * {
-        grid-column: 1 / -1 !important;
-    }
     
-    /* Fix header to stay at top */
-    .app-header {
-        position: sticky !important;
-        top: 0;
-        z-index: 1000;
-    }
-
-    /* Reset any fixed positioning inside cards */
-    .poker-card * {
-        position: static;
-    }
-
-    /* Make tables scroll horizontally on small screens */
+    /* Make tables scroll horizontally */
     .table-container {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
-        width: 100% !important;
+        overflow-x: auto;
     }
     
-    /* Ensure elements inside don't overflow */
-    .player-card, .form-group, .card-content, .card-header {
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-    }
-
-    /* Adjust form layouts for mobile */
-    .form-group {
-        width: 100%;
-    }
-
+    /* Adjust form elements */
     input, select, button {
         width: 100%;
-        max-width: none;
         box-sizing: border-box;
-    }
-
-    /* Increase tap target sizes for better mobile UX */
-    .poker-button {
-        padding: 14px 20px;
-        margin-top: 15px;
-        font-size: 16px;
-    }
-
-    /* Adjust player cards for mobile */
-    .player-card {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 15px;
-    }
-
-    .player-card-content {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-
-    .player-card-actions {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-    }
-
-    /* Fix for iOS Safari viewport issues */
-    body {
-        -webkit-text-size-adjust: 100%;
-        min-height: -webkit-fill-available;
-    }
-
-    html {
-        height: -webkit-fill-available;
     }
 }
 
-/* Additional iOS-specific fixes */
+/* iOS-specific fixes - minimal approach */
 @supports (-webkit-touch-callout: none) {
-    /* CSS specific to iOS devices */
     body {
-        /* Remove fixed positioning that prevents scrolling */
-        position: static !important;
-        overflow-x: hidden !important;
-        overflow-y: auto !important;
-        width: 100%;
-        height: auto !important;
-        min-height: 100vh;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    main.app-content {
-        display: flex !important;
-        flex-direction: column !important;
-        width: 100% !important;
-        overflow-y: visible !important;
-        grid-template-columns: 1fr !important;
-        -webkit-overflow-scrolling: touch;
-        box-sizing: border-box;
-        padding: 10px;
-        height: auto !important;
-        max-height: none !important;
+        position: static;
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: auto;
     }
     
-    /* Prevent focusing issues */
     input, select, textarea {
-        font-size: 16px !important; /* Prevent zoom on focus */
+        font-size: 16px; /* Prevent zoom on focus */
+    }
+}
+
+/* Mobile device styles */
+.mobile-device {
+    /* Base styles for all mobile devices */
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Apply grid layout for desktop, stack for mobile */
+@media screen and (min-width: 769px) {
+    /* Desktop grid layout */
+    main.app-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-gap: 20px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    /* Simple mobile layout */
+    body {
+        position: static;
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: auto;
+        min-height: 100%;
+    }
+    
+    main.app-content {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        height: auto;
+        overflow-y: visible;
+    }
+    
+    section, .poker-card {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        margin-bottom: 20px;
+        padding: 15px;
+        box-sizing: border-box;
+    }
+    
+    /* Make tables scroll horizontally */
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    /* Adjust form elements */
+    input, select, button {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Adjust header for mobile */
+    .app-header {
+        padding: 10px;
+    }
+    
+    /* Improve tap targets */
+    .poker-button, button, select, input {
+        min-height: 44px; /* iOS recommended minimum tap target size */
+    }
+    
+    /* Ensure forms stack properly */
+    .form-group {
+        margin-bottom: 15px;
+    }
+}
+
+/* iOS-specific fixes - minimal approach */
+@supports (-webkit-touch-callout: none) {
+    body {
+        position: static;
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: auto;
+    }
+    
+    input, select, textarea {
+        font-size: 16px; /* Prevent zoom on focus */
     }
 }
 

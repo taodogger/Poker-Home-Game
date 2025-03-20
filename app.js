@@ -1893,28 +1893,17 @@ function setupMobileCompatibility() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isIOS || isMobile) {
-        // Add device-specific class to body
-        document.body.classList.add(isIOS ? 'ios-device' : 'mobile-device');
+        // Add mobile class to body
+        document.body.classList.add('mobile-device');
         
-        // Force correct scroll behavior
-        document.addEventListener('DOMContentLoaded', () => {
-            // Fix potential scroll issues on page load
-            window.scrollTo(0, 1);
-            setTimeout(() => window.scrollTo(0, 0), 100);
-        });
-        
-        // Override any problematic styles directly
+        // Fix iOS-specific issues with viewport
         if (isIOS) {
-            // iOS-specific fixes
-            document.documentElement.style.setProperty('height', 'auto', 'important');
-            document.body.style.setProperty('position', 'static', 'important');
-            document.body.style.setProperty('overflow-y', 'auto', 'important');
-            document.body.style.setProperty('height', 'auto', 'important');
+            document.body.classList.add('ios-device');
             
-            // Add proper viewport fix
+            // Ensure viewport meta tag is set correctly
             const viewport = document.querySelector("meta[name=viewport]");
             if (viewport) {
-                viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+                viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
             }
         }
     }
