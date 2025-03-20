@@ -1941,46 +1941,60 @@ function calculatePayouts() {
         return;
     }
 
-    // Create summary of player results
-    let html = '<div class="payout-container">';
+    // Create a more visually effective display
+    let html = `
+        <div class="payout-wrapper">
+            <div class="payout-summary-header">
+                <h3>Game Results</h3>
+                <div class="payout-timestamp">${new Date().toLocaleTimeString()}</div>
+            </div>
+            
+            <div class="results-container">
+                <!-- Player Cards -->
+                <div class="player-results-cards">`;
     
-    // Player summary section
-    html += '<div class="payout-summary">';
-    html += '<h3>Player Results</h3>';
-    html += '<div class="player-results">';
+    // Sort players by performance (winners first, then losers)
+    const sortedPlayers = [...playerDiffs].sort((a, b) => b.difference - a.difference);
     
-    playerDiffs.forEach(player => {
-        const resultClass = player.difference > 0 ? 'winner' : player.difference < 0 ? 'loser' : 'neutral';
-        const prefix = player.difference > 0 ? '+' : '';
-        const chipDiff = prefix + player.difference;
-        const cashValue = player.difference * PokerApp.state.chipRatio;
-        const cashDiff = prefix + '$' + Math.abs(cashValue).toFixed(2);
+    // Create a player card for each player
+    sortedPlayers.forEach(player => {
+        const isWinner = player.difference > 0;
+        const isLoser = player.difference < 0;
+        const isNeutral = player.difference === 0;
+        
+        const statusClass = isWinner ? 'winner' : isLoser ? 'loser' : 'neutral';
+        const statusIcon = isWinner ? '🔼' : isLoser ? '🔽' : '➖';
+        const amountText = player.difference > 0 ? '+' : '';
+        const cashValue = (player.difference * PokerApp.state.chipRatio).toFixed(2);
         
         html += `
-            <div class="player-result ${resultClass}">
-                <div class="player-result-name">${player.name}</div>
-                <div class="player-result-chips">
-                    ${player.initial} → ${player.current}
-                    <span class="diff">(${chipDiff})</span>
+            <div class="player-result-card ${statusClass}">
+                <div class="player-status-indicator">${statusIcon}</div>
+                <div class="player-card-content">
+                    <div class="player-name">${player.name}</div>
+                    <div class="chip-change">
+                        <span class="chip-label">Chips:</span> 
+                        <span class="chips-start">${player.initial}</span>
+                        <span class="arrow">→</span>
+                        <span class="chips-end">${player.current}</span>
+                        <span class="chip-diff">(${amountText}${player.difference})</span>
+                    </div>
+                    <div class="cash-value ${statusClass}">$${Math.abs(cashValue)}</div>
                 </div>
-                <div class="player-result-cash">${cashDiff}</div>
-            </div>
-        `;
+            </div>`;
     });
     
-    html += '</div>'; // End player-results
-    html += '</div>'; // End payout-summary
-    
-    // Payment instructions section
-    html += '<div class="payment-instructions">';
-    html += '<h3>Payment Instructions</h3>';
+    html += `
+                </div>
+                
+                <!-- Payment Instructions -->
+                <div class="payment-instructions">
+                    <h3>${transactions.length > 0 ? 'Payment Instructions' : 'No Payments Needed'}</h3>`;
     
     if (transactions.length === 0) {
-        html += '<p class="no-transactions">No payments needed - all players are even!</p>';
+        html += `<div class="no-payments-message">All players are even!</div>`;
     } else {
-        html += '<div class="transaction-list">';
-        
-        // Group by payer for clarity
+        // Group transactions by payer
         const payerGroups = {};
         transactions.forEach(t => {
             if (!payerGroups[t.from]) {
@@ -1989,176 +2003,287 @@ function calculatePayouts() {
             payerGroups[t.from].push(t);
         });
         
-        // Create a simple list of who pays whom
+        // Display each payer's obligations
         Object.entries(payerGroups).forEach(([payer, payments]) => {
-            html += `<div class="payer-section">`;
-            html += `<div class="payer-name">${payer} pays:</div>`;
-            html += `<ul class="payment-list">`;
-            
+            html += `
+                <div class="payment-group">
+                    <div class="payer">${payer} pays:</div>
+                    <div class="payment-list">`;
+                    
             payments.forEach(payment => {
                 html += `
-                    <li class="payment-item">
-                        <span class="payee">${payment.to}</span>
-                        <span class="amount">$${payment.cash}</span>
-                    </li>
-                `;
+                    <div class="payment-item">
+                        <div class="payment-arrow">→</div>
+                        <div class="payment-details">
+                            <span class="payment-recipient">${payment.to}</span>
+                            <span class="payment-amount">$${payment.cash}</span>
+                        </div>
+                    </div>`;
             });
             
-            html += `</ul></div>`;
+            html += `
+                    </div>
+                </div>`;
         });
-        
-        html += '</div>'; // End transaction-list
     }
     
-    html += '</div>'; // End payment-instructions
-    html += '</div>'; // End payout-container
+    html += `
+                </div>
+            </div>
+        </div>`;
     
     payoutResults.innerHTML = html;
     
-    // Add some styling for the payout display
-    const style = document.createElement('style');
+    // Add styles for the new payout display
     if (!document.querySelector('#payout-styles')) {
+        const style = document.createElement('style');
         style.id = 'payout-styles';
         style.textContent = `
-            .payout-container {
-                display: flex;
-                flex-direction: column;
-                gap: 1.5rem;
+            .payout-wrapper {
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                 width: 100%;
             }
             
-            .payout-summary, .payment-instructions {
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 8px;
-                padding: 1rem;
-            }
-            
-            .payout-summary h3, .payment-instructions h3 {
-                margin-top: 0;
-                margin-bottom: 1rem;
-                color: var(--main-color);
-                font-size: 1.1rem;
-            }
-            
-            .player-results {
-                display: flex;
-                flex-direction: column;
-                gap: 0.75rem;
-            }
-            
-            .player-result {
+            .payout-summary-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0.5rem;
-                border-radius: 4px;
-                background: rgba(255, 255, 255, 0.05);
+                padding: 12px 16px;
+                background: rgba(0, 0, 0, 0.3);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             }
             
-            .player-result.winner {
-                background: rgba(46, 213, 115, 0.1);
-                border-left: 3px solid #2ed573;
-            }
-            
-            .player-result.loser {
-                background: rgba(255, 71, 87, 0.1);
-                border-left: 3px solid #ff4757;
-            }
-            
-            .player-result.neutral {
-                background: rgba(255, 255, 255, 0.05);
-                border-left: 3px solid #aaa;
-            }
-            
-            .player-result-name {
+            .payout-summary-header h3 {
+                margin: 0;
+                color: white;
+                font-size: 1.1rem;
                 font-weight: 600;
-                flex: 1;
             }
             
-            .player-result-chips {
-                font-family: monospace;
+            .payout-timestamp {
+                font-size: 0.8rem;
                 color: rgba(255, 255, 255, 0.7);
             }
             
-            .player-result-chips .diff {
+            .results-container {
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .player-results-cards {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 12px;
+            }
+            
+            .player-result-card {
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                padding: 12px;
+                display: flex;
+                align-items: center;
+                position: relative;
+                border-left: 4px solid #666;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            
+            .player-result-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            }
+            
+            .player-result-card.winner {
+                border-left-color: #2ed573;
+                background: linear-gradient(to right, rgba(46, 213, 115, 0.15), rgba(0, 0, 0, 0.2));
+            }
+            
+            .player-result-card.loser {
+                border-left-color: #ff4757;
+                background: linear-gradient(to right, rgba(255, 71, 87, 0.15), rgba(0, 0, 0, 0.2));
+            }
+            
+            .player-result-card.neutral {
+                border-left-color: #999;
+            }
+            
+            .player-status-indicator {
+                font-size: 1.2rem;
+                margin-right: 12px;
+                opacity: 0.8;
+            }
+            
+            .player-card-content {
+                flex: 1;
+            }
+            
+            .player-name {
                 font-weight: 600;
+                font-size: 1.1rem;
+                margin-bottom: 4px;
                 color: white;
             }
             
-            .player-result.winner .diff {
+            .chip-change {
+                color: rgba(255, 255, 255, 0.75);
+                font-size: 0.9rem;
+                margin-bottom: 4px;
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+            
+            .chip-label {
+                opacity: 0.7;
+            }
+            
+            .chips-start, .chips-end {
+                font-family: monospace;
+            }
+            
+            .arrow {
+                opacity: 0.7;
+                margin: 0 2px;
+            }
+            
+            .chip-diff {
+                font-weight: 600;
+                margin-left: 4px;
+            }
+            
+            .cash-value {
+                font-weight: 700;
+                font-size: 1.2rem;
+                color: #666;
+            }
+            
+            .cash-value.winner {
                 color: #2ed573;
             }
             
-            .player-result.loser .diff {
+            .cash-value.loser {
                 color: #ff4757;
             }
             
-            .player-result-cash {
-                font-weight: 700;
-                min-width: 80px;
-                text-align: right;
+            /* Payment Instructions Section */
+            .payment-instructions {
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 10px;
+                padding: 16px;
             }
             
-            .winner .player-result-cash {
-                color: #2ed573;
-            }
-            
-            .loser .player-result-cash {
-                color: #ff4757;
-            }
-            
-            .payer-section {
-                margin-bottom: 1.5rem;
-            }
-            
-            .payer-name {
-                font-weight: 700;
+            .payment-instructions h3 {
+                margin-top: 0;
+                margin-bottom: 12px;
+                color: white;
                 font-size: 1.1rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding-bottom: 8px;
+            }
+            
+            .no-payments-message {
+                text-align: center;
+                padding: 12px;
+                color: rgba(255, 255, 255, 0.9);
+                font-weight: 500;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 6px;
+            }
+            
+            .payment-group {
+                margin-bottom: 16px;
+                animation: fadeIn 0.3s ease forwards;
+            }
+            
+            .payer {
+                font-weight: 600;
                 color: #ff4757;
-                margin-bottom: 0.5rem;
+                margin-bottom: 8px;
             }
             
             .payment-list {
-                list-style-type: none;
-                padding-left: 1rem;
-                margin: 0;
+                padding-left: 12px;
             }
             
             .payment-item {
                 display: flex;
-                justify-content: space-between;
                 align-items: center;
-                padding: 0.5rem 0.8rem;
-                background: rgba(0, 0, 0, 0.15);
-                border-radius: 6px;
-                margin-bottom: 0.5rem;
+                margin-bottom: 8px;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                padding: 10px;
+                transition: transform 0.2s ease;
             }
             
-            .payee {
+            .payment-item:hover {
+                transform: scale(1.02);
+            }
+            
+            .payment-arrow {
+                color: rgba(255, 255, 255, 0.5);
+                margin-right: 10px;
+                font-size: 1.2rem;
+            }
+            
+            .payment-details {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex: 1;
+            }
+            
+            .payment-recipient {
                 color: #2ed573;
                 font-weight: 600;
             }
             
-            .amount {
+            .payment-amount {
                 font-weight: 700;
                 font-size: 1.1rem;
                 color: white;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 4px 12px;
+                border-radius: 50px;
             }
             
-            .no-transactions {
-                text-align: center;
-                padding: 1rem;
-                color: var(--main-color);
-                font-weight: 600;
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            /* Mobile optimizations */
+            @media (max-width: 768px) {
+                .results-container {
+                    padding: 12px;
+                }
+                
+                .player-results-cards {
+                    grid-template-columns: 1fr;
+                }
+                
+                .payment-details {
+                    flex-direction: row;
+                    align-items: center;
+                }
+                
+                .payment-recipient, .payment-amount {
+                    padding: 4px 8px;
+                }
             }
         `;
         document.head.appendChild(style);
     }
     
-    console.log('[PAYOUT] Payout results updated');
+    // Scroll to the results
+    payoutResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
     
-    // Show a toast notification
-    PokerApp.UI.showToast('Payouts calculated successfully', 'success');
+    console.log('[PAYOUT] Results displayed');
+    PokerApp.UI.showToast('Payouts calculated', 'success');
 }
 
 // Add removePlayer function
