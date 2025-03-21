@@ -1116,654 +1116,189 @@ button,
 
 /* Reset Animation - Curtain Flow Effect */
 .reset-curtain {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 0;
-  background: var(--vibrant-gradient);
-  z-index: 9995;
-  transform-origin: top;
-  transition: height 0s linear;
-  opacity: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.reset-curtain::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 5%),
-    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 6%),
-    radial-gradient(circle at 40% 60%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 5%),
-    radial-gradient(circle at 60% 80%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 4%);
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-/* Floating particles */
-.reset-curtain.active .particles {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.reset-curtain.active .particles::before,
-.reset-curtain.active .particles::after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  background: transparent;
-}
-
-.reset-curtain.active .particles::before {
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 0.8%),
-    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 0.6%),
-    radial-gradient(circle at 80% 70%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 0.7%),
-    radial-gradient(circle at 10% 60%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 0.5%),
-    radial-gradient(circle at 30% 80%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 0.7%),
-    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 0.8%),
-    radial-gradient(circle at 60% 10%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 0.6%),
-    radial-gradient(circle at 90% 90%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 0.7%);
-  animation: floatingParticles 1.5s ease infinite;
-  transform: scale(1);
-}
-
-.reset-curtain.active .particles::after {
-  background-image: 
-    radial-gradient(circle at 15% 25%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 0.7%),
-    radial-gradient(circle at 45% 55%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 0.5%),
-    radial-gradient(circle at 75% 65%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 0.6%),
-    radial-gradient(circle at 5% 65%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 0.4%),
-    radial-gradient(circle at 35% 85%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 0.6%),
-    radial-gradient(circle at 85% 15%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 0.7%),
-    radial-gradient(circle at 65% 5%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 0.5%),
-    radial-gradient(circle at 95% 85%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 0.6%);
-  animation: floatingParticles 1.5s ease infinite reverse;
-  transform: scale(0.9);
-}
-
-@keyframes floatingParticles {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-10px) scale(1.05);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-  }
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 0;
+    background: var(--vibrant-gradient);
+    z-index: 100;
+    transform-origin: top;
+    transition: height 0s linear;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
 }
 
 .reset-curtain.active {
-  height: 100vh;
-  opacity: 1;
-  pointer-events: all;
-  animation: curtainFlow 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards;
-}
-
-.reset-curtain.active::before {
-  opacity: 1;
-}
-
-.reset-curtain::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
-  transform: translateY(-100%);
-  animation: curtainShine 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards;
-  opacity: 0;
-}
-
-.reset-curtain.active::after {
-  opacity: 1;
-}
-
-.reset-splash {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  width: 200px;
-  height: 200px;
-  background: rgba(255,255,255,0.3);
-  border-radius: 50%;
-  opacity: 0;
-  z-index: 9995;
-}
-
-.reset-curtain.active .reset-splash {
-  animation: splashEffect 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-}
-
-.reset-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 2.5rem;
-  font-weight: 900;
-  white-space: nowrap;
-  text-align: center;
-  opacity: 0;
-  text-shadow: 0 2px 15px rgba(0,0,0,0.5);
-  letter-spacing: 0.5px;
-}
-
-.reset-curtain.active .reset-text {
-  animation: fadeInOut 1s ease forwards;
-}
-
-@keyframes curtainFlow {
-  0% {
-    height: 0;
-    opacity: 0;
-  }
-  20% {
-    height: 100vh;
+    height: 100%;
     opacity: 1;
-  }
-  80% {
-    height: 100vh;
-    opacity: 1;
-  }
-  100% {
-    height: 100vh;
+    animation: resetCurtainAnimation 2s ease-in-out forwards;
+}
+
+@keyframes resetCurtainAnimation {
+    0% {
+        height: 0;
+        opacity: 0;
+    }
+    20% {
+        height: 100%;
+        opacity: 1;
+    }
+    80% {
+        height: 100%;
+        opacity: 1;
+    }
+    100% {
+        height: 0;
+        opacity: 0;
+    }
+}
+
+.reset-curtain::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 5%),
+        radial-gradient(circle at 80% 40%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 6%),
+        radial-gradient(circle at 40% 60%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 5%),
+        radial-gradient(circle at 60% 80%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 4%);
     opacity: 0;
-  }
+    transition: opacity 0.5s ease;
 }
 
-@keyframes curtainShine {
-  0% {
-    transform: translateY(-100%);
-  }
-  50% {
-    transform: translateY(100%);
-  }
-  100% {
-    transform: translateY(100%);
-  }
+/* Floating particles */
+.reset-curtain .particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
 }
 
-@keyframes splashEffect {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  80% {
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(1.2);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.5);
-  }
-}
-
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.8);
-  }
-  30% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  70% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.2);
-  }
-}
-
-/* Card reset animation */
-@keyframes cardReset {
-  0% {
-    transform: translateY(0) rotate(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-20px) rotate(5deg);
-    opacity: 0;
-  }
-}
-
-.resetting .poker-card {
-  animation: cardReset 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-}
-
-.resetting .poker-card:nth-child(1) { animation-delay: 0s; }
-.resetting .poker-card:nth-child(2) { animation-delay: 0.05s; }
-.resetting .poker-card:nth-child(3) { animation-delay: 0.1s; }
-.resetting .poker-card:nth-child(4) { animation-delay: 0.15s; }
-.resetting .poker-card:nth-child(5) { animation-delay: 0.2s; }
-.resetting .poker-card:nth-child(6) { animation-delay: 0.25s; }
-.resetting .poker-card:nth-child(7) { animation-delay: 0.3s; }
-.resetting .poker-card:nth-child(8) { animation-delay: 0.35s; }
-
-/* Table rows reset animation */
-@keyframes rowReset {
-  0% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(30px);
-    opacity: 0;
-  }
-}
-
-.resetting tbody tr {
-  animation: rowReset 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-}
-
-.resetting tbody tr:nth-child(1) { animation-delay: 0s; }
-.resetting tbody tr:nth-child(2) { animation-delay: 0.05s; }
-.resetting tbody tr:nth-child(3) { animation-delay: 0.1s; }
-.resetting tbody tr:nth-child(4) { animation-delay: 0.15s; }
-.resetting tbody tr:nth-child(5) { animation-delay: 0.2s; }
-.resetting tbody tr:nth-child(6) { animation-delay: 0.25s; }
-.resetting tbody tr:nth-child(7) { animation-delay: 0.3s; }
-.resetting tbody tr:nth-child(8) { animation-delay: 0.35s; }
-
-/* Flying Cards Animation for Reset Effect */
+/* Flying cards container */
 .flying-cards-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  perspective: 1000px;
-  z-index: 9998;
-  opacity: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 101;
+    perspective: 1000px;
 }
 
-.flying-cards-container.active {
-  opacity: 1;
-}
-
+/* Reset card animation */
 .reset-card {
-  position: absolute;
-  width: 60px;
-  height: 90px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  z-index: 9998;
-  opacity: 0;
-  transform: translateZ(0);
-  background-size: cover;
-  background-position: center;
-  border: 3px solid white;
+    position: absolute;
+    width: 60px;
+    height: 90px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg);
+    pointer-events: none;
 }
 
-.flying-cards-container.active .reset-card {
-  animation: flyingCard 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
-}
-
-.reset-card:nth-child(1) {
-  top: 10%;
-  left: 20%;
-  background-image: linear-gradient(135deg, #ff4757, #ff6b81);
-  animation-delay: 0.1s;
-  transform: rotate(-10deg);
-}
-
-.reset-card:nth-child(2) {
-  top: 15%;
-  left: 70%;
-  background-image: linear-gradient(135deg, #2ed3ff, #1e90ff);
-  animation-delay: 0.15s;
-  transform: rotate(5deg);
-}
-
-.reset-card:nth-child(3) {
-  top: 30%;
-  left: 40%;
-  background-image: linear-gradient(135deg, #2ed573, #7bed9f);
-  animation-delay: 0.2s;
-  transform: rotate(-15deg);
-}
-
-.reset-card:nth-child(4) {
-  top: 50%;
-  left: 10%;
-  background-image: linear-gradient(135deg, #ff6347, #ff4500);
-  animation-delay: 0.25s;
-  transform: rotate(12deg);
-}
-
-.reset-card:nth-child(5) {
-  top: 60%;
-  left: 80%;
-  background-image: linear-gradient(135deg, #9370db, #8a2be2);
-  animation-delay: 0.3s;
-  transform: rotate(-8deg);
-}
-
-.reset-card:nth-child(6) {
-  top: 80%;
-  left: 50%;
-  background-image: linear-gradient(135deg, #00ffff, #00ced1);
-  animation-delay: 0.35s;
-  transform: rotate(20deg);
-}
-
-.reset-card:nth-child(7) {
-  top: 40%;
-  left: 90%;
-  background-image: linear-gradient(135deg, #ff00ff, #bf00ff);
-  animation-delay: 0.4s;
-  transform: rotate(-25deg);
-}
-
-.reset-card:nth-child(8) {
-  top: 20%;
-  left: 60%;
-  background-image: linear-gradient(135deg, #1e90ff, #4169e1);
-  animation-delay: 0.45s;
-  transform: rotate(15deg);
-}
-
-.reset-card::before {
-  content: '';
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  border-radius: 4px;
+.reset-card.active {
+    animation: flyingCard 2s ease-out forwards;
 }
 
 @keyframes flyingCard {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) rotate(var(--rotate, 0deg)) scale(0.3);
-  }
-  10% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(var(--rotate, 0deg)) scale(1.1);
-  }
-  30% {
-    transform: translate(calc(var(--direction, 1) * 100px), -100px) rotate(calc(var(--rotate) + 20deg)) scale(0.9);
-  }
-  80% {
-    opacity: 1;
-    transform: translate(calc(var(--direction, 1) * 300px), 100px) rotate(calc(var(--rotate) + 40deg)) scale(0.7);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(calc(var(--direction, 1) * 400px), 0) rotate(calc(var(--rotate) + 60deg)) scale(0.1);
-  }
+    0% {
+        opacity: 0;
+        transform: translate(0, 0) rotate(0deg);
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--flyX), var(--flyY)) rotate(var(--flyRotate));
+    }
 }
 
-/* Confetti for Reset Animation */
+/* Confetti container */
 .confetti-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 9997;
-  overflow: hidden;
-  opacity: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 102;
+    perspective: 1000px;
 }
 
-.confetti-container.active {
-  opacity: 1;
-}
-
-.confetti {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  opacity: 0;
-}
-
-.confetti.square {
-  width: 10px;
-  height: 10px;
-  border-radius: 0;
-  transform: rotate(45deg);
-}
-
-.confetti.triangle {
-  width: 0;
-  height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-bottom: 14px solid var(--color);
-  background: transparent;
-}
-
-.confetti.circle {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.confetti:nth-child(even) {
-  animation: confettiDrop1 4s ease-in-out forwards;
-}
-
-.confetti:nth-child(odd) {
-  animation: confettiDrop2 5s ease-in-out forwards;
-}
-
-.confetti-container.active .confetti {
-  opacity: 1;
-}
-
-@keyframes confettiDrop1 {
-  0% {
-    opacity: 1;
-    transform: translateY(-100px) rotateX(0deg) rotateY(0deg) scale(0.2);
-  }
-  20% {
-    transform: translateY(0) rotateX(180deg) rotateY(90deg) scale(1);
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
+/* Confetti piece */
+.confetti-piece {
+    position: absolute;
+    width: 10px;
+    height: 10px;
     opacity: 0;
-    transform: translateY(1000px) rotateX(360deg) rotateY(180deg) scale(0.2);
-  }
+    pointer-events: none;
+    animation: confettiFall 3s ease-in forwards;
+    animation-delay: var(--fall-delay, 0s);
 }
 
-@keyframes confettiDrop2 {
-  0% {
-    opacity: 1;
-    transform: translateY(-100px) rotateX(0deg) rotateY(0deg) scale(0.2);
-  }
-  20% {
-    transform: translateY(0) rotateX(-180deg) rotateY(-90deg) scale(1);
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(1000px) rotateX(-360deg) rotateY(-180deg) scale(0.2);
-  }
+@keyframes confettiFall {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px) rotate(0deg);
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(var(--fall-distance, 100vh)) rotate(720deg);
+    }
 }
 
-/* Shuffle Effect */
+/* Shuffle effect */
 .shuffle-effect {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 200px;
-  z-index: 9996;
-  perspective: 1000px;
-  opacity: 0;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 200px;
+    pointer-events: none;
+    z-index: 103;
+    opacity: 0;
 }
 
 .shuffle-effect.active {
-  opacity: 1;
-  animation: shufflePulse 1.5s ease-out forwards;
+    animation: shuffleEffect 2s ease-out forwards;
 }
 
-.deck-card {
-  position: absolute;
-  width: 80px;
-  height: 110px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  top: 50%;
-  left: 50%;
-  margin: -55px 0 0 -40px;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  opacity: 0;
-}
-
-.shuffle-effect.active .deck-card {
-  opacity: 1;
-}
-
-.deck-card:nth-child(1) {
-  transform: translateZ(0);
-  animation: shuffle1 1.5s ease-out forwards;
-}
-
-.deck-card:nth-child(2) {
-  transform: translateZ(-2px);
-  animation: shuffle2 1.5s ease-out forwards;
-}
-
-.deck-card:nth-child(3) {
-  transform: translateZ(-4px);
-  animation: shuffle3 1.5s ease-out forwards;
-}
-
-.deck-card:nth-child(4) {
-  transform: translateZ(-6px);
-  animation: shuffle4 1.5s ease-out forwards;
-}
-
-.deck-card::before {
-  content: '';
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
-}
-
-@keyframes shufflePulse {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.5);
-  }
-  30% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.2);
-  }
-  70% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(0.9);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.1);
-  }
-}
-
-@keyframes shuffle1 {
-  0% {
-    transform: translateZ(0) rotateZ(0);
-  }
-  30% {
-    transform: translateZ(40px) rotateZ(10deg) translateX(-30px);
-  }
-  60% {
-    transform: translateZ(10px) rotateZ(-5deg) translateX(20px);
-  }
-  100% {
-    transform: translateZ(50px) rotateZ(180deg) translateX(-100px) translateY(-50px) scale(0);
-  }
-}
-
-@keyframes shuffle2 {
-  0% {
-    transform: translateZ(-2px) rotateZ(0);
-  }
-  30% {
-    transform: translateZ(30px) rotateZ(-15deg) translateX(20px);
-  }
-  60% {
-    transform: translateZ(5px) rotateZ(10deg) translateX(-30px);
-  }
-  100% {
-    transform: translateZ(40px) rotateZ(-150deg) translateX(80px) translateY(-60px) scale(0);
-  }
-}
-
-@keyframes shuffle3 {
-  0% {
-    transform: translateZ(-4px) rotateZ(0);
-  }
-  30% {
-    transform: translateZ(20px) rotateZ(20deg) translateX(10px);
-  }
-  60% {
-    transform: translateZ(0px) rotateZ(-25deg) translateX(15px);
-  }
-  100% {
-    transform: translateZ(30px) rotateZ(120deg) translateX(-50px) translateY(-100px) scale(0);
-  }
-}
-
-@keyframes shuffle4 {
-  0% {
-    transform: translateZ(-6px) rotateZ(0);
-  }
-  30% {
-    transform: translateZ(10px) rotateZ(-5deg) translateX(-15px);
-  }
-  60% {
-    transform: translateZ(-5px) rotateZ(15deg) translateX(5px);
-  }
-  100% {
-    transform: translateZ(20px) rotateZ(-90deg) translateX(100px) translateY(-80px) scale(0);
-  }
+@keyframes shuffleEffect {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+    20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
 }
 
 /* App Header */

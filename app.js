@@ -1774,123 +1774,114 @@ function endGame() {
 
 // Update the resetGame function to properly cleanup and show animation
 function resetGame() {
-    console.log('[GAME] Reset button clicked');
-    
-    // Ask for confirmation
-    if (!confirm('Are you sure you want to reset the game? All player data will be lost.')) {
-        return;
+    // Create reset curtain if it doesn't exist
+    let resetCurtain = document.querySelector('.reset-curtain');
+    if (!resetCurtain) {
+        resetCurtain = document.createElement('div');
+        resetCurtain.className = 'reset-curtain';
+        document.body.appendChild(resetCurtain);
     }
-    
-    // Show reset animation
-    const resetCurtain = document.querySelector('.reset-curtain');
-    const flyingCards = document.querySelector('.flying-cards-container');
-    const shuffleEffect = document.querySelector('.shuffle-effect');
-    const confettiContainer = document.querySelector('.confetti-container');
-    
-    if (resetCurtain) {
-        resetCurtain.classList.add('active');
-        
-        // Play card shuffle sound if available
-        const shuffleSound = document.getElementById('card-shuffle-sound');
-        if (shuffleSound) {
-            shuffleSound.currentTime = 0;
-            shuffleSound.play().catch(e => console.log('Audio play error:', e));
-        }
-        
-        // Animate flying cards
-        if (flyingCards) {
-            flyingCards.classList.add('active');
-            
-            // Add random animation to each card
-            document.querySelectorAll('.reset-card').forEach(card => {
-                const randomX = Math.random() * 200 - 100; // -100 to 100 vw
-                const randomY = Math.random() * 200 - 100; // -100 to 100 vh
-                const randomRotate = Math.random() * 1080 - 540; // -540 to 540 deg (multiple spins)
-                
-                // Set CSS variables for the animation
-                card.style.setProperty('--flyX', `${randomX}vw`);
-                card.style.setProperty('--flyY', `${randomY}vh`);
-                card.style.setProperty('--flyRotate', `${randomRotate}deg`);
-                
-                card.style.animationDelay = `${Math.random() * 0.3}s`;
-                card.classList.add('active');
-            });
-        }
-        
-        // Animate shuffle effect
-        if (shuffleEffect) {
-            shuffleEffect.classList.add('active');
-        }
-        
-        // Generate confetti
-        if (confettiContainer) {
-            for (let i = 0; i < 50; i++) {
-                const confetti = document.createElement('div');
-                confetti.className = 'confetti-piece';
-                confetti.style.setProperty('--fall-delay', `${Math.random() * 3}s`);
-                confetti.style.setProperty('--fall-distance', `${100 + Math.random() * 50}vh`);
-                confetti.style.left = `${Math.random() * 100}vw`;
-                confetti.top = `-50px`;
-                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
-                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-                confettiContainer.appendChild(confetti);
-            }
-        }
+
+    // Create flying cards container if it doesn't exist
+    let flyingCardsContainer = document.querySelector('.flying-cards-container');
+    if (!flyingCardsContainer) {
+        flyingCardsContainer = document.createElement('div');
+        flyingCardsContainer.className = 'flying-cards-container';
+        document.body.appendChild(flyingCardsContainer);
     }
-    
-    // Wait for animation to complete before resetting game state
+
+    // Create confetti container if it doesn't exist
+    let confettiContainer = document.querySelector('.confetti-container');
+    if (!confettiContainer) {
+        confettiContainer = document.createElement('div');
+        confettiContainer.className = 'confetti-container';
+        document.body.appendChild(confettiContainer);
+    }
+
+    // Create shuffle effect if it doesn't exist
+    let shuffleEffect = document.querySelector('.shuffle-effect');
+    if (!shuffleEffect) {
+        shuffleEffect = document.createElement('div');
+        shuffleEffect.className = 'shuffle-effect';
+        document.body.appendChild(shuffleEffect);
+    }
+
+    // Play card shuffle sound if available
+    const shuffleSound = document.getElementById('shuffleSound');
+    if (shuffleSound) {
+        shuffleSound.currentTime = 0;
+        shuffleSound.play().catch(() => {});
+    }
+
+    // Trigger reset animation
+    resetCurtain.classList.add('active');
+
+    // Create and animate flying cards
+    flyingCardsContainer.innerHTML = '';
+    for (let i = 0; i < 8; i++) {
+        const card = document.createElement('div');
+        card.className = 'reset-card';
+        card.style.setProperty('--flyX', `${Math.random() * 800 - 400}px`);
+        card.style.setProperty('--flyY', `${Math.random() * 600 - 300}px`);
+        card.style.setProperty('--flyRotate', `${Math.random() * 720 - 360}deg`);
+        flyingCardsContainer.appendChild(card);
+        setTimeout(() => card.classList.add('active'), 50 * i);
+    }
+
+    // Create and animate confetti
+    confettiContainer.innerHTML = '';
+    const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#9370db', '#ff6b81'];
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti-piece';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = `${Math.random() * 100}%`;
+        confetti.style.setProperty('--fall-delay', `${Math.random() * 2}s`);
+        confetti.style.setProperty('--fall-distance', `${100 + Math.random() * 50}vh`);
+        confettiContainer.appendChild(confetti);
+    }
+
+    // Show shuffle effect
+    shuffleEffect.classList.add('active');
+
+    // Reset game state after animation
     setTimeout(() => {
-        // Clean up Firebase first
-        if (PokerApp.state.sessionId && appDatabase) {
-            try {
-                const updates = {
-                    active: false,
-                    status: 'ended',
-                    endedAt: Date.now()
-                };
-                
-                appDatabase.ref(`games/${PokerApp.state.sessionId}`).update(updates)
-                    .then(() => {
-                        console.log('[FIREBASE] Game reset successfully');
-                        cleanupFirebaseListeners();
-                    })
-                    .catch(error => {
-                        console.error('[FIREBASE] Error resetting game:', error);
-                    });
-            } catch (error) {
-                console.error('[FIREBASE] Error cleaning up Firebase in resetGame:', error);
-            }
-        }
-        
-        // Reset state and UI
         resetGameState();
-        
-        // Show confirmation
-        PokerApp.UI.showToast('Game has been reset successfully', 'success');
-        
-        // Hide animation elements after delay
+        resetCurtain.classList.remove('active');
+        shuffleEffect.classList.remove('active');
+
+        // Clean up animation elements
         setTimeout(() => {
-            if (resetCurtain) resetCurtain.classList.remove('active');
-            if (flyingCards) {
-                flyingCards.classList.remove('active');
-                document.querySelectorAll('.reset-card').forEach(card => {
-                    card.classList.remove('active');
-                    card.style.removeProperty('--flyX');
-                    card.style.removeProperty('--flyY');
-                    card.style.removeProperty('--flyRotate');
-                });
-            }
-            if (shuffleEffect) shuffleEffect.classList.remove('active');
-            
-            // Remove confetti pieces
-            if (confettiContainer) {
-                while (confettiContainer.firstChild) {
-                    confettiContainer.removeChild(confettiContainer.firstChild);
-                }
-            }
-        }, 500);
-        
-    }, 2000); // Animation time before reset completes
+            flyingCardsContainer.innerHTML = '';
+            confettiContainer.innerHTML = '';
+            shuffleEffect.innerHTML = '';
+        }, 2000);
+    }, 2000);
+}
+
+function resetGameState() {
+    // Reset all game state variables
+    currentHand = [];
+    handHistory = [];
+    potTotal = 0;
+    currentBet = 0;
+    currentRound = 0;
+    gameStarted = false;
+    
+    // Clear the UI
+    document.getElementById('currentHand').innerHTML = '';
+    document.getElementById('handHistory').innerHTML = '';
+    document.getElementById('potTotal').textContent = '0';
+    document.getElementById('currentBet').textContent = '0';
+    
+    // Re-enable all inputs and buttons
+    const inputs = document.querySelectorAll('input, select, button');
+    inputs.forEach(input => {
+        input.disabled = false;
+    });
+    
+    // Show a toast notification
+    showToast('Game reset successfully!', 'success');
 }
 
 // Add calculatePayouts function
