@@ -1774,10 +1774,18 @@ function endGame() {
 
 // Update the resetGame function to properly cleanup and show animation
 function resetGame() {
+    console.log('[GAME] Reset button clicked');
+    
+    // Ask for confirmation
+    if (!confirm('Are you sure you want to reset the game? All player data will be lost.')) {
+        return;
+    }
+    
     // Show reset animation
     const resetCurtain = document.querySelector('.reset-curtain');
     const flyingCards = document.querySelector('.flying-cards-container');
     const shuffleEffect = document.querySelector('.shuffle-effect');
+    const confettiContainer = document.querySelector('.confetti-container');
     
     if (resetCurtain) {
         resetCurtain.classList.add('active');
@@ -1795,12 +1803,16 @@ function resetGame() {
             
             // Add random animation to each card
             document.querySelectorAll('.reset-card').forEach(card => {
-                const randomX = Math.random() * 100 - 50;
-                const randomY = Math.random() * 100 - 50;
-                const randomRotate = Math.random() * 360;
+                const randomX = Math.random() * 200 - 100; // -100 to 100 vw
+                const randomY = Math.random() * 200 - 100; // -100 to 100 vh
+                const randomRotate = Math.random() * 1080 - 540; // -540 to 540 deg (multiple spins)
                 
-                card.style.transform = `translate(${randomX}vw, ${randomY}vh) rotate(${randomRotate}deg)`;
-                card.style.animationDelay = `${Math.random() * 0.5}s`;
+                // Set CSS variables for the animation
+                card.style.setProperty('--flyX', `${randomX}vw`);
+                card.style.setProperty('--flyY', `${randomY}vh`);
+                card.style.setProperty('--flyRotate', `${randomRotate}deg`);
+                
+                card.style.animationDelay = `${Math.random() * 0.3}s`;
                 card.classList.add('active');
             });
         }
@@ -1808,6 +1820,21 @@ function resetGame() {
         // Animate shuffle effect
         if (shuffleEffect) {
             shuffleEffect.classList.add('active');
+        }
+        
+        // Generate confetti
+        if (confettiContainer) {
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti-piece';
+                confetti.style.setProperty('--fall-delay', `${Math.random() * 3}s`);
+                confetti.style.setProperty('--fall-distance', `${100 + Math.random() * 50}vh`);
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.top = `-50px`;
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                confettiContainer.appendChild(confetti);
+            }
         }
     }
     
@@ -1839,7 +1866,7 @@ function resetGame() {
         resetGameState();
         
         // Show confirmation
-        PokerApp.UI.showToast('Game has been reset', 'success');
+        PokerApp.UI.showToast('Game has been reset successfully', 'success');
         
         // Hide animation elements after delay
         setTimeout(() => {
@@ -1848,13 +1875,22 @@ function resetGame() {
                 flyingCards.classList.remove('active');
                 document.querySelectorAll('.reset-card').forEach(card => {
                     card.classList.remove('active');
-                    card.style.transform = '';
+                    card.style.removeProperty('--flyX');
+                    card.style.removeProperty('--flyY');
+                    card.style.removeProperty('--flyRotate');
                 });
             }
             if (shuffleEffect) shuffleEffect.classList.remove('active');
+            
+            // Remove confetti pieces
+            if (confettiContainer) {
+                while (confettiContainer.firstChild) {
+                    confettiContainer.removeChild(confettiContainer.firstChild);
+                }
+            }
         }, 500);
         
-    }, 1500); // Animation time before reset completes
+    }, 2000); // Animation time before reset completes
 }
 
 // Add calculatePayouts function
