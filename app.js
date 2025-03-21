@@ -2536,42 +2536,61 @@ window.updatePlayerChips = updatePlayerChips;
 
 // Animation for new player joining
 function animateNewPlayer(playerId) {
-    const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
-    if (!playerRow) return;
-    
-    // First make sure any old animation classes are removed
-    playerRow.classList.remove('player-added');
-    
-    // Force reflow
-    void playerRow.offsetWidth;
-    
-    // Add animation class
-    playerRow.classList.add('player-added');
-    
-    // Create flying cards animation
-    createFlyingCards(playerRow);
+    // Add a small delay to ensure the DOM has been updated
+    setTimeout(() => {
+        const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+        if (!playerRow) {
+            console.log('[ANIMATION] Player row not found for animation:', playerId);
+            return;
+        }
+        
+        console.log('[ANIMATION] Animating new player:', playerId);
+        
+        // First make sure any old animation classes are removed
+        playerRow.classList.remove('player-added');
+        
+        // Force reflow
+        void playerRow.offsetWidth;
+        
+        // Add animation class
+        playerRow.classList.add('player-added');
+        
+        // Create flying cards animation
+        createFlyingCards(playerRow);
+    }, 300); // 300ms delay to ensure DOM update completes
 }
 
 // Animation for adding chips to existing player
 function animateChipAddition(playerId) {
-    const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
-    if (!playerRow) return;
-    
-    // Find the chip count cell
-    const chipCell = playerRow.querySelector('.chip-cell');
-    if (!chipCell) return;
-    
-    // First make sure any old animation classes are removed
-    chipCell.classList.remove('chips-added');
-    
-    // Force reflow
-    void chipCell.offsetWidth;
-    
-    // Add animation class
-    chipCell.classList.add('chips-added');
-    
-    // Create flying chips animation
-    createFlyingChips(chipCell);
+    // Add a small delay to ensure the DOM has been updated
+    setTimeout(() => {
+        const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+        if (!playerRow) {
+            console.log('[ANIMATION] Player row not found for chip animation:', playerId);
+            return;
+        }
+        
+        // Find the chip count cell - use the correct class name
+        const chipCell = playerRow.querySelector('.current-chips');
+        if (!chipCell) {
+            console.log('[ANIMATION] Chip cell not found for animation');
+            return;
+        }
+        
+        console.log('[ANIMATION] Animating chip addition for player:', playerId);
+        
+        // First make sure any old animation classes are removed
+        chipCell.classList.remove('chips-added');
+        
+        // Force reflow
+        void chipCell.offsetWidth;
+        
+        // Add animation class
+        chipCell.classList.add('chips-added');
+        
+        // Create flying chips animation
+        createFlyingChips(chipCell);
+    }, 300); // 300ms delay to ensure DOM update completes
 }
 
 // Create flying cards animation
@@ -2747,3 +2766,141 @@ document.addEventListener('DOMContentLoaded', () => {
         setupMobileCompatibility();
     }
 });
+
+// Helper function to handle lastPlayer updates
+function handleLastPlayerUpdate(lastPlayer) {
+    if (!lastPlayer) {
+        console.log(`[FIREBASE] No lastPlayer data to process`);
+        return;
+    }
+    
+    console.log(`[FIREBASE] Processing lastPlayer:`, lastPlayer);
+    
+    // Check if this player already exists in our state
+    const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
+        (p.id && p.id === parseInt(lastPlayer.id)) || 
+        (p.name && lastPlayer.name && 
+            p.name.toLowerCase() === lastPlayer.name.toLowerCase())
+    );
+    
+    if (existingPlayerIndex === -1) {
+        // New player - add them
+        const playerData = {
+            id: parseInt(lastPlayer.id),
+            name: lastPlayer.name,
+            initial_chips: parseInt(lastPlayer.initial_chips),
+            current_chips: parseInt(lastPlayer.current_chips)
+        };
+        
+        console.log(`[FIREBASE] Adding new player to state:`, playerData);
+        PokerApp.state.players.push(playerData);
+        
+        // Update UI
+        updatePlayerList();
+        updateEmptyState();
+        
+        // Update hand animation if it exists
+        if (window.handAnimation) {
+            window.handAnimation.setPlayers(PokerApp.state.players);
+        }
+        
+        // Show toast notification
+        PokerApp.UI.showToast(`New player joined: ${lastPlayer.name}`, 'success');
+        
+        // The animation must be triggered after the DOM is updated
+        console.log('[ANIMATION] Triggering new player animation:', playerData.id);
+        animateNewPlayer(playerData.id);
+        
+        // Save state to localStorage
+        saveState();
+        
+        return true;
+    } else {
+        // Player exists - check if this is a rebuy (chip addition)
+        const existingPlayer = PokerApp.state.players[existingPlayerIndex];
+        const newChips = parseInt(lastPlayer.initial_chips);
+        
+        if (newChips > 0 && existingPlayer.initial_chips !== newChips) {
+            // This is a rebuy - add the chips
+            const previousChips = existingPlayer.current_chips;
+            existingPlayer.current_chips += newChips;
+            existingPlayer.initial_chips += newChips;
+            
+            // Update UI
+            updatePlayerList();
+            
+            // Show toast notification
+            PokerApp.UI.showToast(`${existingPlayer.name} added ${newChips} chips!`, 'success');
+            
+            // The animation must be triggered after the DOM is updated
+            console.log('[ANIMATION] Triggering chip addition animation:', existingPlayer.id);
+            animateChipAddition(existingPlayer.id);
+            
+            // Save state
+            saveState();
+            
+            // Update Firebase
+            if (PokerApp.state.sessionId) {
+                updatePlayersInFirebase();
+            }
+            
+            return true;
+        }
+        
+        console.log(`[FIREBASE] Player already exists in state, skipping:`, lastPlayer.name);
+        return false;
+    }
+}
+
+// Add to global scope
+window.handleLastPlayerUpdate = handleLastPlayerUpdate;
+
+// Setup lastPlayer listener
+function setupLastPlayerListener(gameId) {
+    if (!gameId) return;
+    
+    // Instead of using playerNotifications, we'll listen for changes to lastPlayer
+    const lastPlayerRef = firebase.database().ref(`games/${gameId}/state/lastPlayer`);
+    
+    // Clear any existing listeners
+    lastPlayerRef.off('value');
+    
+    console.log(`[FIREBASE] Setting up lastPlayer listener for game: ${gameId}`);
+    
+    // First, get the current lastPlayer value to handle any player that joined before we set up the listener
+    lastPlayerRef.once('value')
+        .then(snapshot => {
+            const currentLastPlayer = snapshot.val();
+            if (currentLastPlayer) {
+                console.log('[FIREBASE] Found existing lastPlayer, processing...');
+                handleLastPlayerUpdate(currentLastPlayer);
+            }
+            
+            // Now set up the ongoing listener
+            setupLastPlayerListener2(lastPlayerRef);
+        })
+        .catch(error => {
+            console.error('[FIREBASE] Error getting current lastPlayer:', error);
+            // Still set up listener even if first fetch fails
+            setupLastPlayerListener2(lastPlayerRef);
+        });
+}
+
+// Helper function to set up the lastPlayer listener
+function setupLastPlayerListener2(lastPlayerRef) {
+    // Set up a listener for lastPlayer changes
+    lastPlayerRef.on('value', 
+        snapshot => {
+            const lastPlayer = snapshot.val();
+            console.log(`[FIREBASE] Received lastPlayer update:`, lastPlayer);
+            
+            // Process the update
+            handleLastPlayerUpdate(lastPlayer);
+        }, 
+        error => {
+            console.error('[FIREBASE] Error in lastPlayer listener:', error);
+        }
+    );
+    
+    console.log(`[FIREBASE] lastPlayer listener set up`);
+}
