@@ -326,11 +326,31 @@ function addPlayer(name, chips) {
         return false;
     }
 
-    if (PokerApp.state.players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-        PokerApp.UI.showToast(`Player "${name}" already exists`, 'error');
-        return false;
+    // Check if player already exists
+    const existingPlayer = PokerApp.state.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+    
+    if (existingPlayer) {
+        // Add chips to existing player
+        const previousChips = existingPlayer.current_chips;
+        existingPlayer.current_chips += parseInt(chips);
+        existingPlayer.initial_chips += parseInt(chips);
+        
+        updatePlayerList();
+        updateEmptyState();
+        saveState();
+
+        if (PokerApp.state.sessionId) {
+            updatePlayersInFirebase();
+        }
+
+        // Add animation for chips being added
+        animateChipAddition(existingPlayer.id);
+        
+        PokerApp.UI.showToast(`Added ${chips} chips to ${name} (now has ${existingPlayer.current_chips})`, 'success');
+        return true;
     }
 
+    // Create a new player
     const player = {
         id: PokerApp.state.nextPlayerId++,
         name: name,
@@ -347,6 +367,9 @@ function addPlayer(name, chips) {
         updatePlayersInFirebase();
     }
 
+    // Animate new player addition
+    animateNewPlayer(player.id);
+    
     PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
     return true;
 }
@@ -1319,7 +1342,7 @@ function setupGameStateListener(gameId) {
                         id: p.id,
                         name: p.name,
                         initial_chips: p.initial_chips || 0,
-                        current_chips: p.current_chips || p.initial_chips || 0,
+                        current_chips: p.current_chips !== undefined ? p.current_chips : (p.initial_chips || 0),
                         joinedAt: p.joinedAt || Date.now(),
                         active: p.active !== false
                     }));
@@ -2510,6 +2533,138 @@ function updatePlayerChips(playerId, newValue) {
 
 // Add to global scope
 window.updatePlayerChips = updatePlayerChips;
+
+// Animation for new player joining
+function animateNewPlayer(playerId) {
+    const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+    if (!playerRow) return;
+    
+    // First make sure any old animation classes are removed
+    playerRow.classList.remove('player-added');
+    
+    // Force reflow
+    void playerRow.offsetWidth;
+    
+    // Add animation class
+    playerRow.classList.add('player-added');
+    
+    // Create flying cards animation
+    createFlyingCards(playerRow);
+}
+
+// Animation for adding chips to existing player
+function animateChipAddition(playerId) {
+    const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+    if (!playerRow) return;
+    
+    // Find the chip count cell
+    const chipCell = playerRow.querySelector('.chip-cell');
+    if (!chipCell) return;
+    
+    // First make sure any old animation classes are removed
+    chipCell.classList.remove('chips-added');
+    
+    // Force reflow
+    void chipCell.offsetWidth;
+    
+    // Add animation class
+    chipCell.classList.add('chips-added');
+    
+    // Create flying chips animation
+    createFlyingChips(chipCell);
+}
+
+// Create flying cards animation
+function createFlyingCards(target) {
+    const cardCount = 5;
+    const container = document.createElement('div');
+    container.className = 'flying-cards-container';
+    
+    // Position the container over the target
+    const rect = target.getBoundingClientRect();
+    container.style.position = 'fixed';
+    container.style.top = `${rect.top}px`;
+    container.style.left = `${rect.left}px`;
+    container.style.width = `${rect.width}px`;
+    container.style.height = `${rect.height}px`;
+    container.style.zIndex = '1000';
+    container.style.pointerEvents = 'none';
+    
+    // Add cards
+    for (let i = 0; i < cardCount; i++) {
+        const card = document.createElement('div');
+        card.className = 'flying-card';
+        
+        // Apply random rotation and scale
+        const rotation = Math.random() * 360;
+        card.style.transform = `rotate(${rotation}deg) scale(0.8)`;
+        
+        // Add suit and rank
+        const suits = ['♠', '♥', '♦', '♣'];
+        const ranks = ['A', 'K', 'Q', 'J', '10'];
+        const suit = suits[Math.floor(Math.random() * suits.length)];
+        const rank = ranks[Math.floor(Math.random() * ranks.length)];
+        card.innerHTML = `<div class="card-inner"><span class="card-value">${rank}</span><span class="card-suit ${suit === '♥' || suit === '♦' ? 'red' : 'black'}">${suit}</span></div>`;
+        
+        container.appendChild(card);
+    }
+    
+    document.body.appendChild(container);
+    
+    // Clean up after animation
+    setTimeout(() => {
+        container.remove();
+    }, 2000); // Animation duration + delays
+}
+
+// Create flying chips animation
+function createFlyingChips(target) {
+    const chipCount = 8;
+    const container = document.createElement('div');
+    container.className = 'flying-chips-container';
+    
+    // Position the container over the target
+    const rect = target.getBoundingClientRect();
+    container.style.position = 'fixed';
+    container.style.top = `${rect.top}px`;
+    container.style.left = `${rect.left}px`;
+    container.style.width = `${rect.width}px`;
+    container.style.height = `${rect.height}px`;
+    container.style.zIndex = '1000';
+    container.style.pointerEvents = 'none';
+    
+    // Add chips
+    for (let i = 0; i < chipCount; i++) {
+        const chip = document.createElement('div');
+        chip.className = 'flying-chip';
+        
+        // Randomize chip color
+        const chipColors = ['red', 'blue', 'green', 'black', 'purple'];
+        const chipColor = chipColors[Math.floor(Math.random() * chipColors.length)];
+        chip.classList.add(`chip-${chipColor}`);
+        
+        // Set random delay for each chip
+        const delay = Math.random() * 0.5;
+        chip.style.animationDelay = `${delay}s`;
+        
+        // Apply random rotation
+        const rotation = Math.random() * 360;
+        chip.style.transform = `rotate(${rotation}deg)`;
+        
+        container.appendChild(chip);
+    }
+    
+    document.body.appendChild(container);
+    
+    // Clean up after animation
+    setTimeout(() => {
+        container.remove();
+    }, 2000); // Animation duration + delays
+}
+
+// Add to global scope
+window.animateNewPlayer = animateNewPlayer;
+window.animateChipAddition = animateChipAddition;
 
 // Make core functions available globally
 window.PokerApp = {

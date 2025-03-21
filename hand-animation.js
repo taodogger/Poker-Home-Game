@@ -823,7 +823,7 @@ class HandAnimation {
             id: p.id,
             name: p.name,
             initial_chips: p.initial_chips,
-            current_chips: p.current_chips || p.initial_chips
+            current_chips: p.current_chips !== undefined ? p.current_chips : p.initial_chips
         }));
         
         // Recalculate player positions
