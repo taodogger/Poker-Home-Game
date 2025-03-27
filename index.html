@@ -294,18 +294,18 @@
         }
         
         .qr-wrapper {
-            background: white;
-            padding: 16px;
-            border-radius: 16px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
             display: inline-block;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            animation: float 3s ease-in-out infinite;
         }
         
-        @keyframes float {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0); }
+        .join-url {
+            margin-top: 15px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
         }
 
         .welcome-message {
@@ -458,13 +458,38 @@
             color: white !important;
             padding: 8px;
         }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            padding-left: var(--spacing-lg);
+            position: relative;
+        }
+
+        .logo-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .header-logo {
+            height: 48px;
+            width: auto;
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
     <header class="app-header">
         <div class="header-content">
             <div class="header-left">
-                <img src="images/Kapoker-logo.png" alt="Kapoker" class="header-logo" width="160" height="40">
+                <div class="logo-wrapper">
+                    <img src="images/Kapoker-logo.png" alt="Kapoker" class="header-logo" width="160" height="40">
+                </div>
             </div>
             <div class="header-right">
                 <select id="theme-selector" class="theme-selector">
@@ -589,30 +614,6 @@
             </div>
         </section>
         
-        <section id="game-controls" class="poker-card">
-            <div class="card-header">
-                <h2>Game Controls</h2>
-            </div>
-
-            <div class="card-content">
-                <div class="game-control-buttons">
-                    <button id="reset-btn" class="poker-button reset-button" onclick="window.resetGame(); return false;">
-                        <span class="button-icon">↺</span> Reset Game
-                    </button>
-                    <!-- Hidden buttons - kept for JS functionality -->
-                    <button id="start-game" class="poker-button start-button" style="display: none;">
-                        <span class="button-icon">▶️</span> Start Game
-                    </button>
-                    <button id="simulate-hand" class="poker-button simulate-button" style="display: none;" disabled>
-                        <span class="button-icon">🎲</span> Next Hand
-                    </button>
-                    <button id="end-game" class="poker-button end-button" style="display: none;" disabled>
-                        <span class="button-icon">⏹️</span> End Game
-                    </button>
-                </div>
-            </div>
-        </section>
-        
         <section id="money-to-chip-ratio" class="poker-card">
             <div class="card-header">
                 <h2>Money to Chip Ratio</h2>
@@ -644,7 +645,12 @@
                             required
                         >
                     </div>
-                    <button type="submit" class="poker-button">Set Ratio</button>
+                    <div class="button-group">
+                        <button type="submit" class="poker-button">Set Ratio</button>
+                        <button id="reset-btn" class="poker-button reset-button" onclick="window.resetGame(); return false;">
+                            <span class="button-icon">↺</span> Reset Game
+                        </button>
+                    </div>
                 </form>
                 <div class="ratio-display">
                     <p id="ratio-display">Each chip is worth $1.00</p>
@@ -695,31 +701,11 @@
     </main>
 
     <!-- Reset Animation Elements -->
-    <div class="reset-curtain">
-        <div class="particles"></div>
-        <div class="reset-splash"></div>
-        <div class="reset-text">Resetting Game...</div>
-    </div>
-
-    <div class="flying-cards-container">
-        <div class="reset-card"></div>
-        <div class="reset-card"></div>
-        <div class="reset-card"></div>
-        <div class="reset-card"></div>
-        <div class="reset-card"></div>
-        <div class="reset-card"></div>
-        <div class="reset-card"></div>
-        <div class="reset-card"></div>
-    </div>
-
-    <div class="shuffle-effect">
-        <div class="deck-card"></div>
-        <div class="deck-card"></div>
-        <div class="deck-card"></div>
-        <div class="deck-card"></div>
-    </div>
-
+    <div class="reset-curtain"></div>
+    <div class="flying-cards-container"></div>
     <div class="confetti-container"></div>
+    <div class="shuffle-effect"></div>
+    <div class="ripple-effect"></div>
 
     <!-- Audio Elements -->
     <audio id="card-shuffle-sound" preload="auto">

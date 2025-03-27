@@ -1,3 +1,172 @@
+// Add sound system at the top of the file
+const SoundSystem = {
+    audioContext: null,
+    
+    init() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            console.log('[SOUND] Audio context initialized');
+        } catch (error) {
+            console.error('[SOUND] WebAudio API not supported:', error);
+        }
+    },
+
+    playPopSound(frequency = 1000) {
+        if (!this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(frequency * 2, this.audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.02);
+        gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.3);
+        
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 0.3);
+    },
+
+    playResetSound() {
+        if (!this.audioContext) return;
+        
+        // Create multiple oscillators for a richer sound
+        const oscillators = [];
+        const gains = [];
+        const frequencies = [400, 600, 800];
+        
+        frequencies.forEach((freq, i) => {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            
+            osc.connect(gain);
+            gain.connect(this.audioContext.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(freq * 0.5, this.audioContext.currentTime + 0.5);
+            
+            gain.gain.setValueAtTime(0, this.audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(0.2, this.audioContext.currentTime + 0.1);
+            gain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.5);
+            
+            oscillators.push(osc);
+            gains.push(gain);
+            
+            osc.start(this.audioContext.currentTime + i * 0.1);
+            osc.stop(this.audioContext.currentTime + 0.5 + i * 0.1);
+        });
+    },
+
+    playChipSound() {
+        if (!this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(2000, this.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(1000, this.audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.2, this.audioContext.currentTime + 0.02);
+        gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.1);
+        
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 0.1);
+    },
+
+    playPayoutSound() {
+        if (!this.audioContext) return;
+        
+        // Create a cash register style sound
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        const filter = this.audioContext.createBiquadFilter();
+        
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        // High-pitched "ding" sound
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(2000, this.audioContext.currentTime);
+        filter.Q.value = 10;
+        
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(2000, this.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(1500, this.audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.02);
+        gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.3);
+        
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 0.3);
+        
+        // Add a lower "register" sound after a slight delay
+        setTimeout(() => {
+            const lowOsc = this.audioContext.createOscillator();
+            const lowGain = this.audioContext.createGain();
+            
+            lowOsc.connect(lowGain);
+            lowGain.connect(this.audioContext.destination);
+            
+            lowOsc.type = 'sine';
+            lowOsc.frequency.setValueAtTime(300, this.audioContext.currentTime);
+            lowOsc.frequency.exponentialRampToValueAtTime(150, this.audioContext.currentTime + 0.2);
+            
+            lowGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+            lowGain.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.05);
+            lowGain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.2);
+            
+            lowOsc.start();
+            lowOsc.stop(this.audioContext.currentTime + 0.2);
+        }, 100);
+    },
+
+    playRemoveSound() {
+        if (!this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(400, this.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.3);
+        
+        gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.3);
+        
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 0.3);
+    }
+};
+
+// Initialize sound system when the app starts
+document.addEventListener('DOMContentLoaded', () => {
+    // Add this to your existing DOMContentLoaded listener
+    SoundSystem.init();
+    
+    // Add click handler to initialize audio context (browsers require user interaction)
+    document.body.addEventListener('click', () => {
+        if (SoundSystem.audioContext && SoundSystem.audioContext.state === 'suspended') {
+            SoundSystem.audioContext.resume();
+        }
+    }, { once: true });
+});
+
 console.log('Kapoker - Initializing...');
 
 // Initialize Firebase database reference
@@ -331,22 +500,25 @@ function addPlayer(name, chips) {
     
     if (existingPlayer) {
         // Add chips to existing player
-        const previousChips = existingPlayer.current_chips;
         existingPlayer.current_chips += parseInt(chips);
         existingPlayer.initial_chips += parseInt(chips);
         
+        // Update UI first
         updatePlayerList();
         updateEmptyState();
+        
+        // Then trigger animation after a short delay to ensure DOM is updated
+        setTimeout(() => {
+            animateChipAddition(existingPlayer.id);
+            PokerApp.UI.showToast(`Added ${chips} chips to ${name} (now has ${existingPlayer.current_chips})`, 'success');
+        }, 50);
+        
+        // Save state and update Firebase
         saveState();
-
         if (PokerApp.state.sessionId) {
             updatePlayersInFirebase();
         }
-
-        // Add animation for chips being added
-        animateChipAddition(existingPlayer.id);
         
-        PokerApp.UI.showToast(`Added ${chips} chips to ${name} (now has ${existingPlayer.current_chips})`, 'success');
         return true;
     }
 
@@ -354,23 +526,29 @@ function addPlayer(name, chips) {
     const player = {
         id: PokerApp.state.nextPlayerId++,
         name: name,
-        initial_chips: chips,
-        current_chips: chips
+        initial_chips: parseInt(chips),
+        current_chips: parseInt(chips)
     };
 
+    // Add to state
     PokerApp.state.players.push(player);
+    
+    // Update UI first
     updatePlayerList();
     updateEmptyState();
+    
+    // Then trigger animation after a short delay to ensure DOM is updated
+    setTimeout(() => {
+        animateNewPlayer(player.id);
+        PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
+    }, 50);
+    
+    // Save state and update Firebase
     saveState();
-
     if (PokerApp.state.sessionId) {
         updatePlayersInFirebase();
     }
-
-    // Animate new player addition
-    animateNewPlayer(player.id);
     
-    PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
     return true;
 }
 
@@ -1290,7 +1468,7 @@ function setupGameStateListener(gameId) {
                     PokerApp.state.lobbyActive = false;
                     PokerApp.state.sessionId = null;
                     PokerApp.UI.updateLobbyUI(false);
-                    localStorage.removeItem('pokerGameState'); // Clear local storage
+                    localStorage.removeItem('pokerGameState');
                     return;
                 }
                 
@@ -1301,7 +1479,7 @@ function setupGameStateListener(gameId) {
                     PokerApp.state.lobbyActive = false;
                     PokerApp.state.sessionId = null;
                     PokerApp.UI.updateLobbyUI(false);
-                    localStorage.removeItem('pokerGameState'); // Clear local storage
+                    localStorage.removeItem('pokerGameState');
                     return;
                 }
                 
@@ -1313,47 +1491,58 @@ function setupGameStateListener(gameId) {
                 PokerApp.state.sessionId = gameId;
                 PokerApp.state.lobbyActive = true;
                 
-                // Set up players listener
-                database.ref(`games/${gameId}/state/players`).on('value', snapshot => {
-                    console.log('[FIREBASE] Received player update from Firebase:', snapshot.val());
+                // Set up players listener with animation handling
+                database.ref(`games/${gameId}/state/players`).on('child_added', snapshot => {
+                    const playerData = snapshot.val();
+                    if (!playerData) return;
                     
-                    if (!snapshot.exists()) {
-                        console.log('[FIREBASE] No players found in snapshot');
-                        return;
+                    console.log('[FIREBASE] New player data received:', playerData);
+                    
+                    // Check if this is a new player
+                    const existingPlayer = PokerApp.state.players.find(p => 
+                        p.id === playerData.id || 
+                        (p.name && playerData.name && p.name.toLowerCase() === playerData.name.toLowerCase())
+                    );
+                    
+                    if (!existingPlayer) {
+                        // Add new player to state
+                        PokerApp.state.players.push(playerData);
+                        
+                        // Update UI and trigger animation
+                        updatePlayerList();
+                        updateEmptyState();
+                        
+                        // Use requestAnimationFrame for smooth animation
+                        requestAnimationFrame(() => {
+                            setTimeout(() => {
+                                animateNewPlayer(playerData.id);
+                                PokerApp.UI.showToast(`${playerData.name} joined with ${playerData.initial_chips} chips`, 'success');
+                            }, 100);
+                        });
                     }
+                });
+                
+                // Listen for player updates (rebuys)
+                database.ref(`games/${gameId}/state/players`).on('child_changed', snapshot => {
+                    const updatedPlayer = snapshot.val();
+                    if (!updatedPlayer) return;
                     
-                    let playersData = snapshot.val();
-                    let players = [];
-                    
-                    if (Array.isArray(playersData)) {
-                        console.log('[FIREBASE] Players data is an array with length:', playersData.length);
-                        players = playersData.filter(p => p != null);
-                    } else if (typeof playersData === 'object') {
-                        console.log('[FIREBASE] Players data is an object with keys:', Object.keys(playersData));
-                        players = Object.values(playersData).filter(p => p != null);
-                    } else {
-                        console.error('[FIREBASE] Unexpected players data format:', typeof playersData);
+                    const existingPlayer = PokerApp.state.players.find(p => p.id === updatedPlayer.id);
+                    if (existingPlayer && updatedPlayer.initial_chips > existingPlayer.initial_chips) {
+                        const chipDiff = updatedPlayer.initial_chips - existingPlayer.initial_chips;
+                        existingPlayer.initial_chips = updatedPlayer.initial_chips;
+                        existingPlayer.current_chips += chipDiff;
+                        
+                        // Update UI and trigger animation
+                        updatePlayerList();
+                        
+                        requestAnimationFrame(() => {
+                            setTimeout(() => {
+                                animateChipAddition(existingPlayer.id);
+                                PokerApp.UI.showToast(`${existingPlayer.name} added ${chipDiff} chips!`, 'success');
+                            }, 100);
+                        });
                     }
-                    
-                    console.log('[FIREBASE] Filtered players data:', players.length, 'players found');
-                    
-                    // Update local state with players from Firebase
-                    PokerApp.state.players = players.map(p => ({
-                        id: p.id,
-                        name: p.name,
-                        initial_chips: p.initial_chips || 0,
-                        current_chips: p.current_chips !== undefined ? p.current_chips : (p.initial_chips || 0),
-                        joinedAt: p.joinedAt || Date.now(),
-                        active: p.active !== false
-                    }));
-                    
-                    console.log('[UI] Updated local player state with players:', PokerApp.state.players);
-                    
-                    // Update UI
-                    updatePlayerList();
-                    
-                    // Save to localStorage to persist
-                    localStorage.setItem('pokerGameState', JSON.stringify(PokerApp.state));
                 });
                 
                 // Listen for lastPlayer updates for notifications
@@ -1797,89 +1986,167 @@ function endGame() {
 
 // Update the resetGame function to properly cleanup and show animation
 function resetGame() {
+    // Play reset sound
+    SoundSystem.playResetSound();
+    
+    // Remove any existing animation elements first
+    document.querySelectorAll('.reset-curtain, .flying-cards-container, .confetti-container, .shuffle-effect, .ripple-effect').forEach(el => {
+        el.remove();
+    });
+
     // Create reset curtain if it doesn't exist
-    let resetCurtain = document.querySelector('.reset-curtain');
-    if (!resetCurtain) {
-        resetCurtain = document.createElement('div');
-        resetCurtain.className = 'reset-curtain';
-        document.body.appendChild(resetCurtain);
-    }
+    let resetCurtain = document.createElement('div');
+    resetCurtain.className = 'reset-curtain';
+    document.body.appendChild(resetCurtain);
 
-    // Create flying cards container if it doesn't exist
-    let flyingCardsContainer = document.querySelector('.flying-cards-container');
-    if (!flyingCardsContainer) {
-        flyingCardsContainer = document.createElement('div');
-        flyingCardsContainer.className = 'flying-cards-container';
-        document.body.appendChild(flyingCardsContainer);
-    }
+    // Create flying cards container
+    let flyingCardsContainer = document.createElement('div');
+    flyingCardsContainer.className = 'flying-cards-container';
+    document.body.appendChild(flyingCardsContainer);
 
-    // Create confetti container if it doesn't exist
-    let confettiContainer = document.querySelector('.confetti-container');
-    if (!confettiContainer) {
-        confettiContainer = document.createElement('div');
-        confettiContainer.className = 'confetti-container';
-        document.body.appendChild(confettiContainer);
-    }
+    // Create confetti container
+    let confettiContainer = document.createElement('div');
+    confettiContainer.className = 'confetti-container';
+    document.body.appendChild(confettiContainer);
 
-    // Create shuffle effect if it doesn't exist
-    let shuffleEffect = document.querySelector('.shuffle-effect');
-    if (!shuffleEffect) {
-        shuffleEffect = document.createElement('div');
-        shuffleEffect.className = 'shuffle-effect';
-        document.body.appendChild(shuffleEffect);
-    }
+    // Create shuffle effect
+    let shuffleEffect = document.createElement('div');
+    shuffleEffect.className = 'shuffle-effect';
+    document.body.appendChild(shuffleEffect);
+
+    // Create ripple effect
+    let rippleEffect = document.createElement('div');
+    rippleEffect.className = 'ripple-effect';
+    document.body.appendChild(rippleEffect);
 
     // Play card shuffle sound if available
-    const shuffleSound = document.getElementById('shuffleSound');
+    const shuffleSound = document.getElementById('card-shuffle-sound');
     if (shuffleSound) {
         shuffleSound.currentTime = 0;
         shuffleSound.play().catch(() => {});
     }
 
-    // Trigger reset animation
+    // Trigger reset animation sequence
     resetCurtain.classList.add('active');
+    rippleEffect.classList.add('active');
 
-    // Create and animate flying cards
+    // Create and animate flying cards with enhanced 3D effects
     flyingCardsContainer.innerHTML = '';
-    for (let i = 0; i < 8; i++) {
+    const cardSuits = ['♠', '♥', '♦', '♣'];
+    
+    for (let i = 0; i < 16; i++) {
         const card = document.createElement('div');
         card.className = 'reset-card';
-        card.style.setProperty('--flyX', `${Math.random() * 800 - 400}px`);
-        card.style.setProperty('--flyY', `${Math.random() * 600 - 300}px`);
-        card.style.setProperty('--flyRotate', `${Math.random() * 720 - 360}deg`);
+        const suit = cardSuits[Math.floor(Math.random() * cardSuits.length)];
+        const isRed = suit === '♥' || suit === '♦';
+        
+        card.innerHTML = `
+            <div class="card-inner">
+                <div class="card-suit ${isRed ? 'red' : 'black'}">${suit}</div>
+            </div>
+        `;
+        
+        // Set random position and rotation
+        const flyX = Math.random() * 1000 - 500; // Random X between -500 and 500
+        const flyY = Math.random() * 800 - 400;  // Random Y between -400 and 400
+        const rotation = Math.random() * 1080 - 540; // Random rotation between -540 and 540 degrees
+        
+        card.style.setProperty('--flyX', `${flyX}px`);
+        card.style.setProperty('--flyY', `${flyY}px`);
+        card.style.setProperty('--flyRotate', `${rotation}deg`);
+        
         flyingCardsContainer.appendChild(card);
-        setTimeout(() => card.classList.add('active'), 50 * i);
+        
+        // Add active class with a slight delay for each card
+        setTimeout(() => {
+            card.classList.add('active');
+        }, i * 50);
     }
 
-    // Create and animate confetti
+    // Create and animate enhanced confetti
     confettiContainer.innerHTML = '';
-    const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#9370db', '#ff6b81'];
-    for (let i = 0; i < 50; i++) {
+    const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#9370db', '#ff6b81', '#ffd700', '#00ff00', '#ff1493', '#00ffff'];
+    for (let i = 0; i < 75; i++) {
         const confetti = document.createElement('div');
         confetti.className = 'confetti-piece';
-        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.color = colors[Math.floor(Math.random() * colors.length)];
         confetti.style.left = `${Math.random() * 100}%`;
         confetti.style.setProperty('--fall-delay', `${Math.random() * 2}s`);
-        confetti.style.setProperty('--fall-distance', `${100 + Math.random() * 50}vh`);
+        confetti.style.setProperty('--fall-distance', `${100 + Math.random() * 100}vh`);
+        confetti.style.setProperty('--rotation', `${Math.random() * 720}deg`);
         confettiContainer.appendChild(confetti);
     }
 
-    // Show shuffle effect
+    // Show enhanced shuffle effect
     shuffleEffect.classList.add('active');
 
-    // Reset game state after animation
+    // Reset game state after animation sequence
     setTimeout(() => {
-        resetGameState();
-        resetCurtain.classList.remove('active');
-        shuffleEffect.classList.remove('active');
+        // End current game if in progress
+        if (PokerApp.state.gameInProgress) {
+            endGame();
+        }
+        
+        // First clean up any Firebase connections
+        if (PokerApp.state.sessionId) {
+            // Update game status to inactive in Firebase
+            try {
+                firebase.database().ref(`games/${PokerApp.state.sessionId}`).update({
+                    active: false,
+                    status: 'reset'
+                });
+                
+                // Remove all Firebase listeners
+                firebase.database().ref(`games/${PokerApp.state.sessionId}`).off();
+                firebase.database().ref(`games/${PokerApp.state.sessionId}/state/players`).off();
+                firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastUpdate`).off();
+                firebase.database().ref(`games/${PokerApp.state.sessionId}/state/lastPlayer`).off();
+                
+                console.log('Cleaned up all Firebase listeners and connections');
+            } catch (error) {
+                console.error('Error cleaning up Firebase connections:', error);
+            }
+        }
+        
+        // Reset game state
+        PokerApp.state.players = [];
+        PokerApp.state.dealerId = null;
+        PokerApp.state.nextPlayerId = 1;
+        PokerApp.state.gameInProgress = false;
+        PokerApp.state.sessionId = null;
+        PokerApp.state.gameName = null;
+        PokerApp.state.lobbyActive = false;
+        
+        // Reset player counter
+        window._lastPlayerCount = 0;
+        
+        // Update UI
+        updatePlayerList();
+        updateEmptyState();
+        updateLobbyUI(false);
+        
+        // Clear QR code container
+        const qrCodeContainer = document.getElementById('qr-code-container');
+        if (qrCodeContainer) {
+            qrCodeContainer.style.display = 'none';
+            const qrWrapper = qrCodeContainer.querySelector('.qr-wrapper');
+            if (qrWrapper) {
+                qrWrapper.innerHTML = '';
+            }
+        }
 
         // Clean up animation elements
+        resetCurtain.classList.remove('active');
+        shuffleEffect.classList.remove('active');
+        rippleEffect.classList.remove('active');
+
+        // Remove animation elements after they're done
         setTimeout(() => {
-            flyingCardsContainer.innerHTML = '';
-            confettiContainer.innerHTML = '';
-            shuffleEffect.innerHTML = '';
+            document.querySelectorAll('.reset-curtain, .flying-cards-container, .confetti-container, .shuffle-effect, .ripple-effect').forEach(el => {
+                el.remove();
+            });
         }, 2000);
-    }, 2000);
+    }, 2500);
 }
 
 function resetGameState() {
@@ -1919,6 +2186,9 @@ function calculatePayouts() {
         PokerApp.UI.showToast('Need at least 2 players to calculate payouts', 'error');
         return;
     }
+
+    // Play payout sound when calculating
+    SoundSystem.playPayoutSound();
 
     const players = PokerApp.state.players;
     let totalDifference = 0;
@@ -2345,6 +2615,9 @@ function removePlayer(playerId) {
     const index = PokerApp.state.players.findIndex(p => p.id === playerId);
     if (index === -1) return;
     
+    // Play remove sound before removing the player
+    SoundSystem.playRemoveSound();
+    
     PokerApp.state.players.splice(index, 1);
     updatePlayerList();
     updateEmptyState();
@@ -2536,33 +2809,34 @@ window.updatePlayerChips = updatePlayerChips;
 
 // Animation for new player joining
 function animateNewPlayer(playerId) {
-    // Add a small delay to ensure the DOM has been updated
-    setTimeout(() => {
-        const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
-        if (!playerRow) {
-            console.log('[ANIMATION] Player row not found for animation:', playerId);
-            return;
-        }
-        
-        console.log('[ANIMATION] Animating new player:', playerId);
-        
-        // First make sure any old animation classes are removed
+    const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+    if (!playerRow) {
+        console.log('[ANIMATION] Player row not found for animation:', playerId);
+        return;
+    }
+    
+    console.log('[ANIMATION] Animating new player:', playerId);
+    
+    // Play pop sound
+    SoundSystem.playPopSound(800);
+    
+    // First make sure any old animation classes are removed
+    playerRow.classList.remove('player-added');
+    
+    // Force reflow
+    void playerRow.offsetWidth;
+    
+    // Add animation class
+    playerRow.classList.add('player-added');
+    
+    // Remove the class after animation completes
+    playerRow.addEventListener('animationend', () => {
         playerRow.classList.remove('player-added');
-        
-        // Force reflow
-        void playerRow.offsetWidth;
-        
-        // Add animation class
-        playerRow.classList.add('player-added');
-        
-        // Create flying cards animation
-        createFlyingCards(playerRow);
-    }, 300); // 300ms delay to ensure DOM update completes
+    }, { once: true });
 }
 
 // Animation for adding chips to existing player
 function animateChipAddition(playerId) {
-    // Add a small delay to ensure the DOM has been updated
     setTimeout(() => {
         const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
         if (!playerRow) {
@@ -2570,7 +2844,6 @@ function animateChipAddition(playerId) {
             return;
         }
         
-        // Find the chip count cell - use the correct class name
         const chipCell = playerRow.querySelector('.current-chips');
         if (!chipCell) {
             console.log('[ANIMATION] Chip cell not found for animation');
@@ -2579,18 +2852,12 @@ function animateChipAddition(playerId) {
         
         console.log('[ANIMATION] Animating chip addition for player:', playerId);
         
-        // First make sure any old animation classes are removed
-        chipCell.classList.remove('chips-added');
+        // Play chip sound
+        SoundSystem.playChipSound();
         
-        // Force reflow
-        void chipCell.offsetWidth;
-        
-        // Add animation class
-        chipCell.classList.add('chips-added');
-        
-        // Create flying chips animation
+        // Only create flying chips animation
         createFlyingChips(chipCell);
-    }, 300); // 300ms delay to ensure DOM update completes
+    }, 300);
 }
 
 // Create flying cards animation
@@ -2681,10 +2948,6 @@ function createFlyingChips(target) {
     }, 2000); // Animation duration + delays
 }
 
-// Add to global scope
-window.animateNewPlayer = animateNewPlayer;
-window.animateChipAddition = animateChipAddition;
-
 // Make core functions available globally
 window.PokerApp = {
     ...window.PokerApp,
@@ -2705,6 +2968,19 @@ window.calculatePayouts = calculatePayouts;
 // Initialize when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[INIT] DOMContentLoaded triggered');
+    
+    // Initialize logo animation
+    const logo = document.querySelector('.header-logo');
+    if (logo) {
+        console.log('[INIT] Setting up logo animation');
+        logo.addEventListener('mousemove', (e) => {
+            const rect = logo.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            logo.style.setProperty('--x', `${x}%`);
+            logo.style.setProperty('--y', `${y}%`);
+        });
+    }
     
     // Load saved theme first
     const savedTheme = localStorage.getItem('theme') || 'Classic';
@@ -2795,21 +3071,18 @@ function handleLastPlayerUpdate(lastPlayer) {
         console.log(`[FIREBASE] Adding new player to state:`, playerData);
         PokerApp.state.players.push(playerData);
         
-        // Update UI
+        // Update UI first
         updatePlayerList();
         updateEmptyState();
         
-        // Update hand animation if it exists
-        if (window.handAnimation) {
-            window.handAnimation.setPlayers(PokerApp.state.players);
-        }
-        
-        // Show toast notification
-        PokerApp.UI.showToast(`New player joined: ${lastPlayer.name}`, 'success');
-        
-        // The animation must be triggered after the DOM is updated
-        console.log('[ANIMATION] Triggering new player animation:', playerData.id);
-        animateNewPlayer(playerData.id);
+        // Use requestAnimationFrame to ensure DOM is updated before animation
+        requestAnimationFrame(() => {
+            // Add a small delay to ensure the DOM is fully updated
+            setTimeout(() => {
+                animateNewPlayer(playerData.id);
+                PokerApp.UI.showToast(`New player joined: ${lastPlayer.name}`, 'success');
+            }, 100);
+        });
         
         // Save state to localStorage
         saveState();
@@ -2822,27 +3095,23 @@ function handleLastPlayerUpdate(lastPlayer) {
         
         if (newChips > 0 && existingPlayer.initial_chips !== newChips) {
             // This is a rebuy - add the chips
-            const previousChips = existingPlayer.current_chips;
             existingPlayer.current_chips += newChips;
             existingPlayer.initial_chips += newChips;
             
-            // Update UI
+            // Update UI first
             updatePlayerList();
             
-            // Show toast notification
-            PokerApp.UI.showToast(`${existingPlayer.name} added ${newChips} chips!`, 'success');
-            
-            // The animation must be triggered after the DOM is updated
-            console.log('[ANIMATION] Triggering chip addition animation:', existingPlayer.id);
-            animateChipAddition(existingPlayer.id);
+            // Use requestAnimationFrame to ensure DOM is updated before animation
+            requestAnimationFrame(() => {
+                // Add a small delay to ensure the DOM is fully updated
+                setTimeout(() => {
+                    animateChipAddition(existingPlayer.id);
+                    PokerApp.UI.showToast(`${existingPlayer.name} added ${newChips} chips!`, 'success');
+                }, 100);
+            });
             
             // Save state
             saveState();
-            
-            // Update Firebase
-            if (PokerApp.state.sessionId) {
-                updatePlayersInFirebase();
-            }
             
             return true;
         }
@@ -2904,3 +3173,75 @@ function setupLastPlayerListener2(lastPlayerRef) {
     
     console.log(`[FIREBASE] lastPlayer listener set up`);
 }
+
+// Logo animation
+const logo = document.querySelector('.header-logo');
+if (logo) {
+    logo.addEventListener('mousemove', (e) => {
+        const rect = logo.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        logo.style.setProperty('--x', `${x}%`);
+        logo.style.setProperty('--y', `${y}%`);
+    });
+
+    logo.addEventListener('mouseleave', () => {
+        logo.style.setProperty('--x', '50%');
+        logo.style.setProperty('--y', '50%');
+    });
+}
+
+// Initialize logo animation
+function initializeLogoAnimation() {
+    const logo = document.querySelector('.header-logo');
+    if (!logo) {
+        console.log('[LOGO] Logo element not found');
+        return;
+    }
+
+    console.log('[LOGO] Initializing logo animation');
+
+    // Remove any existing listeners
+    const newLogo = logo.cloneNode(true);
+    logo.parentNode.replaceChild(newLogo, logo);
+
+    // Set initial position for the glow effect
+    newLogo.style.setProperty('--x', '50%');
+    newLogo.style.setProperty('--y', '50%');
+
+    // Add mousemove listener with throttling
+    let lastUpdate = 0;
+    const throttleDelay = 1000 / 60; // 60fps
+
+    newLogo.addEventListener('mousemove', (e) => {
+        const now = Date.now();
+        if (now - lastUpdate > throttleDelay) {
+            const rect = newLogo.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            newLogo.style.setProperty('--x', `${x}%`);
+            newLogo.style.setProperty('--y', `${y}%`);
+            lastUpdate = now;
+        }
+    });
+
+    // Add mouseleave listener to reset position
+    newLogo.addEventListener('mouseleave', () => {
+        newLogo.style.setProperty('--x', '50%');
+        newLogo.style.setProperty('--y', '50%');
+    });
+
+    // Add mouseenter listener to ensure effects are visible
+    newLogo.addEventListener('mouseenter', () => {
+        newLogo.style.setProperty('--x', '50%');
+        newLogo.style.setProperty('--y', '50%');
+    });
+
+    console.log('[LOGO] Logo animation initialized');
+}
+
+// Call logo initialization when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[INIT] Initializing logo animation on DOMContentLoaded');
+    initializeLogoAnimation();
+});

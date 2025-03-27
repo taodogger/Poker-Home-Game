@@ -1,0 +1,17 @@
+[33mcommit 89cf72bb46793b7e306999f0f614fda72cf7bb10[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mlive[m[33m)[m
+Author: hmyay <roageeytbiz@gmail.com>
+Date:   Fri Mar 21 18:52:53 2025 +1100
+
+    Fix reset game animation and UI responsiveness: - Remove confirmation dialog - Improve animation cleanup - Fix z-index and pointer-events - Ensure UI remains interactive
+
+[33mcommit ec3ecf649b4b60cb6fc2a8c57b35e13a1be88b88[m
+Author: hmyay <roageeytbiz@gmail.com>
+Date:   Fri Mar 21 17:29:29 2025 +1100
+
+    Keep only reset animation
+
+[33mcommit e219694fa548150f8102e005debe020d2a6b9145[m[33m ([m[1;31morigin/live[m[33m, [m[1;32mtemp-fix-branch[m[33m)[m
+Author: hmyay <roageeytbiz@gmail.com>
+Date:   Fri Mar 21 16:12:11 2025 +1100
+
+    Add logo and favicon images
