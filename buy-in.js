@@ -284,28 +284,48 @@ document.addEventListener('DOMContentLoaded', () => {
                             await buyInDatabase.ref(`games/${gameId}/state`).transaction((currentState) => {
                                 console.log('[BUY-IN] Transaction started with current state:', currentState);
 
-                                // If the game state doesn't exist (edge case), abort
+                                // --- Robust State Initialization and Validation ---
                                 if (!currentState) {
-                                    console.error('[BUY-IN] No current state found in transaction');
-                                    return; // Abort transaction
+                                    console.warn('[BUY-IN] No current state found. Initializing default state.');
+                                    currentState = {
+                                        players: [],
+                                        nextPlayerId: 1,
+                                        lastUpdate: Date.now(),
+                                        lastPlayer: null // Ensure field exists
+                                    };
+                                } else {
+                                    // Ensure essential fields exist and have correct types if state exists
+                                    currentState.players = currentState.players || [];
+                                    if (!Array.isArray(currentState.players)) {
+                                        console.warn('[BUY-IN] Converting players object to array');
+                                        // Filter out potential null values if converting from object
+                                        currentState.players = Object.values(currentState.players).filter(p => p != null);
+                                    }
+                                    // Ensure nextPlayerId is a number, calculate if missing
+                                    if (typeof currentState.nextPlayerId !== 'number' || currentState.nextPlayerId <= 0) {
+                                        console.warn('[BUY-IN] Recalculating nextPlayerId.');
+                                        currentState.nextPlayerId = Math.max(0, ...currentState.players.map(p => p?.id || 0)) + 1;
+                                    }
+                                    // Ensure lastPlayer field exists
+                                    if (!currentState.hasOwnProperty('lastPlayer')) {
+                                        currentState.lastPlayer = null;
+                                    }
+                                    // Ensure lastUpdate exists
+                                    currentState.lastUpdate = currentState.lastUpdate || Date.now();
                                 }
+                                // --- End State Initialization ---
 
-                                // Ensure players is an array, converting from object if necessary
-                                let currentPlayers = currentState.players || [];
-                                if (!Array.isArray(currentPlayers)) {
-                                    console.log('[BUY-IN] Converting players object to array');
-                                    currentPlayers = Object.values(currentPlayers).filter(p => p != null); // Filter out null/removed players
-                                }
+
+                                // Now use the guaranteed-to-be-valid currentState
+                                let currentPlayers = currentState.players; // Already guaranteed to be an array
                                 console.log('[BUY-IN] Current players in transaction:', currentPlayers);
 
-                                // Normalize the submitted name for comparison
                                 const normalizedNewName = playerName.toLowerCase().trim();
-                                // Find if player already exists (case-insensitive)
                                 const existingPlayerIndex = currentPlayers.findIndex(p => p && p.name && p.name.toLowerCase().trim() === normalizedNewName);
 
                                 let updatedPlayers = [...currentPlayers]; // Create a mutable copy
-                                let nextId = currentState.nextPlayerId || (Math.max(...updatedPlayers.map(p => p?.id || 0), 0) + 1);
-                                let playerForNotification; // Object to send in lastPlayer field
+                                let nextId = currentState.nextPlayerId; // Use the validated/initialized ID
+                                let playerForNotification = null; // Initialize
 
                                 if (existingPlayerIndex !== -1) {
                                     // --- Player Exists: Handle Rebuy ---
@@ -317,24 +337,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const currentCurrent = parseInt(existingPlayer.current_chips) || 0;
                                     const addedChips = parseInt(chips) || 0;
 
-                                    // Create a *new* object for the updated player to avoid modifying the original state directly
                                     const updatedPlayer = {
                                         ...existingPlayer,
-                                        initial_chips: currentInitial + addedChips, // Add to initial for correct payout calculation later
-                                        current_chips: currentCurrent + addedChips, // Add to current stack
+                                        initial_chips: currentInitial + addedChips,
+                                        current_chips: currentCurrent + addedChips,
                                         lastBuyIn: Date.now()
                                     };
-
-                                    // Replace the old player object with the updated one in our mutable array
                                     updatedPlayers[existingPlayerIndex] = updatedPlayer;
 
-                                    // Prepare notification object for the main app
-                                    playerForNotification = {
-                                        ...updatedPlayer,
-                                        action: 'rebuy',
-                                        addedChips: addedChips
-                                    };
-                                    buyInAction = 'rebought'; // Set flag for success message
+                                    playerForNotification = { ...updatedPlayer, action: 'rebuy', addedChips: addedChips };
+                                    buyInAction = 'rebought';
                                     playerUpdateDetails = { name: updatedPlayer.name, chips: addedChips, totalChips: updatedPlayer.current_chips };
                                     console.log(`[BUY-IN] Updated player data:`, updatedPlayer);
 
@@ -342,55 +354,53 @@ document.addEventListener('DOMContentLoaded', () => {
                                     // --- New Player: Add to Game ---
                                     console.log(`[BUY-IN] New player '${playerName}'. Adding to game.`);
                                     const newPlayer = {
-                                        id: nextId,
+                                        id: nextId, // Use current nextId
                                         name: playerName,
                                         initial_chips: chips,
                                         current_chips: chips,
                                         joinedAt: Date.now(),
-                                        active: true // Assuming new players start active
+                                        active: true
                                     };
-                                    updatedPlayers.push(newPlayer); // Add to our mutable array
+                                    updatedPlayers.push(newPlayer);
 
-                                    // Prepare notification object
-                                    playerForNotification = {
-                                        ...newPlayer,
-                                        action: 'join'
-                                    };
-                                    nextId++; // Increment ID for the *next* potential new player
-                                    buyInAction = 'joined'; // Set flag for success message
+                                    playerForNotification = { ...newPlayer, action: 'join' };
+                                    nextId++; // Increment ID *only after* assigning it to the new player
+                                    buyInAction = 'joined';
                                     playerUpdateDetails = { name: newPlayer.name, chips: newPlayer.initial_chips };
                                     console.log(`[BUY-IN] Added new player:`, newPlayer);
                                 }
 
                                 console.log('[BUY-IN] Final updated players list for state:', updatedPlayers);
 
-                                // Construct the complete new state object to return for the transaction
+                                // Construct the complete new state object explicitly
+                                // Carry over any other top-level fields from the original currentState
+                                // that weren't explicitly handled (if any exist).
                                 const newState = {
-                                    ...currentState, // Preserve other state properties
-                                    players: updatedPlayers,
-                                    nextPlayerId: nextId,
-                                    lastUpdate: Date.now(),
-                                    lastPlayer: playerForNotification // This triggers update in main app
+                                    ...currentState, // Start with potentially other fields from original state
+                                    players: updatedPlayers, // Overwrite with new players array
+                                    nextPlayerId: nextId,    // Overwrite with new nextId
+                                    lastUpdate: Date.now(),  // Set new update timestamp
+                                    lastPlayer: playerForNotification // Set the player action details
                                 };
 
-                                console.log('[BUY-IN] Returning new state from transaction:', newState);
+                                console.log('[BUY-IN] Attempting to commit newState:', JSON.stringify(newState));
                                 return newState; // Commit the changes
 
                             }, (error, committed, snapshot) => {
                                 // This callback handles the result of the transaction attempt
                                 if (error) {
                                     console.error('[BUY-IN] Transaction failed:', error);
-                                    // Rethrow the error to be caught by the outer try/catch block
                                     throw new Error("Failed to update game state. Please try again. Error: " + error.message);
                                 } else if (!committed) {
-                                    console.log('[BUY-IN] Transaction not committed (likely aborted due to concurrent update or validation failure)');
-                                    // This usually means the state changed between reading and writing (e.g., name taken)
-                                    throw new Error('Could not process buy-in because the game state changed. Please try again.');
+                                    console.warn('[BUY-IN] Transaction not committed. Retries likely failed due to persistent concurrent updates or invalid state generation.');
+                                    // Log the state we *tried* to commit for debugging
+                                    // Note: We can't access 'newState' here directly, but the log before 'return' should show it.
+                                    throw new Error('Could not process buy-in due to high contention or data conflict. Please try again shortly.');
                                 } else {
                                     console.log('[BUY-IN] Transaction completed successfully.');
                                     // Data saved successfully
                                 }
-                            });
+                            }); // End Transaction
 
                             // --- Transaction Successful: Show Confirmation ---
                             const container = document.querySelector('.container');
