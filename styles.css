@@ -1458,6 +1458,13 @@ label {
     --secondary-color-rgb: 30, 144, 255;
 }
 
+[data-theme="Crimson"] {
+    --main-color: #DC143C;
+    --main-color-rgb: 220, 20, 60;
+    --secondary-color: #FF4500;
+    --secondary-color-rgb: 255, 69, 0;
+}
+
 [data-theme="Midnight"] {
     --main-color: #2F4F4F;
     --main-color-rgb: 47, 79, 79;
@@ -1465,11 +1472,46 @@ label {
     --secondary-color-rgb: 105, 105, 105;
 }
 
+[data-theme="Ocean"] {
+    --main-color: #20B2AA;
+    --main-color-rgb: 32, 178, 170;
+    --secondary-color: #5F9EA0;
+    --secondary-color-rgb: 95, 158, 160;
+}
+
+[data-theme="Fire"] {
+    --main-color: #FF6347;
+    --main-color-rgb: 255, 99, 71;
+    --secondary-color: #FF4500;
+    --secondary-color-rgb: 255, 69, 0;
+}
+
 [data-theme="Purple"] {
     --main-color: #9370DB;
     --main-color-rgb: 147, 112, 219;
     --secondary-color: #8A2BE2;
     --secondary-color-rgb: 138, 43, 226;
+}
+
+[data-theme="Neon"] {
+    --main-color: #00FFFF;
+    --main-color-rgb: 0, 255, 255;
+    --secondary-color: #00CED1;
+    --secondary-color-rgb: 0, 206, 209;
+}
+
+[data-theme="Rizzler"] {
+    --main-color: #ff00ff;
+    --main-color-rgb: 255, 0, 255;
+    --secondary-color: #bf00ff;
+    --secondary-color-rgb: 191, 0, 255;
+}
+
+[data-theme="Doginme"] {
+    --main-color: #1e90ff;
+    --main-color-rgb: 30, 144, 255;
+    --secondary-color: #4169e1;
+    --secondary-color-rgb: 65, 105, 225;
 }
 
 /* Mobile optimizations */
@@ -2402,14 +2444,44 @@ main > section:hover::before {
     --theme-hue-drift: 12;
 }
 
+[data-theme="Crimson"] {
+    --theme-hue-shift: -15;
+    --theme-hue-drift: 8;
+}
+
 [data-theme="Midnight"] {
     --theme-hue-shift: 30;
     --theme-hue-drift: 15;
 }
 
+[data-theme="Ocean"] {
+    --theme-hue-shift: 45;
+    --theme-hue-drift: 20;
+}
+
+[data-theme="Fire"] {
+    --theme-hue-shift: -25;
+    --theme-hue-drift: 10;
+}
+
 [data-theme="Purple"] {
     --theme-hue-shift: 60;
     --theme-hue-drift: 25;
+}
+
+[data-theme="Neon"] {
+    --theme-hue-shift: 80;
+    --theme-hue-drift: 30;
+}
+
+[data-theme="Rizzler"] {
+    --theme-hue-shift: 120;
+    --theme-hue-drift: 40;
+}
+
+[data-theme="Doginme"] {
+    --theme-hue-shift: 180;
+    --theme-hue-drift: 50;
 }
 
 /* Additional theme-specific variations for header elements */
@@ -2424,12 +2496,49 @@ main > section:hover::before {
         rgba(var(--theme-primary-rgb), 0));
 }
 
+[data-theme="Crimson"] .app-header .pattern-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20a20 20 0 1 1 40 0a20 20 0 0 1-40 0zm20-15a15 15 0 1 0 0 30a15 15 0 0 0 0-30zm0 5a10 10 0 1 1 0 20a10 10 0 0 1 0-20z' fill='%23a83240' fill-opacity='0.03'/%3E%3C/svg%3E");
+}
+
 [data-theme="Midnight"] .app-header .card-symbol {
     color: rgba(60, 78, 124, 0.18);
     text-shadow: 0 0 15px rgba(60, 78, 124, 0.3);
 }
 
+[data-theme="Ocean"] .app-header .light-effect {
+    filter: blur(15px);
+}
+
+[data-theme="Fire"] .app-header::after {
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 200, 100, 0.08),
+        transparent
+    );
+}
+
 [data-theme="Purple"] .app-header .card-symbol-2,
 [data-theme="Purple"] .app-header .card-symbol-4 {
     color: rgba(122, 80, 160, 0.15);
+}
+
+[data-theme="Neon"] .app-header .gradient-layer {
+    background: 
+        radial-gradient(circle at 10% 20%, 
+            rgba(var(--theme-primary-rgb), 0.2) 0%, 
+            rgba(var(--theme-primary-rgb), 0) 40%),
+        radial-gradient(circle at 90% 80%, 
+            rgba(var(--theme-secondary-rgb), 0.18) 0%, 
+            rgba(var(--theme-secondary-rgb), 0) 40%);
+}
+
+[data-theme="Rizzler"] .app-header::before {
+    height: 3px;
+    opacity: 0.9;
+}
+
+[data-theme="Doginme"] .app-header .pattern-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg width='36' height='36' viewBox='0 0 36 36' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M18 0a18 18 0 1 0 0 36a18 18 0 0 0 0-36zm0 2a16 16 0 1 1 0 32a16 16 0 0 1 0-32z' fill='%2364a0a0' fill-opacity='0.025'/%3E%3C/svg%3E");
+    opacity: 0.6;
 }

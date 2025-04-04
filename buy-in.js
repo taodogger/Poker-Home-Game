@@ -36,6 +36,38 @@ const themes = {
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
         '--vibrant-gradient': 'linear-gradient(45deg, #ff4757, #ff6b81)'
     },
+    'Ocean': {
+        '--main-color': '#2ed3ff',
+        '--main-color-rgb': '46, 211, 255',
+        '--secondary-color': '#1e90ff',
+        '--secondary-color-rgb': '30, 144, 255',
+        '--body-background': 'linear-gradient(135deg, #0a192f, #112240)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #2ed3ff, #1e90ff)'
+    },
+    'Forest': {
+        '--main-color': '#2ed573',
+        '--main-color-rgb': '46, 213, 115',
+        '--secondary-color': '#7bed9f',
+        '--secondary-color-rgb': '123, 237, 159',
+        '--body-background': 'linear-gradient(135deg, #1a2f1a, #2d4a2d)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #2ed573, #7bed9f)'
+    },
+    'Sunset': {
+        '--main-color': '#ffa502',
+        '--main-color-rgb': '255, 165, 2',
+        '--secondary-color': '#ff6b81',
+        '--secondary-color-rgb': '255, 107, 129',
+        '--body-background': 'linear-gradient(135deg, #2d1a1a, #4a2d2d)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #ffa502, #ff6b81)'
+    },
+    'Fire': {
+        '--main-color': '#ff6347',
+        '--main-color-rgb': '255, 99, 71',
+        '--secondary-color': '#ff4500',
+        '--secondary-color-rgb': '255, 69, 0',
+        '--body-background': 'linear-gradient(135deg, #2d1a1a, #4a2d2d)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #ff6347, #ff4500)'
+    },
     'Purple': {
         '--main-color': '#9370db',
         '--main-color-rgb': '147, 112, 219',
@@ -43,6 +75,30 @@ const themes = {
         '--secondary-color-rgb': '138, 43, 226',
         '--body-background': 'linear-gradient(135deg, #1a1a2d, #2d2d4a)',
         '--vibrant-gradient': 'linear-gradient(45deg, #9370db, #8a2be2)'
+    },
+    'Neon': {
+        '--main-color': '#00ffff',
+        '--main-color-rgb': '0, 255, 255',
+        '--secondary-color': '#00ced1',
+        '--secondary-color-rgb': '0, 206, 209',
+        '--body-background': 'linear-gradient(135deg, #0a1a2d, #1a2d4a)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #00ffff, #00ced1)'
+    },
+    'Rizzler': {
+        '--main-color': '#ff00ff',
+        '--main-color-rgb': '255, 0, 255',
+        '--secondary-color': '#bf00ff',
+        '--secondary-color-rgb': '191, 0, 255',
+        '--body-background': 'linear-gradient(135deg, #2d1a2d, #4a2d4a)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #ff00ff, #bf00ff)'
+    },
+    'Doginme': {
+        '--main-color': '#1e90ff',
+        '--main-color-rgb': '30, 144, 255',
+        '--secondary-color': '#4169e1',
+        '--secondary-color-rgb': '65, 105, 225',
+        '--body-background': 'linear-gradient(135deg, #1a1a2d, #2d2d4a)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #1e90ff, #4169e1)'
     }
 };
 
