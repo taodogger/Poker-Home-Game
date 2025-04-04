@@ -1696,8 +1696,8 @@ function generateQrCode(url) {
         console.log('[QR] Creating new QR code in element:', qrWrapper);
         new QRCode(qrWrapper, {
             text: url,
-            width: 220, // Increase size
-            height: 220, // Increase size
+            width: 180,
+            height: 180,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
@@ -1741,8 +1741,8 @@ function ensureQrCodeVisible() {
                 if (typeof QRCode !== 'undefined') {
                     new QRCode(qrWrapper, {
                         text: joinUrl,
-                        width: 220, // Increase size
-                        height: 220, // Increase size
+                        width: 180,
+                        height: 180,
                         colorDark: "#000000",
                         colorLight: "#ffffff",
                         correctLevel: QRCode.CorrectLevel.H

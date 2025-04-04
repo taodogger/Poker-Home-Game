@@ -14,50 +14,149 @@
     <link rel="apple-touch-icon" href="images/k-favicon.png">
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Modern Kahoot/Igloo style additions - REMOVED REDUNDANT RULES */
-        /* :root variables moved to styles.css or kept if page-specific */
+        /* Modern Kahoot/Igloo style additions */
         :root {
-            /* Keep page-specific overrides if any, otherwise remove */
-            /* --vibrant-gradient, --glow-effect, etc. now defined globally */
-             --font-primary: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; /* Can keep if font is specific */
+            --vibrant-gradient: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+            --glow-effect: 0 0 15px rgba(var(--main-color-rgb, 0, 255, 135), 0.5);
+            --card-border-radius: 20px;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            --button-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            --font-primary: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         
-        /* REMOVED: .poker-card styles now handled by styles.css */
-        /* REMOVED: .poker-card::before styles now handled by styles.css */
-        /* REMOVED: .poker-card:hover::before styles now handled by styles.css */
-        /* REMOVED: .poker-card h2 styles now handled by styles.css */
-        /* REMOVED: .poker-card h2::after styles now handled by styles.css */
+        /* Card container style */
+        .poker-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border-radius: var(--card-border-radius);
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+            font-family: var(--font-primary);
+        }
         
-        /* REMOVED: .poker-button styles now handled by styles.css */
-        /* REMOVED: .poker-button::before styles now handled by styles.css */
-        /* REMOVED: .poker-button:hover::before styles now handled by styles.css */
-        /* REMOVED: .poker-button:hover styles now handled by styles.css */
-
-        /* Keep Player cards specific animations if desired, or move */
+        .poker-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, 
+                rgba(var(--main-color-rgb, 0, 255, 135), 0.1), 
+                rgba(var(--secondary-color-rgb, 96, 239, 255), 0.05)
+            );
+            z-index: -1;
+            transform: scale(1.05);
+            filter: blur(20px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .poker-card:hover::before {
+            opacity: 1;
+        }
+        
+        .poker-card h2 {
+            color: white;
+            font-weight: 800;
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, white, rgba(255,255,255,0.8));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+        }
+        
+        .poker-card h2::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -10px;
+            width: 60px;
+            height: 4px;
+            background: var(--vibrant-gradient);
+            border-radius: 2px;
+        }
+        
+        /* Animated buttons */
+        .poker-button {
+            background: var(--vibrant-gradient);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--button-shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 1rem;
+            font-family: var(--font-primary);
+        }
+        
+        .poker-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.7s ease;
+        }
+        
+        .poker-button:hover::before {
+            left: 100%;
+        }
+        
+        .poker-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Player cards */
         .player-card {
-            /* ... existing styles ... */
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 1rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
             animation: slideInFromRight 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
             opacity: 0;
             transform: translateX(30px);
         }
-
+        
         .player-card:hover {
-             /* ... existing specific hover styles ... */
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
-
+        
         @keyframes slideInFromRight {
             to {
                 opacity: 1;
                 transform: translateX(0);
             }
         }
-
-        /* Keep Section animations if desired, or move */
+        
+        /* Animations for section elements */
         section {
             animation: fadeInUp 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
             opacity: 0;
         }
-
+        
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -68,7 +167,7 @@
                 transform: translateY(0);
             }
         }
-
+        
         section:nth-child(1) { animation-delay: 0.1s; }
         section:nth-child(2) { animation-delay: 0.2s; }
         section:nth-child(3) { animation-delay: 0.3s; }
@@ -76,43 +175,316 @@
         section:nth-child(5) { animation-delay: 0.5s; }
         section:nth-child(6) { animation-delay: 0.6s; }
         
-        /* Keep Game status badge styles if specific, or move */
+        /* Game status badge */
         .game-status-badge {
-            /* ... existing styles ... */
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
         }
-        /* ... other specific styles ... */
+        
+        .game-status-badge span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .game-status-badge.inactive span {
+            background: #ff5252;
+            box-shadow: 0 0 10px rgba(255, 82, 82, 0.5);
+        }
+        
+        .game-status-badge.active span {
+            background: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        /* Player avatars */
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--vibrant-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            margin-right: 12px;
+        }
+        
+        /* Improved tables */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            font-family: var(--font-primary);
+        }
+        
+        tbody tr {
+            background: rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+            transform-origin: center;
+            animation: scaleIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            opacity: 0;
+            font-family: var(--font-primary);
+        }
+        
+        tbody tr:hover {
+            background: rgba(255,255,255,0.1);
+            transform: scale(1.02);
+        }
+        
+        @keyframes scaleIn {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        th, td {
+            padding: 16px;
+            text-align: left;
+        }
+        
+        th:first-child, td:first-child {
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+        }
+        
+        th:last-child, td:last-child {
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+        
+        thead th {
+            color: rgba(255,255,255,0.7);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            padding-bottom: 12px;
+        }
+        
+        /* QR code container */
+        #qr-code-container {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border-radius: 24px;
+            overflow: hidden;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 2rem;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            font-family: var(--font-primary);
+        }
+        
+        #qr-code-container h3 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .qr-wrapper {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        
+        .join-url {
+            margin-top: 15px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
 
-        /* Modern Header Styles - REMOVED as they are now in styles.css */
+        .welcome-message {
+            background: var(--vibrant-gradient);
+            border-radius: 16px;
+            padding: 1.5rem;
+            color: white;
+            text-align: center;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+            width: 100%;
+            margin: 1rem auto;
+            overflow: hidden;
+            position: relative;
+            animation: fadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
 
+        .welcome-message h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin: 0;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0.8));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .welcome-message p {
+            font-size: 1.1rem;
+            margin: 0.5rem 0;
+        }
+
+        .welcome-card-hand {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .welcome-card {
+            width: 40px;
+            height: 60px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            position: relative;
+            transform: rotate(var(--rotate, 0deg));
+        }
+
+        .welcome-card:nth-child(1) { --rotate: -10deg; }
+        .welcome-card:nth-child(2) { --rotate: -5deg; }
+        .welcome-card:nth-child(3) { --rotate: 0deg; z-index: 2; transform: translateY(-5px) scale(1.05); }
+        .welcome-card:nth-child(4) { --rotate: 5deg; }
+        .welcome-card:nth-child(5) { --rotate: 10deg; }
+
+        @media (max-width: 768px) {
+            .welcome-message {
+                flex-direction: column;
+                padding: 1.5rem 1rem;
+            }
+            
+            .welcome-card {
+                width: 30px;
+                height: 45px;
+            }
+        }
+
+        /* Hide theme-specific icons by default */
+        .theme-icon {
+            display: none;
+        }
+
+        /* Only show doginme icon when doginme theme is active */
+        [data-theme="doginme"] .doginme-icon {
+            display: block;
+        }
+
+        /* Only show rizzler icon when rizzler theme is active */
+        [data-theme="rizzler"] .rizzler-icon {
+            display: block;
+        }
+
+        /* Modern Header Styles */
+        header {
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            padding: 1rem;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            letter-spacing: -0.01em;
+        }
+
+        .title-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            object-fit: contain;
+        }
+
+        #theme-selector {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 2rem 0.5rem 1rem;
+            border-radius: 8px;
+            color: white !important;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            min-width: 120px;
+            transition: all 0.2s ease;
+        }
+
+        #theme-selector:hover {
+            background: rgba(0, 0, 0, 0.4) !important;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        #theme-selector:focus {
+            outline: none;
+            border-color: var(--main-color);
+        }
+
+        #theme-selector option {
+            background: #1a1a1a !important;
+            color: white !important;
+            padding: 8px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            padding-left: var(--spacing-lg);
+            position: relative;
+        }
+
+        .logo-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .header-logo {
+            height: 48px;
+            width: auto;
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
-    <!-- Use modern background effects -->
-    <div class="particles"></div>
-    <div class="cards">
-        <div class="card"></div>
-        <div class="card"></div>
-        <div class="card"></div>
-        <div class="card"></div>
-        <div class="card"></div>
-    </div>
-
-    <!-- Redesigned header with better alignment -->
     <header class="app-header">
-        <div class="header-pattern"></div>
-        <div class="modern-backdrop">
-            <div class="gradient-layer"></div>
-            <div class="pattern-overlay"></div>
-            <div class="accent-line accent-line-1"></div>
-            <div class="accent-line accent-line-2"></div>
-            <div class="accent-line accent-line-3"></div>
-            <div class="light-effect light-effect-1"></div>
-            <div class="light-effect light-effect-2"></div>
-            <div class="card-symbol card-symbol-1">♠</div>
-            <div class="card-symbol card-symbol-2">♥</div>
-            <div class="card-symbol card-symbol-3">♣</div>
-            <div class="card-symbol card-symbol-4">♦</div>
-        </div>
         <div class="header-content">
             <div class="header-left">
                 <div class="logo-wrapper">
@@ -136,10 +508,8 @@
         </div>
     </header>
 
-    <!-- Hero Section removed as requested -->
-
     <main class="app-content" id="app-content">
-        <section id="game-lobby">
+        <section id="game-lobby" class="poker-card">
             <div class="card-header">
                 <h2>Game Lobby</h2>
                 <div class="game-status-badge inactive">
@@ -176,7 +546,7 @@
             </div>
         </section>
 
-        <section id="add-player">
+        <section id="add-player" class="poker-card">
             <div class="card-header">
                 <h2>Add Player</h2>
             </div>
@@ -215,11 +585,11 @@
             </div>
         </section>
 
-        <section id="players">
+        <section id="players" class="poker-card">
             <div class="card-header">
                 <h2>Players</h2>
                 <div class="card-actions">
-                    <!-- Any actions would go here -->
+                    <!-- Removing add-player-btn that has no function -->
                 </div>
             </div>
 
@@ -244,7 +614,7 @@
             </div>
         </section>
         
-        <section id="money-to-chip-ratio">
+        <section id="money-to-chip-ratio" class="poker-card">
             <div class="card-header">
                 <h2>Money to Chip Ratio</h2>
             </div>
@@ -277,7 +647,7 @@
                     </div>
                     <div class="button-group">
                         <button type="submit" class="poker-button">Set Ratio</button>
-                        <button id="reset-btn" class="poker-button reset-button">
+                        <button id="reset-btn" class="poker-button reset-button" onclick="window.resetGame(); return false;">
                             <span class="button-icon">↺</span> Reset Game
                         </button>
                     </div>
@@ -288,7 +658,7 @@
             </div>
         </section>
         
-        <section id="payout-calculator">
+        <section id="payout-calculator" class="poker-card">
             <div class="card-header">
                 <h2>Payout Calculator</h2>
             </div>
@@ -309,7 +679,7 @@
         </section>
 
         <!-- Developer Tools (only visible in query param mode) -->
-        <section id="dev-tools" style="display: none;">
+        <section id="dev-tools" class="poker-card" style="display: none;">
             <div class="card-header">
                 <h2>Developer Tools</h2>
             </div>
