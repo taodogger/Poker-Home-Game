@@ -978,8 +978,11 @@ function initialize() {
         if (randomThemeBtn) {
             randomThemeBtn.addEventListener('click', () => {
                 const themeNames = Object.keys(availableThemes);
-                const randomIndex = Math.floor(Math.random() * themeNames.length);
-                const randomTheme = themeNames[randomIndex];
+                // Filter out the current theme
+                const availableChoices = themeNames.filter(name => name !== PokerApp.state.currentTheme);
+                // Pick random from remaining themes
+                const randomIndex = Math.floor(Math.random() * availableChoices.length);
+                const randomTheme = availableChoices[randomIndex];
                 
                 // Apply the random theme
                 setTheme(randomTheme);
