@@ -972,13 +972,37 @@ function initialize() {
 
             themeSwatchesContainer.appendChild(swatch);
         });
+
+        // Setup random theme button
+        const randomThemeBtn = document.getElementById('random-theme');
+        if (randomThemeBtn) {
+            randomThemeBtn.addEventListener('click', () => {
+                const themeNames = Object.keys(availableThemes);
+                const randomIndex = Math.floor(Math.random() * themeNames.length);
+                const randomTheme = themeNames[randomIndex];
+                
+                // Apply the random theme
+                setTheme(randomTheme);
+                
+                // Update active state on swatches
+                document.querySelectorAll('.theme-swatch').forEach(swatch => {
+                    swatch.classList.toggle('active', swatch.dataset.themeName === randomTheme);
+                });
+
+                // Add a little animation to the dice
+                randomThemeBtn.style.transform = 'rotate(360deg)';
+                setTimeout(() => {
+                    randomThemeBtn.style.transform = '';
+                }, 300);
+            });
+        }
     } else {
         console.warn('Theme swatches container not found.');
     }
 
     // Apply initial theme if not already set
     if (!PokerApp.state.currentTheme) {
-        setTheme('Classic'); // Default theme
+        setTheme('Royal'); // Default theme changed to Royal
     } else {
         setTheme(PokerApp.state.currentTheme); // Apply saved theme
     }

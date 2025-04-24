@@ -3155,3 +3155,35 @@ main > section:hover::before {
     background: #f8fafc !important; /* slate-50 - light bg */
     border-color: #e2e8f0 !important; /* slate-200 - subtle border */
 }
+
+.theme-random-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    padding: 0;
+    margin-left: 10px;
+}
+
+.theme-random-btn:hover {
+    transform: scale(1.15) rotate(-15deg);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="RainbowLight"] .theme-random-btn {
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="RainbowLight"] .theme-random-btn:hover {
+    border-color: rgba(0, 0, 0, 0.5);
+}
