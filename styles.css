@@ -1947,7 +1947,7 @@ button,
     left: 50%;
     width: 100vw;
     height: 0;
-    background: var(--body-background, var(--vibrant-gradient));
+    background: var(--vibrant-gradient);
     z-index: 100;
     transform: translate(-50%, -50%);
     transform-origin: center;
@@ -1956,10 +1956,10 @@ button,
     overflow: hidden;
 }
 
-/* Add a subtle transition effect for light theme */
+/* Override for RainbowLight theme */
 [data-theme="RainbowLight"] .reset-curtain {
-    background: var(--background-color);
-    box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
+    background: #e0f2fe; /* Light blue background */
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.05);
 }
 
 .reset-curtain.active {
