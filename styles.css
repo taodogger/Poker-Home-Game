@@ -1923,21 +1923,17 @@ button,
 @media screen and (orientation: portrait) {
     html, body {
         background: #0a0a0a;
-        position: fixed;
+        /* REMOVE: position: fixed; */
         width: 100%;
         height: 100%;
-        overflow: hidden;
+        /* REMOVE: overflow: hidden; */
+        /* ADD: Allow vertical scroll */
+        overflow-y: auto;
+        overflow-x: hidden; /* Keep horizontal overflow hidden */
     }
 
-    .container {
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-    }
+    /* Remove this container rule if it's not needed for index.html portrait */
+    /* .container { ... } */
 }
 
 /* Reset Animation - Enhanced Curtain Flow Effect */
