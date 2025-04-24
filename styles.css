@@ -190,8 +190,9 @@ body {
     overflow-y: scroll; /* Explicitly allow vertical scroll */
     background: var(--body-background, var(--background-color));
     letter-spacing: -0.01em;
-    display: flex; /* Use flexbox for body layout */
-    flex-direction: column; /* Stack header and main vertically */
+    /* REMOVE Flexbox styles */
+    /* display: flex; */
+    /* flex-direction: column; */
 }
 
 /* Remove animated background keyframes if not used */
