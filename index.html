@@ -102,16 +102,22 @@
         <div class="header-content">
             <div class="header-left">
                 <div class="logo-wrapper">
-                    <img src="images/Kapoker-logo.png" alt="Kapoker" class="header-logo" width="160" height="40">
+                    <!-- <img src="images/Kapoker-logo.png" alt="Kapoker" class="header-logo" width="160" height="40"> -->
+                    <div id="text-logo" class="header-logo-text">
+                        <span>K</span><span>a</span><span>p</span><span>o</span><span>k</span><span>e</span><span>r</span> 
+                    </div>
                 </div>
             </div>
             <div class="header-right">
-                <select id="theme-selector" class="theme-selector">
-                    <option value="Classic">Classic Theme</option>
-                    <option value="Royal">Royal Theme</option>
-                    <option value="Midnight">Midnight Theme</option>
-                    <option value="Purple">Purple Theme</option>
-                </select>
+                <!-- REMOVE: <select id="theme-selector" class="theme-selector"> -->
+                <!-- REMOVE:    <option value="Classic">Classic Theme</option> -->
+                <!-- REMOVE:    <option value="Royal">Royal Theme</option> -->
+                <!-- REMOVE:    <option value="Midnight">Midnight Theme</option> -->
+                <!-- REMOVE:    <option value="Purple">Purple Theme</option> -->
+                <!-- REMOVE:    <option value="RainbowLight">Rainbow Light</option> -->
+                <!-- REMOVE: </select> -->
+                <!-- ADD: New container for theme swatches -->
+                <div id="theme-swatches" class="theme-swatches-container"></div>
             </div>
         </div>
     </header>
@@ -351,14 +357,14 @@
             }
             
             // Set up theme selector
-            const themeSelector = document.getElementById('theme-selector');
+            /* REMOVE: const themeSelector = document.getElementById('theme-selector');
             if (themeSelector) {
                 themeSelector.addEventListener('change', function(e) {
                     if (typeof setTheme === 'function') {
                         setTheme(e.target.value);
                     }
                 });
-            }
+            } */
 
             // Set up join URL copy functionality
             const joinUrlContainer = document.querySelector('.join-url');
@@ -461,6 +467,19 @@
                     }
                 }
             }
+            
+            // --- Glow Effect Logic ---
+            const sections = document.querySelectorAll('main > section');
+            sections.forEach(section => {
+                section.addEventListener('pointermove', (e) => {
+                    const rect = section.getBoundingClientRect();
+                    const x = e.clientX - rect.left; // x position within the element.
+                    const y = e.clientY - rect.top;  // y position within the element.
+                    section.style.setProperty('--glow-x', `${x}px`);
+                    section.style.setProperty('--glow-y', `${y}px`);
+                });
+            });
+            // --- End Glow Effect Logic ---
         });
     </script>
 
@@ -468,12 +487,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Fix theme selector position
-            const themeSelector = document.getElementById('theme-selector');
+            /* REMOVE: const themeSelector = document.getElementById('theme-selector');
             if (themeSelector) {
                 themeSelector.style.marginLeft = 'auto';
                 themeSelector.style.position = 'absolute';
                 themeSelector.style.right = '24px';
-            }
+            } */
             
             // Fix game controls height
             const gameControls = document.getElementById('game-controls');

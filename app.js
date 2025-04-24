@@ -431,13 +431,15 @@ function updatePlayerList() {
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-player-btn';
         removeBtn.setAttribute('data-player-id', player.id);
+        removeBtn.title = 'Remove Player'; // Add tooltip
         
-        const icon = document.createElement('span');
-        icon.className = 'button-icon';
-        icon.textContent = '×';
+        const removeIcon = document.createElement('span');
+        removeIcon.className = 'button-icon';
+        removeIcon.textContent = '×'; // Keep simple remove icon
         
-        removeBtn.appendChild(icon);
+        removeBtn.appendChild(removeIcon);
         actionsCell.appendChild(removeBtn);
+
         row.appendChild(actionsCell);
         
         playerTableBody.appendChild(row);
@@ -456,7 +458,10 @@ function updatePlayerList() {
     totalsRow.appendChild(totalsInitialCell);
     
     const totalsCurrentCell = document.createElement('td');
-    totalsCurrentCell.innerHTML = `<strong>${totalCurrentChips}</strong>`;
+    // Calculate total money directly using current ratio
+    const currentChipRatio = PokerApp.state.chipRatio || 1.0;
+    const totalMoneyValue = totalCurrentChips * currentChipRatio;
+    totalsCurrentCell.innerHTML = `<strong>${totalCurrentChips}</strong> <span class="total-money-amount">($${totalMoneyValue.toFixed(2)})</span>`;
     totalsRow.appendChild(totalsCurrentCell);
     
     const totalsBlankCell = document.createElement('td');
@@ -509,7 +514,7 @@ function addPlayer(name, chips) {
         
         // Then trigger animation after a short delay to ensure DOM is updated
         setTimeout(() => {
-            animateChipAddition(existingPlayer.id);
+            animateNewPlayer(existingPlayer.id, true); // Call with isUpdate = true
             PokerApp.UI.showToast(`Added ${chips} chips to ${name} (now has ${existingPlayer.current_chips})`, 'success');
         }, 50);
         
@@ -528,6 +533,8 @@ function addPlayer(name, chips) {
         name: name,
         initial_chips: parseInt(chips),
         current_chips: parseInt(chips)
+        // No buyinAmount needed here
+        // No rebuys needed here for this simpler approach yet
     };
 
     // Add to state
@@ -539,7 +546,7 @@ function addPlayer(name, chips) {
     
     // Then trigger animation after a short delay to ensure DOM is updated
     setTimeout(() => {
-        animateNewPlayer(player.id);
+        animateNewPlayer(player.id); // Default is isUpdate = false
         PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
     }, 50);
     
@@ -673,15 +680,42 @@ function setupEventListeners() {
         // Add the new listener
         newForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            const name = document.getElementById('player-name').value.trim();
-            const chips = parseInt(document.getElementById('initial-chips').value);
-            
+            const nameInput = document.getElementById('player-name');
+            const chipsInput = document.getElementById('initial-chips');
+            const chips = parseInt(chipsInput.value);
+
+            // --- ADD NEW PLAYER LOGIC ---
+            const name = nameInput.value.trim();
+            if (!name || isNaN(chips) || chips <= 0) {
+                PokerApp.UI.showToast('Please enter a valid name and chip amount', 'error');
+                return;
+            }
+
             addPlayer(name, chips);
-            
-            // Reset form
-            document.getElementById('player-name').value = '';
-            document.getElementById('initial-chips').value = '';
+
+            // Reset form fields
+            nameInput.value = '';
+            chipsInput.value = '';
+            nameInput.focus(); // Focus name input for next player
         });
+    }
+
+    // Helper function to reset the Add Player form UI
+    function resetAddPlayerForm(formElement) {
+        const addPlayerSection = document.getElementById('add-player');
+        const nameInput = document.getElementById('player-name');
+        const chipsInput = document.getElementById('initial-chips');
+        const heading = addPlayerSection.querySelector('h2');
+        const submitButton = formElement.querySelector('button[type="submit"]');
+
+        formElement.removeAttribute('data-rebuy-player-id');
+        heading.textContent = 'Add Player';
+        nameInput.value = '';
+        nameInput.disabled = false;
+        chipsInput.value = '';
+        chipsInput.placeholder = 'Enter chip amount';
+        submitButton.textContent = 'Add Player';
+        console.log('[UI] Reset Add Player form');
     }
     
     // Set up ratio form
@@ -902,6 +936,71 @@ function initialize() {
             initializeApp(false);
             PokerApp.UI.showToast('Offline mode - some features unavailable', 'error');
         });
+
+    // Setup theme swatches
+    const themeSwatchesContainer = document.getElementById('theme-swatches');
+    if (themeSwatchesContainer) {
+        Object.entries(availableThemes).forEach(([themeName, themeData]) => {
+            const swatch = document.createElement('div');
+            swatch.className = 'theme-swatch';
+            swatch.dataset.themeName = themeName;
+            // REMOVE: swatch.style.backgroundColor = themeData.mainColor;
+            // ADD: Set CSS variables for the gradient background
+            swatch.style.setProperty('--swatch-main-color', themeData.mainColor);
+            swatch.style.setProperty('--swatch-secondary-color', themeData.secondaryColor);
+            swatch.title = themeData.name; // Tooltip for theme name
+
+            // Special styling for RainbowLight swatch (keep border, remove background override)
+            if (themeName === 'RainbowLight') {
+                swatch.style.border = '2px solid #e2e8f0'; // Light border
+                // REMOVE: swatch.style.backgroundImage = 'linear-gradient(45deg, #f8fafc, #e0f2fe)'; 
+            }
+
+            swatch.addEventListener('click', () => {
+                if (typeof setTheme === 'function') {
+                    setTheme(themeName);
+                    // Update active state
+                    document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+                    swatch.classList.add('active');
+                }
+            });
+
+            // Set initial active state
+            if (PokerApp.state.currentTheme === themeName) {
+                swatch.classList.add('active');
+            }
+
+            themeSwatchesContainer.appendChild(swatch);
+        });
+    } else {
+        console.warn('Theme swatches container not found.');
+    }
+
+    // Apply initial theme if not already set
+    if (!PokerApp.state.currentTheme) {
+        setTheme('Classic'); // Default theme
+    } else {
+        setTheme(PokerApp.state.currentTheme); // Apply saved theme
+    }
+    
+    // Initialize logo animation after theme is set
+    initializeLogoAnimation();
+
+    console.log('Initialization complete.');
+    
+    // ... other initial setup, like checking for gameId ...
+     if (PokerApp.state.sessionId) {
+        console.log('[INIT] Found existing session ID:', PokerApp.state.sessionId);
+        setupGameStateListener(PokerApp.state.sessionId);
+        PokerApp.UI.updateLobbyUI(true); // Show lobby as active
+        // Ensure QR code is visible if session is active
+        if (typeof ensureQrCodeVisible === 'function') {
+            ensureQrCodeVisible();
+        }
+    } else {
+        console.log('[INIT] No active session ID found.');
+        PokerApp.UI.updateLobbyUI(false);
+    }
 }
 
 // Helper function to make sure Firebase is initialized
@@ -1162,104 +1261,85 @@ const themes = {
         '--main-color-rgb': '46, 139, 87',
         '--secondary-color': '#3CB371',
         '--secondary-color-rgb': '60, 179, 113',
-        '--vibrant-gradient': 'linear-gradient(135deg, #2E8B57, #3CB371)',
-        '--accent-gradient': 'linear-gradient(45deg, #2E8B57, #3CB371)',
+        '--accent-color': '#98FB98',
+        '--background-color': '#1a1a1a',
+        '--surface-color': 'rgba(255, 255, 255, 0.1)',
+        '--text-color': 'white',
         '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        'icon': '♠️'
+        '--vibrant-gradient': 'linear-gradient(45deg, var(--main-color), var(--secondary-color))',
+        '--card-bg': 'rgba(30, 30, 40, 0.5)',
+        '--glow-effect': '0 0 20px rgba(var(--main-color-rgb), 0.5)',
+        'icon': '♣️'
     },
     'Royal': {
         '--main-color': '#4169E1',
         '--main-color-rgb': '65, 105, 225',
         '--secondary-color': '#1E90FF',
         '--secondary-color-rgb': '30, 144, 255',
-        '--vibrant-gradient': 'linear-gradient(135deg, #4169E1, #1E90FF)',
-        '--accent-gradient': 'linear-gradient(45deg, #4169E1, #1E90FF)',
-        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        'icon': '♦️'
-    },
-    'Crimson': {
-        '--main-color': '#DC143C',
-        '--main-color-rgb': '220, 20, 60',
-        '--secondary-color': '#FF4500',
-        '--secondary-color-rgb': '255, 69, 0',
-        '--vibrant-gradient': 'linear-gradient(135deg, #DC143C, #FF4500)',
-        '--accent-gradient': 'linear-gradient(45deg, #DC143C, #FF4500)',
-        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        'icon': '♥️'
+        '--accent-color': '#87CEFA',
+        '--background-color': '#0f172a',
+        '--surface-color': 'rgba(255, 255, 255, 0.1)',
+        '--text-color': 'white',
+        '--body-background': 'linear-gradient(135deg, #0f172a, #1e293b)',
+        '--vibrant-gradient': 'linear-gradient(45deg, var(--main-color), var(--secondary-color))',
+        '--card-bg': 'rgba(30, 41, 59, 0.5)',
+        '--glow-effect': '0 0 20px rgba(var(--main-color-rgb), 0.5)',
+        'icon': '♠️'
     },
     'Midnight': {
         '--main-color': '#2F4F4F',
         '--main-color-rgb': '47, 79, 79',
         '--secondary-color': '#696969',
         '--secondary-color-rgb': '105, 105, 105',
-        '--vibrant-gradient': 'linear-gradient(135deg, #2F4F4F, #696969)',
-        '--accent-gradient': 'linear-gradient(45deg, #2F4F4F, #696969)',
-        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        'icon': '♣️'
-    },
-    'Ocean': {
-        '--main-color': '#20B2AA',
-        '--main-color-rgb': '32, 178, 170',
-        '--secondary-color': '#5F9EA0',
-        '--secondary-color-rgb': '95, 158, 160',
-        '--vibrant-gradient': 'linear-gradient(135deg, #20B2AA, #5F9EA0)',
-        '--accent-gradient': 'linear-gradient(45deg, #20B2AA, #5F9EA0)',
-        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        'icon': '🌊'
-    },
-    'Fire': {
-        '--main-color': '#FF6347',
-        '--main-color-rgb': '255, 99, 71',
-        '--secondary-color': '#FF4500',
-        '--secondary-color-rgb': '255, 69, 0',
-        '--vibrant-gradient': 'linear-gradient(135deg, #FF6347, #FF4500)',
-        '--accent-gradient': 'linear-gradient(45deg, #FF6347, #FF4500)',
-        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        'icon': '🔥'
+        '--accent-color': '#A9A9A9',
+        '--background-color': '#111111',
+        '--surface-color': 'rgba(255, 255, 255, 0.08)',
+        '--text-color': '#E0E0E0',
+        '--body-background': '#111111',
+        '--vibrant-gradient': 'linear-gradient(45deg, var(--main-color), var(--secondary-color))',
+        '--card-bg': 'rgba(40, 40, 40, 0.6)',
+        '--glow-effect': '0 0 15px rgba(var(--main-color-rgb), 0.4)',
+        'icon': '♦️'
     },
     'Purple': {
         '--main-color': '#9370DB',
         '--main-color-rgb': '147, 112, 219',
         '--secondary-color': '#8A2BE2',
         '--secondary-color-rgb': '138, 43, 226',
-        '--vibrant-gradient': 'linear-gradient(135deg, #9370DB, #8A2BE2)',
-        '--accent-gradient': 'linear-gradient(45deg, #9370DB, #8A2BE2)',
-        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        'icon': '🔮'
+        '--accent-color': '#BA55D3',
+        '--background-color': '#1a1a2d',
+        '--surface-color': 'rgba(255, 255, 255, 0.1)',
+        '--text-color': 'white',
+        '--body-background': 'linear-gradient(135deg, #1a1a2d, #2d2d4a)',
+        '--vibrant-gradient': 'linear-gradient(45deg, var(--main-color), var(--secondary-color))',
+        '--card-bg': 'rgba(30, 30, 60, 0.5)',
+        '--glow-effect': '0 0 20px rgba(var(--main-color-rgb), 0.5)',
+        'icon': '💜'
     },
-    'Neon': {
-        '--main-color': '#00FFFF',
-        '--main-color-rgb': '0, 255, 255',
-        '--secondary-color': '#00CED1',
-        '--secondary-color-rgb': '0, 206, 209',
-        '--vibrant-gradient': 'linear-gradient(135deg, #00FFFF, #00CED1)',
-        '--accent-gradient': 'linear-gradient(45deg, #00FFFF, #00CED1)',
-        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        'icon': '💡'
+    'RainbowLight': {
+        '--main-color': '#0ea5e9', // Sky blue - Keep for accents like underlines
+        '--main-color-rgb': '14, 165, 233',
+        '--secondary-color': '#22c55e', // Green - Keep for accents
+        '--secondary-color-rgb': '34, 197, 94',
+        '--accent-color': '#f97316', // Orange - Keep for accents
+        '--background-color': '#f8fafc', // Very light gray background
+        '--surface-color': '#ffffff', // White surface for sections/cards
+        '--text-color': '#1e293b', // Slate dark blue/gray text
+        '--text-muted-color': '#64748b', // Lighter text for muted elements
+        '--body-background': 'var(--background-color)',
+        '--header-background': '#ffffff', // White header background
+        '--card-bg': 'var(--surface-color)', // White cards
+        '--card-shadow': '0 4px 15px rgba(0, 0, 0, 0.07)', // Softer shadow for light theme
+        '--button-background': '#334155', // Dark Slate for buttons
+        '--button-text-color': '#ffffff', // White text on dark buttons
+        '--glow-effect': '0 0 20px rgba(var(--main-color-rgb), 0.2)', // Subtle glow
+        // Modern/Pastel Rainbow Colors for Logo Letters
+        '--logo-colors': JSON.stringify([ // Store as stringified JSON for easy parsing in JS
+            '#fb7185', '#facc15', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6' 
+            // Rose, Amber, Green, Sky, Violet, Pink
+        ]),
+        'icon': '🌈'
     },
-    'Rizzler': {
-        '--main-color': '#ff00ff',
-        '--main-color-rgb': '255, 0, 255',
-        '--secondary-color': '#bf00ff',
-        '--secondary-color-rgb': '191, 0, 255',
-        '--vibrant-gradient': 'linear-gradient(135deg, #ff00ff, #bf00ff)',
-        '--accent-gradient': 'linear-gradient(45deg, #ff00ff, #bf00ff)',
-        '--body-background': 'url("./images/rizzler-background.jpg")',
-        'tableImage': './images/rizzler-board.jpg',
-        'icon': './images/rizzler-icon.png'
-    },
-    'Doginme': {
-        '--main-color': '#1e90ff',
-        '--main-color-rgb': '30, 144, 255',
-        '--secondary-color': '#4169e1',
-        '--secondary-color-rgb': '65, 105, 225',
-        '--vibrant-gradient': 'linear-gradient(135deg, #1e90ff, #4169e1)',
-        '--accent-gradient': 'linear-gradient(45deg, #1e90ff, #4169e1)',
-        '--body-background': 'url("./images/doginme-background.jpg")',
-        'tableImage': './images/doginme-board.jpg',
-        'icon': './images/doginme-icon.png',
-        '--accent-color': '#1e90ff'
-    }
 };
 
 // Function to set the theme
@@ -1351,6 +1431,169 @@ function setTheme(theme) {
         } catch (error) {
             console.error('[FIREBASE] Error updating theme in Firebase:', error);
         }
+    }
+
+    // Initialize features for the new theme
+    initializeThemeSpecificFeatures(theme); 
+
+    PokerApp.state.currentTheme = theme;
+    saveState(); // Save the selected theme
+
+    // Update active swatch
+    const themeSwatchesContainer = document.getElementById('theme-swatches');
+    if (themeSwatchesContainer) {
+        themeSwatchesContainer.querySelectorAll('.theme-swatch').forEach(swatch => {
+            if (swatch.dataset.themeName === theme) {
+                swatch.classList.add('active');
+            } else {
+                swatch.classList.remove('active');
+            }
+        });
+    }
+
+    // Initialize theme-specific features (like RainbowLight animations)
+    initializeThemeSpecificFeatures(theme);
+}
+
+// Function to animate the logo text letters (per-letter)
+function animateLogoLetters() {
+    const logoElement = document.getElementById('text-logo');
+    if (!logoElement) return;
+
+    const letterSpans = logoElement.querySelectorAll('span');
+    if (letterSpans.length === 0) return;
+
+    let logoColors = [];
+    try {
+        // Get colors from CSS variable (defined in theme)
+        const colorsJson = getComputedStyle(document.documentElement).getPropertyValue('--logo-colors').trim();
+        if (colorsJson) {
+            logoColors = JSON.parse(colorsJson);
+        }
+    } catch (e) {
+        console.error("Error parsing logo colors from CSS variable:", e);
+        // Fallback colors if parsing fails
+        logoColors = ['#fb7185', '#facc15', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6'];
+    }
+
+    if (logoColors.length === 0) return; // Don't run if no colors
+
+    let intervalId = null;
+
+    const updateColors = () => {
+        // Shuffle colors
+        const shuffledColors = [...logoColors].sort(() => Math.random() - 0.5);
+        
+        letterSpans.forEach((span, index) => {
+            span.style.color = shuffledColors[index % shuffledColors.length];
+            // Add subtle animation (optional - can be enhanced)
+            span.style.transition = 'color 0.5s ease-in-out'; 
+        });
+    };
+
+    // Function to start the interval
+    const startAnimation = () => {
+        if (intervalId) clearInterval(intervalId); // Clear existing interval if any
+        updateColors(); // Initial color set
+        intervalId = setInterval(updateColors, 3000); // Shuffle every 3 seconds
+    };
+
+    // Start the animation
+    startAnimation();
+
+    // Return a function to stop the animation if needed elsewhere
+    return () => {
+        if (intervalId) clearInterval(intervalId);
+    };
+}
+
+// Function to animate the color of whole elements cycling through a list
+function animateElementColorCycle(selector, interval = 1500) {
+    const elements = document.querySelectorAll(selector);
+    if (elements.length === 0) return null;
+
+    let logoColors = [];
+    try {
+        const colorsJson = getComputedStyle(document.documentElement).getPropertyValue('--logo-colors').trim();
+        if (colorsJson) {
+            logoColors = JSON.parse(colorsJson);
+        }
+    } catch (e) {
+        console.error("Error parsing logo colors from CSS variable:", e);
+        logoColors = ['#fb7185', '#facc15', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6'];
+    }
+
+    if (logoColors.length === 0) return null;
+
+    // Use a Map to store the current color index for each element
+    const elementColorIndices = new Map();
+    elements.forEach((element, i) => {
+        // Initialize each element with a slightly offset starting color index
+        elementColorIndices.set(element, i % logoColors.length);
+        element.style.color = logoColors[elementColorIndices.get(element)]; // Set initial color
+        element.style.transition = 'color 0.5s ease-in-out'; // Apply transition once
+    });
+
+    const intervalId = setInterval(() => {
+        elements.forEach(element => {
+            // Get the current index for this element, default to 0 if not set
+            let currentIndex = elementColorIndices.get(element) || 0;
+            // Increment the index for the next cycle
+            currentIndex = (currentIndex + 1) % logoColors.length;
+            // Update the map
+            elementColorIndices.set(element, currentIndex);
+            // Apply the new color
+            element.style.color = logoColors[currentIndex];
+        });
+    }, interval);
+
+    // Return a function to stop this specific animation
+    return () => {
+        clearInterval(intervalId);
+        // Reset color on stop
+        elements.forEach(element => {
+            element.style.color = ''; 
+            element.style.transition = '';
+            elementColorIndices.delete(element); // Clean up map entry
+        });
+    };
+}
+
+// Add a function to re-initialize logo animation when theme changes
+function initializeThemeSpecificFeatures(themeName) {
+    // Stop previous animations first
+    if (window.stopLogoAnimation) {
+        window.stopLogoAnimation();
+        window.stopLogoAnimation = null;
+    }
+    if (window.stopHeaderAnimation) {
+        window.stopHeaderAnimation();
+        window.stopHeaderAnimation = null;
+    }
+    if (window.stopResetBtnAnimation) {
+        window.stopResetBtnAnimation();
+        window.stopResetBtnAnimation = null;
+    }
+
+    if (themeName === 'RainbowLight') {
+        // Start new animations and store the stop functions
+        window.stopLogoAnimation = animateLogoLetters();
+        window.stopHeaderAnimation = animateElementColorCycle('.card-header h2');
+        window.stopResetBtnAnimation = animateElementColorCycle('#reset-btn');
+    } else {
+        // Ensure styles are reset if not RainbowLight
+        const logoElement = document.getElementById('text-logo');
+         if (logoElement) {
+            const letterSpans = logoElement.querySelectorAll('span');
+            letterSpans.forEach(span => {
+                span.style.color = ''; 
+                span.style.transition = '';
+            });
+        }
+        document.querySelectorAll('.card-header h2, #reset-btn').forEach(el => {
+            el.style.color = '';
+            el.style.transition = '';
+        });
     }
 }
 
@@ -2791,11 +3034,21 @@ function updatePlayerChips(playerId, newValue) {
         return;
     }
     
+    // Store previous amount for comparison if needed
+    const previousAmount = player.current_chips;
+    
     // Update player's chips
     player.current_chips = parsedAmount;
     
     // Update UI with recalculated totals
     updatePlayerList();
+    
+    // Trigger animation if value changed
+    if (parsedAmount !== previousAmount) {
+        setTimeout(() => {
+            animateNewPlayer(playerId, true); // Call with isUpdate = true
+        }, 50); // Small delay after UI update
+    }
     
     // Save state locally and to Firebase if needed
     saveState();
@@ -2807,146 +3060,44 @@ function updatePlayerChips(playerId, newValue) {
 // Add to global scope
 window.updatePlayerChips = updatePlayerChips;
 
-// Animation for new player joining
-function animateNewPlayer(playerId) {
+// Animation for new player joining OR chip updates
+function animateNewPlayer(playerId, isUpdate = false) { // Added isUpdate parameter
     const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
     if (!playerRow) {
         console.log('[ANIMATION] Player row not found for animation:', playerId);
         return;
     }
     
-    console.log('[ANIMATION] Animating new player:', playerId);
+    const animationClass = isUpdate ? 'player-chips-updated' : 'player-added';
+    console.log(`[ANIMATION] Animating ${isUpdate ? 'chip update' : 'new player'}: ${playerId} using class ${animationClass}`);
     
-    // Play pop sound
-    SoundSystem.playPopSound(800);
+    // Play appropriate sound
+    if (isUpdate) {
+        SoundSystem.playChipSound(); // Play chip sound for updates
+    } else {
+        SoundSystem.playPopSound(800); // Play pop sound for new players
+    }
     
     // First make sure any old animation classes are removed
-    playerRow.classList.remove('player-added');
+    playerRow.classList.remove('player-added', 'player-chips-updated');
     
     // Force reflow
     void playerRow.offsetWidth;
     
-    // Add animation class
-    playerRow.classList.add('player-added');
+    // Add the appropriate animation class
+    playerRow.classList.add(animationClass);
     
     // Remove the class after animation completes
     playerRow.addEventListener('animationend', () => {
-        playerRow.classList.remove('player-added');
+        playerRow.classList.remove(animationClass);
     }, { once: true });
 }
 
-// Animation for adding chips to existing player
-function animateChipAddition(playerId) {
-    setTimeout(() => {
-        const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
-        if (!playerRow) {
-            console.log('[ANIMATION] Player row not found for chip animation:', playerId);
-            return;
-        }
-        
-        const chipCell = playerRow.querySelector('.current-chips');
-        if (!chipCell) {
-            console.log('[ANIMATION] Chip cell not found for animation');
-            return;
-        }
-        
-        console.log('[ANIMATION] Animating chip addition for player:', playerId);
-        
-        // Play chip sound
-        SoundSystem.playChipSound();
-        
-        // Only create flying chips animation
-        createFlyingChips(chipCell);
-    }, 300);
-}
+// Animation for adding chips to existing player -- REMOVING THIS
+// function animateChipAddition(playerId) { ... }
 
-// Create flying cards animation
-function createFlyingCards(target) {
-    const cardCount = 5;
-    const container = document.createElement('div');
-    container.className = 'flying-cards-container';
-    
-    // Position the container over the target
-    const rect = target.getBoundingClientRect();
-    container.style.position = 'fixed';
-    container.style.top = `${rect.top}px`;
-    container.style.left = `${rect.left}px`;
-    container.style.width = `${rect.width}px`;
-    container.style.height = `${rect.height}px`;
-    container.style.zIndex = '1000';
-    container.style.pointerEvents = 'none';
-    
-    // Add cards
-    for (let i = 0; i < cardCount; i++) {
-        const card = document.createElement('div');
-        card.className = 'flying-card';
-        
-        // Apply random rotation and scale
-        const rotation = Math.random() * 360;
-        card.style.transform = `rotate(${rotation}deg) scale(0.8)`;
-        
-        // Add suit and rank
-        const suits = ['♠', '♥', '♦', '♣'];
-        const ranks = ['A', 'K', 'Q', 'J', '10'];
-        const suit = suits[Math.floor(Math.random() * suits.length)];
-        const rank = ranks[Math.floor(Math.random() * ranks.length)];
-        card.innerHTML = `<div class="card-inner"><span class="card-value">${rank}</span><span class="card-suit ${suit === '♥' || suit === '♦' ? 'red' : 'black'}">${suit}</span></div>`;
-        
-        container.appendChild(card);
-    }
-    
-    document.body.appendChild(container);
-    
-    // Clean up after animation
-    setTimeout(() => {
-        container.remove();
-    }, 2000); // Animation duration + delays
-}
-
-// Create flying chips animation
-function createFlyingChips(target) {
-    const chipCount = 8;
-    const container = document.createElement('div');
-    container.className = 'flying-chips-container';
-    
-    // Position the container over the target
-    const rect = target.getBoundingClientRect();
-    container.style.position = 'fixed';
-    container.style.top = `${rect.top}px`;
-    container.style.left = `${rect.left}px`;
-    container.style.width = `${rect.width}px`;
-    container.style.height = `${rect.height}px`;
-    container.style.zIndex = '1000';
-    container.style.pointerEvents = 'none';
-    
-    // Add chips
-    for (let i = 0; i < chipCount; i++) {
-        const chip = document.createElement('div');
-        chip.className = 'flying-chip';
-        
-        // Randomize chip color
-        const chipColors = ['red', 'blue', 'green', 'black', 'purple'];
-        const chipColor = chipColors[Math.floor(Math.random() * chipColors.length)];
-        chip.classList.add(`chip-${chipColor}`);
-        
-        // Set random delay for each chip
-        const delay = Math.random() * 0.5;
-        chip.style.animationDelay = `${delay}s`;
-        
-        // Apply random rotation
-        const rotation = Math.random() * 360;
-        chip.style.transform = `rotate(${rotation}deg)`;
-        
-        container.appendChild(chip);
-    }
-    
-    document.body.appendChild(container);
-    
-    // Clean up after animation
-    setTimeout(() => {
-        container.remove();
-    }, 2000); // Animation duration + delays
-}
+// Create flying chips animation -- REMOVING THIS
+// function createFlyingChips(target) { ... }
 
 // Make core functions available globally
 window.PokerApp = {
@@ -3041,6 +3192,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         setupMobileCompatibility();
     }
+
+    // Initialize theme-specific features
+    const initialTheme = localStorage.getItem('theme') || 'Classic';
+    initializeThemeSpecificFeatures(initialTheme);
 });
 
 // Helper function to handle lastPlayer updates
@@ -3245,3 +3400,12 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[INIT] Initializing logo animation on DOMContentLoaded');
     initializeLogoAnimation();
 });
+
+// Central theme definitions (REORDERED - Royal First)
+const availableThemes = {
+    'Royal': { name: 'Royal', mainColor: '#4169E1', secondaryColor: '#1E90FF' },
+    'Classic': { name: 'Classic', mainColor: '#2E8B57', secondaryColor: '#3CB371' },
+    'Purple': { name: 'Purple', mainColor: '#9370DB', secondaryColor: '#8A2BE2' },
+    'Midnight': { name: 'Midnight', mainColor: '#2F4F4F', secondaryColor: '#696969' },
+    'RainbowLight': { name: 'Rainbow Light', mainColor: '#f8fafc', secondaryColor: '#e0f2fe' } // Use white/light blue
+};
