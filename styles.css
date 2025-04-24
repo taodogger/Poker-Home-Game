@@ -99,7 +99,7 @@
 
 /* Theme Overrides */
 [data-theme="RainbowLight"] {
-    --background-color: #f8fafc;
+    --background-color: #f8fafc;  /* Light gray/blue background */
     --surface-color: #ffffff;
     
     /* Invert text colors for light theme */
@@ -114,6 +114,11 @@
     --input-border: #e2e8f0;
     --input-placeholder: #94a3b8;  /* slate-400 */
     --label-color: #475569;       /* slate-600 */
+
+    /* Override any rainbow gradients with solid colors */
+    --body-background: var(--background-color);
+    --card-bg: var(--surface-color);
+    --grid-line-color: rgba(0, 0, 0, 0.08);
 }
 
 /* Reset & Base Styles */
@@ -1942,13 +1947,19 @@ button,
     left: 50%;
     width: 100vw;
     height: 0;
-    background: var(--vibrant-gradient);
+    background: var(--body-background, var(--vibrant-gradient));
     z-index: 100;
     transform: translate(-50%, -50%);
     transform-origin: center;
     opacity: 0;
     pointer-events: none;
     overflow: hidden;
+}
+
+/* Add a subtle transition effect for light theme */
+[data-theme="RainbowLight"] .reset-curtain {
+    background: var(--background-color);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
 }
 
 .reset-curtain.active {
