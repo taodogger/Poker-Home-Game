@@ -134,8 +134,10 @@ html {
     height: 100%;
     height: -webkit-fill-available;
     overflow-x: hidden;
+    overflow-y: scroll; /* Explicitly allow vertical scroll */
     background: var(--background-color);
     position: relative;
+    -webkit-overflow-scrolling: touch; /* Improve scrolling on iOS */
 }
 
 /* Subtle Animated Noise Background */
@@ -185,8 +187,11 @@ body {
     min-height: 100vh;
     min-height: -webkit-fill-available;
     overflow-x: hidden;
+    overflow-y: scroll; /* Explicitly allow vertical scroll */
     background: var(--body-background, var(--background-color));
     letter-spacing: -0.01em;
+    display: flex; /* Use flexbox for body layout */
+    flex-direction: column; /* Stack header and main vertically */
 }
 
 /* Remove animated background keyframes if not used */
