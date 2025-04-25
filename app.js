@@ -32,6 +32,86 @@ const SoundSystem = {
         oscillator.stop(this.audioContext.currentTime + 0.3);
     },
 
+    // NEW Sound for UI Clicks / Theme Swaps
+    playUIClickSound() {
+        if (!this.audioContext) return;
+        if (this.audioContext.state === 'suspended') return; 
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        // Use a sine wave for a smoother sound
+        oscillator.type = 'sine'; 
+        // Start higher, quick upward sweep for upbeat feel
+        oscillator.frequency.setValueAtTime(400, this.audioContext.currentTime); 
+        oscillator.frequency.linearRampToValueAtTime(600, this.audioContext.currentTime + 0.05);
+        
+        // Keep it short and slightly louder
+        gainNode.gain.setValueAtTime(0.15, this.audioContext.currentTime); // Increased gain slightly
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.12); // Slightly slower decay
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + 0.12); // Match gain duration
+    },
+
+    // NEW: Kaching sound for ratio set / payout calculation
+    playKachingSound() {
+        if (!this.audioContext || this.audioContext.state === 'suspended') return;
+        const now = this.audioContext.currentTime;
+        const timeOffset = 0.05; // Slight delay between sounds
+
+        // 1. "Ka" - Mechanical Sound
+        const kaOsc = this.audioContext.createOscillator();
+        const kaGain = this.audioContext.createGain();
+        const kaFilter = this.audioContext.createBiquadFilter();
+
+        kaOsc.connect(kaFilter);
+        kaFilter.connect(kaGain);
+        kaGain.connect(this.audioContext.destination);
+
+        kaFilter.type = 'bandpass';
+        kaFilter.frequency.setValueAtTime(1200, now); // Mid-range frequency
+        kaFilter.Q.value = 5; 
+
+        kaOsc.type = 'square'; // Square wave for mechanical feel
+        kaOsc.frequency.setValueAtTime(300, now);
+        kaOsc.frequency.exponentialRampToValueAtTime(100, now + 0.1); // Quick downward sweep
+
+        kaGain.gain.setValueAtTime(0, now);
+        kaGain.gain.linearRampToValueAtTime(0.25, now + 0.01); // Very quick attack
+        kaGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); // Short decay
+
+        kaOsc.start(now);
+        kaOsc.stop(now + 0.1);
+
+        // 2. "Ching" - Ringing Sound (Delayed)
+        const chingOsc = this.audioContext.createOscillator();
+        const chingGain = this.audioContext.createGain();
+        const chingFilter = this.audioContext.createBiquadFilter();
+
+        chingOsc.connect(chingFilter);
+        chingFilter.connect(chingGain);
+        chingGain.connect(this.audioContext.destination);
+
+        chingFilter.type = 'bandpass';
+        chingFilter.frequency.setValueAtTime(2800, now + timeOffset); // Higher frequency for ring
+        chingFilter.Q.value = 10; // Reasonably sharp Q
+
+        chingOsc.type = 'sine'; // Sine or triangle for the ring
+        chingOsc.frequency.setValueAtTime(2800, now + timeOffset);
+        chingOsc.frequency.exponentialRampToValueAtTime(2200, now + timeOffset + 0.2); // Slower decay
+
+        chingGain.gain.setValueAtTime(0, now + timeOffset);
+        chingGain.gain.linearRampToValueAtTime(0.3, now + timeOffset + 0.02); // Quick attack
+        chingGain.gain.exponentialRampToValueAtTime(0.001, now + timeOffset + 0.4); // Longer decay for ring
+
+        chingOsc.start(now + timeOffset);
+        chingOsc.stop(now + timeOffset + 0.4);
+    },
+
     playResetSound() {
         if (!this.audioContext) return;
         
@@ -156,13 +236,16 @@ const SoundSystem = {
 
 // Initialize sound system when the app starts
 document.addEventListener('DOMContentLoaded', () => {
-    // Add this to your existing DOMContentLoaded listener
+    console.log('[INIT] DOMContentLoaded triggered');
+    // Call initialize directly - it will handle loading state internally
+    initialize(); 
+    // Sound system init and resume listener remain here
     SoundSystem.init();
-    
-    // Add click handler to initialize audio context (browsers require user interaction)
-    document.body.addEventListener('click', () => {
+    document.body.addEventListener('click', () => { // Resume context listener
         if (SoundSystem.audioContext && SoundSystem.audioContext.state === 'suspended') {
-            SoundSystem.audioContext.resume();
+            SoundSystem.audioContext.resume().then(() => {
+                 console.log('[SOUND] AudioContext resumed successfully after user interaction.');
+            }).catch(e => console.error('[SOUND] Error resuming AudioContext:', e));
         }
     }, { once: true });
 });
@@ -193,7 +276,7 @@ PokerApp.state = {
     dealerId: null,
     nextPlayerId: 1,
     chipRatio: 1.0,
-    theme: 'Classic',
+    theme: 'Royal',
     sessionId: null,
     gameName: null,
     lobbyActive: false
@@ -322,10 +405,12 @@ PokerApp.UI = {
                 qrCodeContainer.style.display = 'none';
             }
             
-            // Reset application state
+            // DO NOT Reset application state here - state should only be reset explicitly
+            /*
             PokerApp.state.sessionId = null;
             PokerApp.state.gameName = null;
             PokerApp.state.lobbyActive = false;
+            */
         }
     }
 };
@@ -729,59 +814,54 @@ function setupEventListeners() {
         // Add the new listener
         newForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            const moneyAmount = parseFloat(document.getElementById('money-amount').value);
-            const chipAmount = parseInt(document.getElementById('chip-amount').value);
             
-            if (isNaN(moneyAmount) || moneyAmount <= 0) {
-                PokerApp.UI.showToast('Please enter a valid money amount', 'error');
+            const money = parseFloat(document.getElementById('money-amount').value);
+            const chips = parseInt(document.getElementById('chip-amount').value);
+            
+            if (isNaN(money) || money <= 0 || isNaN(chips) || chips <= 0) {
+                PokerApp.UI.showToast('Please enter valid money and chip amounts', 'error');
                 return;
             }
             
-            if (isNaN(chipAmount) || chipAmount <= 0) {
-                PokerApp.UI.showToast('Please enter a valid chip amount', 'error');
-                return;
-            }
+            // Calculate and update ratio
+            PokerApp.state.chipRatio = money / chips;
             
-            const ratio = moneyAmount / chipAmount;
-            PokerApp.state.chipRatio = ratio;
-            
-            // Update the ratio display
+            // Update display
             const ratioDisplay = document.getElementById('ratio-display');
             if (ratioDisplay) {
-                ratioDisplay.innerText = `Each chip is worth $${ratio.toFixed(2)}`;
+                ratioDisplay.textContent = `Each chip is worth $${PokerApp.state.chipRatio.toFixed(2)}`;
             }
+            
+            // Play Kaching sound
+            if (SoundSystem && typeof SoundSystem.playKachingSound === 'function') {
+                SoundSystem.playKachingSound();
+            }
+            
+            PokerApp.UI.showToast('Chip ratio updated', 'success');
             
             // Save state
             saveState();
-            PokerApp.UI.showToast(`Set ratio to $${ratio.toFixed(2)} per chip`, 'success');
             
-            // Update ratio in Firebase if in a session
-            if (PokerApp.state.sessionId && window.firebase && window.firebase.database) {
-                window.firebase.database().ref(`games/${PokerApp.state.sessionId}/ratio`).set(ratio)
-                    .then(() => {
-                        console.log('[FIREBASE] Updated chip ratio in Firebase');
-                    })
-                    .catch(error => {
-                        console.error('[FIREBASE] Error updating ratio:', error);
-                    });
-                
-                // Also update in the state object
-                window.firebase.database().ref(`games/${PokerApp.state.sessionId}/state/chipRatio`).set(ratio)
-                    .then(() => {
-                        console.log('[FIREBASE] Updated chip ratio in game state');
-                    })
-                    .catch(error => {
-                        console.error('[FIREBASE] Error updating ratio in state:', error);
-                    });
+            // Update Firebase if connected
+            if (PokerApp.state.sessionId) {
+                updateGameStateInFirebase({ chipRatio: PokerApp.state.chipRatio });
             }
-            
-            // Reset form
-            document.getElementById('money-amount').value = '';
-            document.getElementById('chip-amount').value = '';
         });
     }
     
-    // Set up reset button
+    // Set up Payout Calculator Button
+    const calculateButton = document.getElementById('calculate-payouts');
+    if (calculateButton) {
+        calculateButton.addEventListener('click', function() {
+            // Play Kaching sound
+            if (SoundSystem && typeof SoundSystem.playKachingSound === 'function') {
+                SoundSystem.playKachingSound();
+            }
+            calculatePayouts();
+        });
+    }
+    
+    // Set up Reset Button
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) {
         // Remove any existing click listeners
@@ -802,232 +882,158 @@ function setupEventListeners() {
         // Also add direct onclick attribute as backup
         newResetBtn.setAttribute('onclick', 'resetGame(); return false;');
     }
-
-    // Set up calculate payouts button
-    const calculatePayoutsBtn = document.getElementById('calculate-payouts');
-    if (calculatePayoutsBtn) {
-        // First, remove any existing listeners
-        const oldBtn = calculatePayoutsBtn;
-        const newBtn = oldBtn.cloneNode(true);
-        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-        
-        // Add the new listener
-        newBtn.addEventListener('click', function() {
-            console.log('[UI] Calculate payouts button clicked');
-            calculatePayouts();
-        });
-    }
 }
 
 // Initialize function
 function initialize() {
     console.log('Initializing poker app...');
-    
-    // Set a flag to prevent multiple initializations
     if (window.appInitialized) {
         console.log('[INIT] App already initialized, skipping');
         return;
     }
-
     window.appInitialized = true;
-    
-    // Remove connection status indicator as requested by user
-    // const header = document.querySelector('.app-header');
-    // if (header) {
-    //     const connectionStatus = document.createElement('div');
-    //     connectionStatus.id = 'connection-status';
-    //     connectionStatus.style.display = 'inline-block';
-    //     connectionStatus.style.padding = '4px 8px';
-    //     connectionStatus.style.borderRadius = '4px';
-    //     connectionStatus.style.fontSize = '12px';
-    //     connectionStatus.style.marginRight = '10px';
-    //     connectionStatus.style.backgroundColor = '#555';
-    //     connectionStatus.style.color = 'white';
-    //     connectionStatus.textContent = 'Connecting...';
-    //     
-    //     // Insert before theme selector
-    //     const themeSelector = document.querySelector('#theme-selector');
-    //     if (themeSelector && themeSelector.parentNode) {
-    //         themeSelector.parentNode.insertBefore(connectionStatus, themeSelector);
-    //     } else {
-    //         header.appendChild(connectionStatus);
-    //     }
-    // }
-    
-    // Listen for Firebase connection events
-    window.addEventListener('firebase-connected', () => {
-        console.log('[INIT] Firebase connection established');
-        
-        // Update connection status indicator - removed as requested
-        // const connectionStatus = document.getElementById('connection-status');
-        // if (connectionStatus) {
-        //     connectionStatus.textContent = 'Connected';
-        //     connectionStatus.style.backgroundColor = '#4caf50';
-        // }
-        
-        PokerApp.UI.showToast('Connected to server', 'success');
-        
-        // If we have an active session, ensure our data is synced
-        if (PokerApp.state.sessionId) {
-            updatePlayersInFirebase();
-        }
-    });
-    
-    // Check if Firebase is available and wait for it if necessary
-    ensureFirebaseInitialized()
-        .then(() => {
-            // Continue with normal initialization
-            initializeApp(true);
-            
-            // Set up automatic reconnection handling
-            window.database.ref('.info/connected').on('value', (snap) => {
-                if (!snap.val()) {
-                    console.log('[FIREBASE] Connection lost, waiting for reconnect...');
-                    
-                    // Update connection status indicator - removed as requested
-                    // const connectionStatus = document.getElementById('connection-status');
-                    // if (connectionStatus) {
-                    //     connectionStatus.textContent = 'Reconnecting...';
-                    //     connectionStatus.style.backgroundColor = '#ff9800';
-                    // }
-                    
-                    PokerApp.UI.showToast('Connection lost. Reconnecting...', 'error');
-                }
-            });
-            
-            // Test write function to verify connection - FIX: use a valid path instead of .info/
-            window.testFirebaseConnection = function() {
-                if (window.database) {
-                    // Use a valid test path instead of .info/ which is reserved
-                    const testRef = window.database.ref('_connection_test');
-                    testRef.set({
-                        timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        manual: true,
-                        userAgent: navigator.userAgent
-                    })
-                    .then(() => {
-                        console.log('[FIREBASE] Manual test write successful');
-                        PokerApp.UI.showToast('Database connection verified', 'success');
-                    })
-                    .catch(error => {
-                        console.error('[FIREBASE] Manual test write failed:', error);
-                        PokerApp.UI.showToast('Database connection failed', 'error');
-                    });
-                } else {
-                    console.error('[FIREBASE] Database not available for test');
-                    PokerApp.UI.showToast('Database not available', 'error');
-                }
-            };
-            
-            // Expose the test function globally
-            window.testConnection = window.testFirebaseConnection;
-        })
-        .catch(error => {
-            console.error('[FIREBASE] Error initializing Firebase:', error);
-            
-            // Update connection status indicator - removed as requested
-            // const connectionStatus = document.getElementById('connection-status');
-            // if (connectionStatus) {
-            //     connectionStatus.textContent = 'Offline';
-            //     connectionStatus.style.backgroundColor = '#f44336';
-            // }
-            
-            // Initialize app anyway but without Firebase features
-            initializeApp(false);
-            PokerApp.UI.showToast('Offline mode - some features unavailable', 'error');
-        });
 
-    // Setup theme swatches
+    console.log('[INIT] Attempting to load saved state first...');
+    const savedStateResult = loadSavedState(); // Try loading state
+    console.log('[INIT] loadSavedState result:', savedStateResult);
+
+    if (savedStateResult) {
+        // State was successfully loaded by loadSavedState()
+        console.log('[INIT] Saved state loaded successfully. Setting up based on loaded state.');
+        // The loadSavedState function already called setTheme, updateUIFromState,
+        // and potentially setupGameStateListener if sessionId was present.
+        // We just need to ensure event listeners and mobile compatibility are set up.
+        try {
+             console.log('[INIT] Setting up event listeners (after load)...');
+             setupEventListeners();
+             console.log('[INIT] Setting up mobile compatibility (after load)...');
+             setupMobileCompatibility();
+             console.log('[INIT] Theme-specific features setup (after load)...');
+             initializeThemeSpecificFeatures(PokerApp.state.theme || 'Royal');
+             console.log('[INIT] Initialization from saved state complete.');
+        } catch (error) {
+            console.error('[INIT_ERROR] Error during setup after loading saved state:', error);
+            // If setup fails even after loading state, maybe fallback to clean init?
+            // For now, just log.
+        }
+
+    } else {
+        // No valid saved state found, proceed with default initialization
+        console.log('[INIT] No saved state found or load failed. Proceeding with default initialization.');
+
+        // Apply default theme explicitly before initializeApp
+        setTheme('Royal');
+
+        // Now, initialize Firebase and the core app logic
+        ensureFirebaseInitialized()
+            .then(() => {
+                initializeApp(true); // Firebase available
+                // Set up Firebase-specific listeners (like .info/connected)
+                 if (window.database) { // Check if database is available
+                     window.database.ref('.info/connected').on('value', (snap) => {
+                         if (!snap.val()) {
+                             console.log('[FIREBASE] Connection lost, waiting for reconnect...');
+                             PokerApp.UI.showToast('Connection lost. Reconnecting...', 'error');
+                         } else {
+                              // Optional: Add a log or toast when reconnected
+                              console.log('[FIREBASE] Reconnected.');
+                         }
+                     });
+                     // Setup test connection function
+                     window.testFirebaseConnection = function() { 
+                         // Use a valid test path instead of .info/ which is reserved
+                         const testRef = window.database.ref('_connection_test');
+                         testRef.set({
+                             timestamp: firebase.database.ServerValue.TIMESTAMP,
+                             manual: true,
+                             userAgent: navigator.userAgent
+                         })
+                         .then(() => {
+                             console.log('[FIREBASE] Manual test write successful');
+                             PokerApp.UI.showToast('Database connection verified', 'success');
+                         })
+                         .catch(error => {
+                             console.error('[FIREBASE] Manual test write failed:', error);
+                             PokerApp.UI.showToast('Database connection failed', 'error');
+                         });
+                      }; // <-- Fixed: Added semicolon
+                     window.testConnection = window.testFirebaseConnection;
+                 } else {
+                     console.warn('[FIREBASE] Database reference not available for setting up connection listener or test function.');
+                 }
+            })
+            .catch(error => {
+                initializeApp(false); // Firebase unavailable
+                PokerApp.UI.showToast('Offline mode - some features unavailable', 'error');
+            });
+
+         // Initialize theme-specific features for default theme
+         initializeThemeSpecificFeatures('Royal');
+         console.log('[INIT] Default initialization complete.');
+    } // <-- End of main if/else (savedStateResult)
+
+    // --- MOVED THEME SETUP HERE --- 
+    // Setup theme swatches (runs regardless of loaded state)
+    console.log('[INIT] Setting up theme swatches...');
     const themeSwatchesContainer = document.getElementById('theme-swatches');
     if (themeSwatchesContainer) {
-        Object.entries(availableThemes).forEach(([themeName, themeData]) => {
-            const swatch = document.createElement('div');
-            swatch.className = 'theme-swatch';
-            swatch.dataset.themeName = themeName;
-            // REMOVE: swatch.style.backgroundColor = themeData.mainColor;
-            // ADD: Set CSS variables for the gradient background
-            swatch.style.setProperty('--swatch-main-color', themeData.mainColor);
-            swatch.style.setProperty('--swatch-secondary-color', themeData.secondaryColor);
-            swatch.title = themeData.name; // Tooltip for theme name
-
-            // Special styling for RainbowLight swatch (keep border, remove background override)
-            if (themeName === 'RainbowLight') {
-                swatch.style.border = '2px solid #e2e8f0'; // Light border
-                // REMOVE: swatch.style.backgroundImage = 'linear-gradient(45deg, #f8fafc, #e0f2fe)'; 
-            }
-
-            swatch.addEventListener('click', () => {
-                if (typeof setTheme === 'function') {
-                    setTheme(themeName);
-                    // Update active state
-                    document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
-                    swatch.classList.add('active');
-                }
-            });
-
-            // Set initial active state
-            if (PokerApp.state.currentTheme === themeName) {
-                swatch.classList.add('active');
-            }
-
-            themeSwatchesContainer.appendChild(swatch);
-        });
-
-        // Setup random theme button
-        const randomThemeBtn = document.getElementById('random-theme');
-        if (randomThemeBtn) {
-            randomThemeBtn.addEventListener('click', () => {
-                const themeNames = Object.keys(availableThemes);
-                // Filter out the current theme
-                const availableChoices = themeNames.filter(name => name !== PokerApp.state.currentTheme);
-                // Pick random from remaining themes
-                const randomIndex = Math.floor(Math.random() * availableChoices.length);
-                const randomTheme = availableChoices[randomIndex];
-                
-                // Apply the random theme
-                setTheme(randomTheme);
-                
-                // Update active state on swatches
-                document.querySelectorAll('.theme-swatch').forEach(swatch => {
-                    swatch.classList.toggle('active', swatch.dataset.themeName === randomTheme);
-                });
-
-                // Add a little animation to the dice
-                randomThemeBtn.style.transform = 'rotate(360deg)';
-                setTimeout(() => {
-                    randomThemeBtn.style.transform = '';
-                }, 300);
-            });
-        }
+         // Clear any existing swatches first
+         themeSwatchesContainer.innerHTML = ''; 
+         Object.entries(availableThemes).forEach(([themeName, themeData]) => {
+             const swatch = document.createElement('div');
+             swatch.className = 'theme-swatch';
+             swatch.dataset.themeName = themeName;
+             swatch.style.setProperty('--swatch-main-color', themeData.mainColor);
+             swatch.style.setProperty('--swatch-secondary-color', themeData.secondaryColor);
+             swatch.title = themeData.name;
+             if (themeName === 'RainbowLight') {
+                  swatch.style.border = '2px solid #e2e8f0';
+             }
+             swatch.addEventListener('click', () => {
+                  if (typeof setTheme === 'function') {
+                       setTheme(themeName);
+                       document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+                       swatch.classList.add('active');
+                  }
+             });
+             // Set active state based on CURRENT theme (loaded or default)
+             if ((PokerApp.state.theme || 'Royal') === themeName) { 
+                  swatch.classList.add('active');
+             }
+             themeSwatchesContainer.appendChild(swatch);
+         });
+         console.log('[INIT] Theme swatches setup complete.');
     } else {
-        console.warn('Theme swatches container not found.');
+        console.warn('[INIT] Theme swatches container not found.');
     }
+    // Setup random theme button (runs regardless of loaded state)
+    console.log('[INIT] Setting up random theme button...');
+     const randomThemeBtn = document.getElementById('random-theme');
+     if (randomThemeBtn) {
+         // Remove potential old listener before adding new one
+         const newRandomBtn = randomThemeBtn.cloneNode(true);
+         randomThemeBtn.parentNode.replaceChild(newRandomBtn, randomThemeBtn);
+         newRandomBtn.addEventListener('click', () => {
+             const themeNames = Object.keys(availableThemes);
+             const availableChoices = themeNames.filter(name => name !== PokerApp.state.currentTheme);
+             const randomIndex = Math.floor(Math.random() * availableChoices.length);
+             const randomTheme = availableChoices[randomIndex];
+             setTheme(randomTheme);
+             document.querySelectorAll('.theme-swatch').forEach(swatch => {
+                  swatch.classList.toggle('active', swatch.dataset.themeName === randomTheme);
+             });
+             newRandomBtn.style.transform = 'rotate(360deg)';
+             setTimeout(() => { newRandomBtn.style.transform = ''; }, 300);
+         });
+         console.log('[INIT] Random theme button setup complete.');
+     } else {
+        console.warn('[INIT] Random theme button not found.');
+     }
+     // --- END OF MOVED THEME SETUP --- 
 
-    // Apply initial theme if not already set
-    if (!PokerApp.state.currentTheme) {
-        setTheme('Royal'); // Default theme changed to Royal
-    } else {
-        setTheme(PokerApp.state.currentTheme); // Apply saved theme
-    }
-    
-    // Initialize logo animation after theme is set
-    initializeLogoAnimation();
-
-    console.log('Initialization complete.');
-    
-    // ... other initial setup, like checking for gameId ...
-     if (PokerApp.state.sessionId) {
-        console.log('[INIT] Found existing session ID:', PokerApp.state.sessionId);
-        setupGameStateListener(PokerApp.state.sessionId);
-        PokerApp.UI.updateLobbyUI(true); // Show lobby as active
-        // Ensure QR code is visible if session is active
-        if (typeof ensureQrCodeVisible === 'function') {
-            ensureQrCodeVisible();
-        }
-    } else {
-        console.log('[INIT] No active session ID found.');
-        PokerApp.UI.updateLobbyUI(false);
-    }
+     // This should only run once, regardless of loaded state or not
+     console.log('[INIT] Finalizing initialization (logo, etc)...');
+     initializeLogoAnimation();
 }
 
 // Helper function to make sure Firebase is initialized
@@ -1122,7 +1128,7 @@ function initializeApp(firebaseAvailable = true) {
             dealerId: null,
             nextPlayerId: 1,
             chipRatio: 1.0,
-            theme: localStorage.getItem('theme') || 'Classic',
+            theme: localStorage.getItem('theme') || 'Royal',
             sessionId: null,
             gameName: null,
             lobbyActive: false
@@ -1376,6 +1382,11 @@ function setTheme(theme) {
         theme = 'Royal'; // Fallback to Royal theme
     }
     
+    // Play sound when theme changes
+    if (SoundSystem && typeof SoundSystem.playUIClickSound === 'function') {
+        SoundSystem.playUIClickSound(); // Use the new UI click sound
+    }
+
     // Store the theme in localStorage and state
     localStorage.setItem('theme', theme);
     
@@ -1641,7 +1652,7 @@ function loadSavedState() {
                 dealerId: state.dealerId || null,
                 nextPlayerId: state.nextPlayerId || 1,
                 chipRatio: state.chipRatio || 1.0,
-                theme: state.theme || 'Classic',
+                theme: state.theme || 'Royal',
                 sessionId: state.sessionId || null,
                 gameName: state.gameName || null,
                 lobbyActive: state.sessionId ? true : false  // Mark as active if we have a session ID
@@ -1680,7 +1691,7 @@ function saveState() {
             dealerId: PokerApp.state.dealerId || null,
             nextPlayerId: PokerApp.state.nextPlayerId || 1,
             chipRatio: PokerApp.state.chipRatio || 1.0,
-            theme: PokerApp.state.theme || 'Classic',
+            theme: PokerApp.state.theme || 'Royal',
             sessionId: PokerApp.state.sessionId,
             gameName: PokerApp.state.gameName,
             lobbyActive: PokerApp.state.sessionId ? true : false,
@@ -1843,9 +1854,6 @@ function setupGameStateListener(gameId) {
                     // Update UI
                     setTheme(PokerApp.state.theme);
                     updateUIFromState();
-                    
-                    // Save to localStorage
-                    localStorage.setItem('pokerGameState', JSON.stringify(PokerApp.state));
                 });
                 
                 // Listen for game active status
@@ -2948,7 +2956,7 @@ function resetGameState() {
         dealerId: null,
         nextPlayerId: 1,
         chipRatio: 1.0,
-        theme: localStorage.getItem('theme') || 'Classic',
+        theme: localStorage.getItem('theme') || 'Royal',
         sessionId: null,
         gameName: null,
         lobbyActive: false
@@ -3146,214 +3154,174 @@ window.calculatePayouts = calculatePayouts;
 // Initialize when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[INIT] DOMContentLoaded triggered');
-    
-    // Initialize logo animation
-    const logo = document.querySelector('.header-logo');
-    if (logo) {
-        console.log('[INIT] Setting up logo animation');
-        logo.addEventListener('mousemove', (e) => {
-            const rect = logo.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * 100;
-            const y = ((e.clientY - rect.top) / rect.height) * 100;
-            logo.style.setProperty('--x', `${x}%`);
-            logo.style.setProperty('--y', `${y}%`);
-        });
-    }
-    
-    // Load saved theme first
-    const savedTheme = localStorage.getItem('theme') || 'Royal';
-    if (themes[savedTheme]) {
-        setTheme(savedTheme);
-    } else {
-        setTheme('Royal'); // Default theme
-    }
-    
-    // Set up theme selector
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        themeSelector.value = savedTheme || 'Royal';
-        
-        // Single event listener for theme changes
-        themeSelector.addEventListener('change', (e) => {
-            const selectedTheme = e.target.value;
-            if (themes[selectedTheme]) {
-                setTheme(selectedTheme);
-                if (window.PokerApp && window.PokerApp.UI) {
-                    window.PokerApp.UI.showToast(`Theme set to ${selectedTheme}`, 'success');
-                }
-            } else {
-                if (window.PokerApp && window.PokerApp.UI) {
-                    window.PokerApp.UI.showToast('Invalid theme selected', 'error');
-                }
-                setTheme('Royal');
-            }
-        });
-    }
-    
-    // First load the saved state
-    const savedStateResult = loadSavedState();
-    console.log('[INIT] Loaded saved state result:', savedStateResult);
-    
-    // Only initialize if we need to (state loading failed)
-    if (!savedStateResult) {
-        console.log('[INIT] No saved state, initializing app');
-        initialize();
-    } else {
-        console.log('[INIT] Using saved state, updating UI');
-        // Make sure the UI is updated with the current state
-        updateUIFromState();
-        
-        // Connect to Firebase if needed but don't reinitialize the app
-        if (PokerApp.state.sessionId) {
-            ensureFirebaseInitialized()
-                .then(() => {
-                    console.log('[FIREBASE] Reconnecting to session:', PokerApp.state.sessionId);
-                    setupGameStateListener(PokerApp.state.sessionId);
-                })
-                .catch(error => {
-                    console.error('[FIREBASE] Error reconnecting to Firebase:', error);
-                });
+    // Call initialize directly - it will handle loading state internally
+    initialize(); 
+    // Sound system init and resume listener remain here
+    SoundSystem.init();
+    document.body.addEventListener('click', () => { // Resume context listener
+        if (SoundSystem.audioContext && SoundSystem.audioContext.state === 'suspended') {
+            SoundSystem.audioContext.resume().then(() => {
+                 console.log('[SOUND] AudioContext resumed successfully after user interaction.');
+            }).catch(e => console.error('[SOUND] Error resuming AudioContext:', e));
         }
-        
-        // Set up event listeners without reinitializing
-        setupEventListeners();
-        setupMobileCompatibility();
-    }
-
-    // Initialize theme-specific features
-    const initialTheme = localStorage.getItem('theme') || 'Classic';
-    initializeThemeSpecificFeatures(initialTheme);
+    }, { once: true });
 });
+
+// Refactored Initialize function
+function initialize() {
+    console.log('Initializing poker app...');
+    if (window.appInitialized) {
+        console.log('[INIT] App already initialized, skipping');
+        return;
+    }
+    window.appInitialized = true;
+
+    console.log('[INIT] Attempting to load saved state first...');
+    const savedStateResult = loadSavedState(); // Try loading state
+    console.log('[INIT] loadSavedState result:', savedStateResult);
+
+    if (savedStateResult) {
+        // State was successfully loaded by loadSavedState()
+        console.log('[INIT] Saved state loaded successfully. Setting up based on loaded state.');
+        // The loadSavedState function already called setTheme, updateUIFromState,
+        // and potentially setupGameStateListener if sessionId was present.
+        // We just need to ensure event listeners and mobile compatibility are set up.
+        try {
+             console.log('[INIT] Setting up event listeners (after load)...');
+             setupEventListeners();
+             console.log('[INIT] Setting up mobile compatibility (after load)...');
+             setupMobileCompatibility();
+             console.log('[INIT] Theme-specific features setup (after load)...');
+             initializeThemeSpecificFeatures(PokerApp.state.theme || 'Royal');
+             console.log('[INIT] Initialization from saved state complete.');
+        } catch (error) {
+            console.error('[INIT_ERROR] Error during setup after loading saved state:', error);
+            // If setup fails even after loading state, maybe fallback to clean init?
+            // For now, just log.
+        }
+
+    } else {
+        // No valid saved state found, proceed with default initialization
+        console.log('[INIT] No saved state found or load failed. Proceeding with default initialization.');
+
+        // Apply default theme explicitly before initializeApp
+        setTheme('Royal');
+
+        // Now, initialize Firebase and the core app logic
+        ensureFirebaseInitialized()
+            .then(() => {
+                initializeApp(true); // Firebase available
+                // Set up Firebase-specific listeners (like .info/connected)
+                 if (window.database) { // Check if database is available
+                     window.database.ref('.info/connected').on('value', (snap) => {
+                         if (!snap.val()) {
+                             console.log('[FIREBASE] Connection lost, waiting for reconnect...');
+                             PokerApp.UI.showToast('Connection lost. Reconnecting...', 'error');
+                         } else {
+                              // Optional: Add a log or toast when reconnected
+                              console.log('[FIREBASE] Reconnected.');
+                         }
+                     });
+                     // Setup test connection function
+                     window.testFirebaseConnection = function() { 
+                         // Use a valid test path instead of .info/ which is reserved
+                         const testRef = window.database.ref('_connection_test');
+                         testRef.set({
+                             timestamp: firebase.database.ServerValue.TIMESTAMP,
+                             manual: true,
+                             userAgent: navigator.userAgent
+                         })
+                         .then(() => {
+                             console.log('[FIREBASE] Manual test write successful');
+                             PokerApp.UI.showToast('Database connection verified', 'success');
+                         })
+                         .catch(error => {
+                             console.error('[FIREBASE] Manual test write failed:', error);
+                             PokerApp.UI.showToast('Database connection failed', 'error');
+                         });
+                      }; // <-- Fixed: Added semicolon
+                     window.testConnection = window.testFirebaseConnection;
+                 } else {
+                     console.warn('[FIREBASE] Database reference not available for setting up connection listener or test function.');
+                 }
+            })
+            .catch(error => {
+                initializeApp(false); // Firebase unavailable
+                PokerApp.UI.showToast('Offline mode - some features unavailable', 'error');
+            });
+
+         // Initialize theme-specific features for default theme
+         initializeThemeSpecificFeatures('Royal');
+         console.log('[INIT] Default initialization complete.');
+    } // <-- End of main if/else (savedStateResult)
+
+    // --- MOVED THEME SETUP HERE --- 
+    // Setup theme swatches (runs regardless of loaded state)
+    console.log('[INIT] Setting up theme swatches...');
+    const themeSwatchesContainer = document.getElementById('theme-swatches');
+    if (themeSwatchesContainer) {
+         // Clear any existing swatches first
+         themeSwatchesContainer.innerHTML = ''; 
+         Object.entries(availableThemes).forEach(([themeName, themeData]) => {
+             const swatch = document.createElement('div');
+             swatch.className = 'theme-swatch';
+             swatch.dataset.themeName = themeName;
+             swatch.style.setProperty('--swatch-main-color', themeData.mainColor);
+             swatch.style.setProperty('--swatch-secondary-color', themeData.secondaryColor);
+             swatch.title = themeData.name;
+             if (themeName === 'RainbowLight') {
+                  swatch.style.border = '2px solid #e2e8f0';
+             }
+             swatch.addEventListener('click', () => {
+                  if (typeof setTheme === 'function') {
+                       setTheme(themeName);
+                       document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+                       swatch.classList.add('active');
+                  }
+             });
+             // Set active state based on CURRENT theme (loaded or default)
+             if ((PokerApp.state.theme || 'Royal') === themeName) { 
+                  swatch.classList.add('active');
+             }
+             themeSwatchesContainer.appendChild(swatch);
+         });
+         console.log('[INIT] Theme swatches setup complete.');
+    } else {
+        console.warn('[INIT] Theme swatches container not found.');
+    }
+    // Setup random theme button (runs regardless of loaded state)
+    console.log('[INIT] Setting up random theme button...');
+     const randomThemeBtn = document.getElementById('random-theme');
+     if (randomThemeBtn) {
+         // Remove potential old listener before adding new one
+         const newRandomBtn = randomThemeBtn.cloneNode(true);
+         randomThemeBtn.parentNode.replaceChild(newRandomBtn, randomThemeBtn);
+         newRandomBtn.addEventListener('click', () => {
+             const themeNames = Object.keys(availableThemes);
+             const availableChoices = themeNames.filter(name => name !== PokerApp.state.currentTheme);
+             const randomIndex = Math.floor(Math.random() * availableChoices.length);
+             const randomTheme = availableChoices[randomIndex];
+             setTheme(randomTheme);
+             document.querySelectorAll('.theme-swatch').forEach(swatch => {
+                  swatch.classList.toggle('active', swatch.dataset.themeName === randomTheme);
+             });
+             newRandomBtn.style.transform = 'rotate(360deg)';
+             setTimeout(() => { newRandomBtn.style.transform = ''; }, 300);
+         });
+         console.log('[INIT] Random theme button setup complete.');
+     } else {
+        console.warn('[INIT] Random theme button not found.');
+     }
+     // --- END OF MOVED THEME SETUP --- 
+
+     // This should only run once, regardless of loaded state or not
+     console.log('[INIT] Finalizing initialization (logo, etc)...');
+     initializeLogoAnimation();
+}
 
 // Helper function to handle lastPlayer updates
 function handleLastPlayerUpdate(lastPlayer) {
-    if (!lastPlayer) {
-        console.log(`[FIREBASE] No lastPlayer data to process`);
-        return;
-    }
-    
-    console.log(`[FIREBASE] Processing lastPlayer:`, lastPlayer);
-    
-    // Check if this player already exists in our state
-    const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
-        (p.id && p.id === parseInt(lastPlayer.id)) || 
-        (p.name && lastPlayer.name && 
-            p.name.toLowerCase() === lastPlayer.name.toLowerCase())
-    );
-    
-    if (existingPlayerIndex === -1) {
-        // New player - add them
-        const playerData = {
-            id: parseInt(lastPlayer.id),
-            name: lastPlayer.name,
-            initial_chips: parseInt(lastPlayer.initial_chips),
-            current_chips: parseInt(lastPlayer.current_chips)
-        };
-        
-        console.log(`[FIREBASE] Adding new player to state:`, playerData);
-        PokerApp.state.players.push(playerData);
-        
-        // Update UI first
-        updatePlayerList();
-        updateEmptyState();
-        
-        // Use requestAnimationFrame to ensure DOM is updated before animation
-        requestAnimationFrame(() => {
-            // Add a small delay to ensure the DOM is fully updated
-            setTimeout(() => {
-                animateNewPlayer(playerData.id);
-                PokerApp.UI.showToast(`New player joined: ${lastPlayer.name}`, 'success');
-            }, 100);
-        });
-        
-        // Save state to localStorage
-        saveState();
-        
-        return true;
-    } else {
-        // Player exists - check if this is a rebuy (chip addition)
-        const existingPlayer = PokerApp.state.players[existingPlayerIndex];
-        const newChips = parseInt(lastPlayer.initial_chips);
-        
-        if (newChips > 0 && existingPlayer.initial_chips !== newChips) {
-            // This is a rebuy - add the chips
-            existingPlayer.current_chips += newChips;
-            existingPlayer.initial_chips += newChips;
-            
-            // Update UI first
-            updatePlayerList();
-            
-            // Use requestAnimationFrame to ensure DOM is updated before animation
-            requestAnimationFrame(() => {
-                // Add a small delay to ensure the DOM is fully updated
-                setTimeout(() => {
-                    animateChipAddition(existingPlayer.id);
-                    PokerApp.UI.showToast(`${existingPlayer.name} added ${newChips} chips!`, 'success');
-                }, 100);
-            });
-            
-            // Save state
-            saveState();
-            
-            return true;
-        }
-        
-        console.log(`[FIREBASE] Player already exists in state, skipping:`, lastPlayer.name);
-        return false;
-    }
-}
-
-// Add to global scope
-window.handleLastPlayerUpdate = handleLastPlayerUpdate;
-
-// Setup lastPlayer listener
-function setupLastPlayerListener(gameId) {
-    if (!gameId) return;
-    
-    // Instead of using playerNotifications, we'll listen for changes to lastPlayer
-    const lastPlayerRef = firebase.database().ref(`games/${gameId}/state/lastPlayer`);
-    
-    // Clear any existing listeners
-    lastPlayerRef.off('value');
-    
-    console.log(`[FIREBASE] Setting up lastPlayer listener for game: ${gameId}`);
-    
-    // First, get the current lastPlayer value to handle any player that joined before we set up the listener
-    lastPlayerRef.once('value')
-        .then(snapshot => {
-            const currentLastPlayer = snapshot.val();
-            if (currentLastPlayer) {
-                console.log('[FIREBASE] Found existing lastPlayer, processing...');
-                handleLastPlayerUpdate(currentLastPlayer);
-            }
-            
-            // Now set up the ongoing listener
-            setupLastPlayerListener2(lastPlayerRef);
-        })
-        .catch(error => {
-            console.error('[FIREBASE] Error getting current lastPlayer:', error);
-            // Still set up listener even if first fetch fails
-            setupLastPlayerListener2(lastPlayerRef);
-        });
-}
-
-// Helper function to set up the lastPlayer listener
-function setupLastPlayerListener2(lastPlayerRef) {
-    // Set up a listener for lastPlayer changes
-    lastPlayerRef.on('value', 
-        snapshot => {
-            const lastPlayer = snapshot.val();
-            console.log(`[FIREBASE] Received lastPlayer update:`, lastPlayer);
-            
-            // Process the update
-            handleLastPlayerUpdate(lastPlayer);
-        }, 
-        error => {
-            console.error('[FIREBASE] Error in lastPlayer listener:', error);
-        }
-    );
-    
-    console.log(`[FIREBASE] lastPlayer listener set up`);
+    // ... rest of file ...
 }
 
 // Logo animation
