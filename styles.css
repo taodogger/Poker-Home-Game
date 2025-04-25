@@ -2469,7 +2469,7 @@ button[onclick*="resetGame"] {
     to { transform: translateX(-50%); }
 }
 
-/* Floating Cards Background */
+/* Remove cards container */
 .cards {
     position: fixed;
     top: 0;
@@ -2480,51 +2480,6 @@ button[onclick*="resetGame"] {
     z-index: -1;
     pointer-events: none;
     perspective: 800px;
-}
-
-.card {
-    position: absolute;
-    width: 50px;
-    height: 70px;
-    border: 1px solid rgba(255, 255, 255, 0.08); /* Slightly less visible border */
-    border-radius: 6px;
-    background: rgba(var(--main-color-rgb, 30, 144, 255), 0.04); /* Reduced background opacity */
-    /* REMOVED backdrop-filter: blur(2px); */
-    opacity: 0;
-    /* Animation applied conditionally */
-}
-
-/* Apply float card animation only if motion is preferred on index page */
-@media (prefers-reduced-motion: no-preference) {
-  body.index-page .card {
-    animation: floatCard 35s infinite ease-in-out alternate; /* Slowed down */
-  }
-}
-
-
-.card:nth-child(1) { top: 10%; left: 15%; animation-delay: 0s; --start-rotate: -10deg; --mid-rotate: 5deg; --end-rotate: -10deg; }
-.card:nth-child(2) { top: 60%; left: 5%; animation-delay: 3s; --start-rotate: 5deg; --mid-rotate: -10deg; --end-rotate: 5deg; }
-.card:nth-child(3) { top: 20%; left: 80%; animation-delay: 6s; --start-rotate: 15deg; --mid-rotate: -5deg; --end-rotate: 15deg; }
-.card:nth-child(4) { top: 75%; left: 70%; animation-delay: 9s; --start-rotate: -5deg; --mid-rotate: 10deg; --end-rotate: -5deg; }
-.card:nth-child(5) { top: 40%; left: 50%; animation-delay: 18s; --start-rotate: 10deg; --mid-rotate: -15deg; --end-rotate: 10deg; } /* Adjusted delay */
-
-@keyframes floatCard {
-    0% {
-        transform: translateY(0) rotate(var(--start-rotate, 0deg)) translateZ(0px);
-        opacity: 0;
-    }
-    20% {
-         opacity: 0.4; /* Reduced opacity */
-         transform: translateY(-15px) rotate(var(--mid-rotate, 5deg)) translateZ(20px); /* Reduced Z */
-    }
-    80% {
-         opacity: 0.4; /* Reduced opacity */
-         transform: translateY(15px) rotate(var(--mid-rotate, -5deg)) translateZ(20px); /* Reduced Z */
-    }
-    100% {
-        transform: translateY(0) rotate(var(--end-rotate, 0deg)) translateZ(0px);
-        opacity: 0;
-    }
 }
 
 /* Additional UI Enhancements */

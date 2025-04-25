@@ -1373,7 +1373,7 @@ const themes = {
 function setTheme(theme) {
     if (!theme || !themes[theme]) {
         console.warn('[THEME] Invalid theme:', theme);
-        theme = 'Classic'; // Fallback to Classic theme
+        theme = 'Royal'; // Fallback to Royal theme
     }
     
     // Store the theme in localStorage and state
@@ -3161,17 +3161,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Load saved theme first
-    const savedTheme = localStorage.getItem('theme') || 'Classic';
+    const savedTheme = localStorage.getItem('theme') || 'Royal';
     if (themes[savedTheme]) {
         setTheme(savedTheme);
     } else {
-        setTheme('Classic'); // Default theme
+        setTheme('Royal'); // Default theme
     }
     
     // Set up theme selector
     const themeSelector = document.getElementById('theme-selector');
     if (themeSelector) {
-        themeSelector.value = savedTheme || 'Classic';
+        themeSelector.value = savedTheme || 'Royal';
         
         // Single event listener for theme changes
         themeSelector.addEventListener('change', (e) => {
@@ -3185,7 +3185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.PokerApp && window.PokerApp.UI) {
                     window.PokerApp.UI.showToast('Invalid theme selected', 'error');
                 }
-                setTheme('Classic');
+                setTheme('Royal');
             }
         });
     }
