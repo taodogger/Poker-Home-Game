@@ -12,7 +12,11 @@
     <meta name="apple-mobile-web-app-title" content="Poker Game">
     <link rel="icon" href="images/k-favicon.png" type="image/png" sizes="32x32">
     <link rel="apple-touch-icon" href="images/k-favicon.png">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/themes.css">
     <style>
         /* Modern Kahoot/Igloo style additions - REMOVED REDUNDANT RULES */
         /* :root variables moved to styles.css or kept if page-specific */
@@ -324,15 +328,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 
     <!-- Firebase Configuration - MUST BE LOADED BEFORE OTHER APP CODE -->
-    <script src="firebase-config.js"></script>
+    <script src="js/firebase-config.js"></script>
 
     <!-- Core Dependencies -->
-    <script src="hand-animation.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <!-- Application Code -->
-    <script src="game-core.js"></script>
-    <script src="app.js"></script>
+    <script src="js/soundSystem.js"></script>
+    <script src="js/app.js"></script>
 
     <!-- Initialize -->
     <script>

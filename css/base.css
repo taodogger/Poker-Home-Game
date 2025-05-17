@@ -1,0 +1,154 @@
+/* Font Declarations */
+@import url('https://api.fontshare.com/v2/css?f[]=switzer@600,700,400,800,900,100,200,300,500&display=swap');
+
+:root {
+    /* Modern Theme Colors */
+    --main-color: #1e90ff;
+    --secondary-color: #4169e1;
+    --accent-color: #ff3b7c;
+    --background-color: #0a0a0a;
+    --surface-color: rgba(255, 255, 255, 0.1);
+    --text-color: white;
+    --accent-gradient: linear-gradient(45deg, var(--main-color), var(--secondary-color));
+    --accent-gradient-reverse: linear-gradient(-45deg, var(--main-color), var(--secondary-color));
+    --glow-gradient: linear-gradient(135deg, 
+        rgba(0, 255, 135, 0.5),
+        rgba(96, 239, 255, 0.5),
+        rgba(255, 59, 124, 0.5)
+    );
+    
+    /* Enhanced UI variables */
+    --body-gradient: radial-gradient(circle at top right,
+        rgba(0, 255, 135, 0.1),
+        rgba(96, 239, 255, 0.05),
+        rgba(10, 10, 10, 1) 70%
+    );
+    --surface-gradient: linear-gradient(135deg, 
+        rgba(255,255,255,0.1), 
+        rgba(255,255,255,0.05)
+    );
+    --glass-effect: rgba(255, 255, 255, 0.05);
+    --surface-border: rgba(255, 255, 255, 0.1);
+    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    --text-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
+    --button-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    --hover-transform: translateY(-4px);
+    
+    /* Typography */
+    --font-primary: 'Switzer', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    --font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    
+    /* Spacing & Sizing */
+    --section-spacing: 32px;
+    --card-padding: 28px;
+    --header-height: 70px;
+    
+    /* Other variables */
+    --border-radius-sm: 12px;
+    --border-radius-md: 14px;
+    --border-radius-lg: 16px;
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-xxl: 48px;
+    
+    /* Transitions */
+    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-standard: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    
+    /* Effects */
+    --blur-effect: blur(16px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --container-padding: max(1rem, env(safe-area-inset-left));
+    --main-color-rgb: 30, 144, 255;
+    --secondary-color-rgb: 65, 105, 225;
+    --vibrant-gradient: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+    --glow-effect: 0 0 20px rgba(var(--main-color-rgb), 0.5);
+    --card-bg: rgba(20, 20, 40, 0.5);
+    
+    /* Enable font features for better number display */
+    font-feature-settings: "tnum" on, "lnum" on;
+
+    /* Core layout structure */
+    --content-max-width: 1400px;
+    --content-padding: 24px;
+
+    /* Base theme colors */
+    /* These are repeated, ensure they are correctly defined or reconciled if values differ */
+    /* For now, including as they appear in the original :root */
+    --main-color: #1e90ff; 
+    --secondary-color: #4169e1;
+    --accent-color: #ff3b7c;
+    --background-color: #0a0a0a;
+    --surface-color: rgba(255, 255, 255, 0.1);
+    
+    /* Text colors */
+    --text-primary: rgba(255, 255, 255, 0.95);    /* Main text */
+    --text-secondary: rgba(255, 255, 255, 0.7);   /* Secondary text */
+    --text-tertiary: rgba(255, 255, 255, 0.5);    /* Disabled/hint text */
+    --text-inverse: #1e293b;                      /* For light backgrounds */
+    
+    /* Form colors */
+    --input-text: var(--text-primary);
+    --input-background: rgba(0, 0, 0, 0.2);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --input-placeholder: var(--text-tertiary);
+    --label-color: var(--text-secondary);
+
+    /* Theme related (will also go into themes.css, but defined here for global access) */
+    --theme-primary-rgb: var(--main-color-rgb); /* Default to main color */
+    --theme-secondary-rgb: var(--secondary-color-rgb); /* Default to secondary */
+    --theme-accent-rgb: 255, 59, 124; /* from --accent-color: #ff3b7c; */
+}
+
+/* Reset & Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    font-family: var(--font-family);
+}
+
+html {
+    height: 100%;
+    height: -webkit-fill-available;
+    overflow-x: hidden;
+    overflow-y: scroll; /* Explicitly allow vertical scroll */
+    background: var(--background-color);
+    position: relative;
+    -webkit-overflow-scrolling: touch; /* Improve scrolling on iOS */
+}
+
+body {
+    color: var(--text-color);
+    margin: 0;
+    font-family: var(--font-primary);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+    overflow-y: scroll; /* Explicitly allow vertical scroll */
+    background: var(--body-background, var(--background-color));
+    letter-spacing: -0.01em;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+} 

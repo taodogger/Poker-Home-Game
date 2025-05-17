@@ -1,0 +1,933 @@
+/* Old poker-card styling (keep if used for nested elements or not fully replaced) */
+.poker-card {
+    --card-border-radius: 16px;
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--card-border-radius, 16px);
+    padding: 1.5rem; 
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease, border-color 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.poker-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(var(--main-color-rgb, 0, 0, 0), 0.35);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.poker-card h2 {
+    color: white;
+    font-weight: 800;
+    font-size: 1.5rem; 
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.poker-card h2::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -8px;
+    width: 50px;
+    height: 3px;
+    background: var(--main-color);
+    border-radius: 2px;
+}
+
+/* Ensure proper spacing between sections if .poker-card is used directly in main */
+.poker-card + .poker-card {
+    margin-top: var(--content-padding);
+}
+
+/* Table improvements */
+.table-container {
+    background: rgba(15, 15, 15, 0.6);
+    border-radius: var(--border-radius-md);
+    overflow: hidden; /* Hidden for border-radius, auto for scroll if needed */
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-top: 16px; /* Default margin, can be overridden by #players .table-container */
+}
+
+table {
+    width: 100%;
+    border-collapse: separate; /* Use separate for border-spacing and border-radius on cells if needed */
+    border-spacing: 0;
+}
+
+thead th {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.7);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+tbody td {
+    padding: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Totals row styling */
+tr.totals-row {
+    background: rgba(var(--main-color-rgb), 0.2);
+    font-weight: 600;
+}
+
+tr.totals-row td {
+    border-top: 1px solid rgba(var(--main-color-rgb), 0.4);
+}
+
+.total-money-amount {
+    font-size: 0.9em; 
+    opacity: 0.8; 
+    margin-left: 4px; 
+    font-weight: normal; 
+}
+
+/* Enhanced Table Styles (Borders for rounded corners) */
+thead th:first-child {
+    border-top-left-radius: var(--border-radius-sm);
+}
+
+thead th:last-child {
+    border-top-right-radius: var(--border-radius-sm);
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+tbody tr:last-child td:first-child {
+    border-bottom-left-radius: var(--border-radius-sm);
+}
+
+tbody tr:last-child td:last-child {
+    border-bottom-right-radius: var(--border-radius-sm);
+}
+
+
+/* Form improvements */
+.setup-form {
+    margin-bottom: 0; /* Reset from potential default */
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--label-color); /* Default from :root */
+    font-size: 0.95rem;
+}
+
+/* General input styling, including type text and number */
+input[type="text"],
+input[type="number"],
+input { /* General input for others if not specifically typed */
+    width: 100%;
+    padding: 14px 16px; /* Base padding */
+    background: var(--input-background); /* Default from :root */
+    border: 1px solid var(--input-border); /* Default from :root */
+    border-radius: var(--border-radius-md);
+    color: var(--input-text); /* Default from :root */
+    font-size: 1rem; /* Base font size */
+    transition: all var(--transition-standard);
+    height: 48px; /* Consistent height */
+    box-sizing: border-box;
+}
+
+/* Overwrite for more specific padding/font-size if needed (from lines 1261+) */
+input {
+    padding: 1.4rem; /* Larger padding from later rules */
+    font-size: 1.2rem; /* Larger font size from later rules */
+    border: 2px solid rgba(255,255,255,0.1); /* Overwrites previous border */
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input:focus { /* General focus */
+    outline: none;
+    border-color: var(--main-color);
+    background: rgba(10, 10, 10, 0.8); /* Darker background on focus */
+    box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.2);
+    transform: translateY(-2px);
+    color: white; /* Ensure text is white on focus */
+}
+
+.form-group:focus-within label {
+    /* transform: translateY(-2px); /* Example: subtle lift for label */
+    color: var(--main-color); /* Highlight label color */
+}
+
+/* Form group refinements for specific text elements inside */
+.form-group span,
+.form-group p { /* These were very general, ensure they don't override specific component text */
+    /* color: white !important; /* Consider removing !important if possible */
+}
+
+/* Button improvements - Modernized Base */
+.poker-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 28px;
+    min-height: 48px;
+    min-width: 160px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--border-radius-md);
+    background: var(--accent-gradient);
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all var(--transition-bounce); /* Use bounce for pop */
+    text-align: center;
+    box-shadow: var(--button-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.poker-button .button-icon {
+    margin-right: 10px;
+    font-size: 1.1em;
+}
+
+.poker-button:hover {
+    transform: var(--hover-transform);
+    box-shadow: 0 12px 24px rgba(var(--main-color-rgb), 0.3);
+}
+
+.poker-button:active {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(var(--main-color-rgb), 0.3);
+}
+
+/* General button styling (from lines 1287+) - reconcile with .poker-button */
+button {
+    padding: 1.2rem 2.4rem; /* Larger padding */
+    font-size: 1.2rem; /* Larger font size */
+    font-weight: 700;
+    color: var(--background-color); /* Text color for accented buttons */
+    background: var(--accent-gradient); /* Base gradient */
+    border: none;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: all var(--transition-standard); /* Standard transition */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,255,135,0.3); /* Specific green shadow */
+    color: var(--background-color); /* Keep text color on hover */
+}
+
+button::before { /* General button hover overlay */
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--accent-gradient-reverse);
+    opacity: 0;
+    transition: opacity var(--transition-standard);
+    z-index: -1;
+}
+
+button:hover::before {
+    opacity: 0.8;
+}
+
+/* Specific button overrides */
+.reset-button {
+    background: linear-gradient(135deg, #4a5568, #2d3748); /* Original reset style */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    color: white; /* Ensure text is white for this specific button */
+}
+
+.reset-button:hover {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    background: linear-gradient(135deg, #5a6578, #3d4758); /* Slightly lighter hover */
+}
+
+.reset-button:active {
+    box-shadow: 0 5px 15px rgba(var(--main-color-rgb), 0.3); /* Or a neutral shadow */
+}
+
+/* Button Group for ratio and reset */
+.button-group {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.button-group .poker-button {
+    flex: 1;
+}
+
+.button-group .reset-button {
+    background: linear-gradient(135deg, #e53e3e, #c53030); 
+    color: white;
+    font-weight: 700; 
+    box-shadow: 0 6px 15px rgba(229, 62, 62, 0.3); 
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.button-group .reset-button:hover {
+    background: linear-gradient(135deg, #c53030, #9b2c2c); 
+    box-shadow: 0 10px 20px rgba(229, 62, 62, 0.4); 
+}
+
+/* Game Control Buttons (Start, Simulate, End) */
+.game-control-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.action-button { /* Base for start, simulate, end */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    font-size: 1.3rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border-radius: var(--border-radius-md);
+    transition: all var(--transition-standard);
+    position: relative;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+}
+
+.action-button::before { /* Shine effect */
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    transition: 0.5s;
+}
+
+.action-button:hover::before {
+    left: 100%;
+}
+
+.start-button {
+    background: linear-gradient(45deg, #00ff87, #60efff);
+    color: #0a0a0a;
+    box-shadow: 0 5px 15px rgba(0,255,135,0.4);
+}
+
+.simulate-button {
+    background: linear-gradient(45deg, #ff3b7c, #ff9f1a);
+    color: white;
+    box-shadow: 0 5px 15px rgba(255,59,124,0.4);
+}
+
+.end-button {
+    background: linear-gradient(45deg, #ff3b30, #ff9500);
+    color: white;
+    box-shadow: 0 5px 15px rgba(255,59,48,0.4);
+}
+
+.button-icon { /* General icon style for buttons */
+    font-size: 1.2rem;
+    transition: transform var(--transition-standard);
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+    position: relative;
+    top: -1px;
+}
+
+.action-button:hover .button-icon {
+    transform: scale(1.2);
+    /* color: var(--background-color); /* Icon color on hover, if needed */
+}
+
+/* Remove Player Button */
+.remove-player-btn {
+    width: 36px; 
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05); 
+    color: rgba(255, 255, 255, 0.7); 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    border-radius: var(--border-radius-sm); 
+    transition: all var(--transition-standard);
+    cursor: pointer;
+    font-size: 1.1rem; 
+    line-height: 1;
+}
+
+.remove-player-btn:hover {
+    background: linear-gradient(135deg, #ff5252, #c62828); 
+    color: white; 
+    border-color: rgba(255, 87, 87, 0.5); 
+    transform: scale(1.1) translateY(-1px); 
+    box-shadow: 0 4px 10px rgba(255, 87, 87, 0.2);
+}
+
+.remove-player-btn:hover::before { /* Prevent general button hover overlay */
+    opacity: 0;
+}
+
+
+/* QR code section */
+.qr-code-section {
+    background: rgba(0, 0, 0, 0.2); /* Base style */
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    text-align: center;
+    margin-top: var(--spacing-lg);
+    border: 1px solid var(--surface-border);
+    backdrop-filter: var(--blur-effect);
+    -webkit-backdrop-filter: var(--blur-effect);
+    /* display: none; /* Controlled by JS or .active class */
+}
+
+/* More specific QR styling from later in the file */
+.qr-code-section {
+    background: rgba(20, 20, 20, 0.6); /* Overwrites previous */
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    margin-top: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+    display: none; /* Default to hidden */
+}
+
+.game-active .qr-code-section, /* Contextual display */
+.qr-code-section.active { /* Direct class display */
+    display: block;
+}
+
+.qr-code-section h3 {
+    color: var(--main-color);
+    margin-bottom: var(--spacing-md);
+    font-size: 1.2rem;
+}
+
+.qr-wrapper {
+    background: white;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    display: inline-block;
+    box-shadow: var(--card-shadow);
+    margin: var(--spacing-md) auto;
+    max-width: 250px;
+}
+
+.qr-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.join-url {
+    background: rgba(30, 30, 30, 0.6);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin: 1rem auto;
+    word-break: break-all;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    max-width: 300px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.join-url:hover {
+    background: rgba(0, 0, 0, 0.4);
+    /* border-color: var(--main-color); /* If it had a border */
+    transform: translateY(-2px);
+}
+
+.click-to-copy {
+    display: inline-block;
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin-top: var(--spacing-xs);
+    opacity: 0.8;
+    transition: all var(--transition-standard);
+}
+
+.join-url:hover .click-to-copy {
+    opacity: 1;
+    color: var(--main-color);
+}
+
+#refresh-firebase { /* Specific button */
+    background: linear-gradient(135deg, #ff9966, #ff5e62);
+    margin-top: 1rem;
+    /* Inherits general button styles for color, padding etc. if not overridden */
+}
+
+/* Player avatar styling */
+.player-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: white;
+    background: var(--main-color);
+    font-size: 1rem;
+    margin-right: 1rem;
+}
+
+/* Game Status Badge */
+.game-status-badge {
+    display: flex; /* Use flex */
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 30px; /* More pill-like */
+    font-size: 0.85rem;
+    background: rgba(0, 0, 0, 0.3); /* Base background */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Base border */
+    gap: 8px; /* Space between dot and text */
+}
+
+.game-status-badge span { /* The dot */
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    /* background: #ff5252; /* Default to inactive color */
+}
+
+.game-status-badge.active span {
+    background: #4caf50;
+}
+
+.game-status-badge.inactive span {
+    background: #ff5252; /* Explicitly set inactive color */
+}
+
+.game-status-badge.active {
+    background: rgba(76, 175, 80, 0.15); /* Light green background */
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    /* color: #14532d; /* Dark green text - if needed */
+}
+
+.game-status-badge.inactive {
+    background: rgba(255, 82, 82, 0.15); /* Light red background */
+    border: 1px solid rgba(255, 82, 82, 0.3);
+    /* color: #7f1d1d; /* Dark red text - if needed */
+}
+
+/* Empty state */
+.empty-state {
+    display: flex; /* Changed to flex for better centering */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 48px 20px; /* Increased padding */
+    color: var(--text-secondary);
+    /* opacity: 0; /* Animation handles initial opacity */
+    /* animation: fadeInEmpty 0.6s 0.2s ease forwards; /* Moved to animations.css */
+    border-top: 1px solid var(--input-border);
+    margin-top: 24px; /* Increased margin */
+    background: rgba(0, 0, 0, 0.2); /* Added subtle background */
+    border-radius: var(--border-radius-md);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.7;
+}
+
+.empty-state p {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.empty-state span {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+/* Hide empty state if it's not supposed to be shown (JS toggles display: block/none) */
+.empty-state:not([style*="display: block"]) {
+    opacity: 0;
+    pointer-events: none;
+    /* animation: none; /* Ensure animation doesn't run if hidden by JS */
+}
+
+/* Info Message Component */
+.info-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(var(--main-color-rgb), 0.1);
+    border-left: 3px solid var(--main-color);
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.info-icon {
+    font-size: 1.2rem;
+    /* color: var(--main-color); /* Icon color to match border */
+}
+
+.info-message p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* Card Content Spacing - if sections have padding, card-content might not need it */
+.card-content {
+    padding: 0; 
+}
+
+/* Enhanced Ratio Display */
+.ratio-display {
+    margin-top: 24px; /* Default margin */
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-md);
+    text-align: center;
+}
+
+.ratio-display p {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    /* color: var(--text-primary); /* Ensured by general text color */
+}
+
+/* Ratio Reset Wrapper - contains ratio-display and reset-button */
+.ratio-reset-wrapper {
+    display: flex;
+    justify-content: space-between; 
+    align-items: center; 
+    margin-top: var(--spacing-xl); 
+    padding-top: var(--spacing-lg); 
+    border-top: 1px solid rgba(255, 255, 255, 0.1); 
+    gap: var(--spacing-md); 
+    flex-wrap: wrap; 
+}
+
+.ratio-reset-wrapper .ratio-display {
+    margin-top: 0; 
+    padding: 12px 16px; 
+    flex-grow: 1; 
+    text-align: left; 
+}
+
+.ratio-reset-wrapper .reset-button {
+    flex-shrink: 0; 
+    width: auto; /* Allow button to size to its content */
+    min-width: 180px; /* Ensure reasonable tap target */
+}
+
+/* Payout Results */
+.payout-results {
+    margin: 20px 0;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-md);
+}
+
+.no-payouts-message {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.no-payouts-message p {
+    margin: 0 0 4px;
+    font-weight: 600;
+    /* color: var(--text-primary); /* Overridden by parent */
+}
+
+.no-payouts-message span {
+    font-size: 0.9rem;
+}
+
+/* Logo wrapper - basic style, hover/after effects in animations.css if complex */
+.logo-wrapper {
+    position: relative;
+    display: flex; /* For alignment if there are multiple items */
+    align-items: center;
+    cursor: pointer;
+    transition: transform var(--transition-standard);
+    z-index: 2; /* Ensure it is above any ::after pseudo-elements if used for glow */
+}
+
+.logo-wrapper:hover {
+    transform: scale(1.05); /* Basic hover */
+}
+
+.header-logo { /* The img or text container */
+    height: 40px;
+    width: auto;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.header-logo-text { /* Style for the new text logo */
+    font-size: 2.2rem; 
+    font-weight: 800; 
+    line-height: 1; 
+    color: var(--text-color); 
+    letter-spacing: -0.05em; 
+    cursor: default; 
+    padding: 0; 
+    display: inline-block; 
+    background: none; /* Removed gradient styles, handled by JS/themes */
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    -webkit-text-fill-color: initial;
+    /* animation: none; /* Removed, handled by JS/themes */
+}
+
+.header-logo-text span {
+    display: inline-block; 
+}
+
+/* Theme Swatches (replaces #theme-selector dropdown) */
+.theme-swatches-container {
+    display: flex;
+    align-items: center;
+    gap: 10px; 
+}
+
+.theme-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, var(--swatch-main-color, #ccc) 70%, var(--swatch-secondary-color, #aaa) 70%);
+}
+
+.theme-swatch:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theme-swatch.active {
+    border-color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3); 
+}
+
+.theme-random-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px; /* Dice emoji size */
+    padding: 0;
+    margin-left: 10px; /* Space from swatches */
+    color: white; /* Make sure emoji is visible */
+}
+
+.theme-random-btn:hover {
+    transform: scale(1.15) rotate(-15deg);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* OLD #theme-selector dropdown - keep for reference or if swatches are reverted */
+/*
+#theme-selector {
+    height: 40px;
+    padding: 0 34px 0 16px;
+    background: rgba(40, 40, 60, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--border-radius-md);
+    color: rgba(255, 255, 255, 0.95);
+    cursor: pointer;
+    min-width: 180px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all var(--transition-standard);
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22rgba(255,255,255,0.7)%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 10px auto;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    position: relative;
+    z-index: 2;
+    overflow: hidden;
+}
+
+#theme-selector::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    transition: 0.5s;
+    z-index: -1;
+}
+
+#theme-selector:hover {
+    background-color: rgba(60, 60, 80, 0.8);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+#theme-selector:hover::before {
+    left: 100%;
+}
+
+#theme-selector:focus {
+    outline: none;
+    border-color: var(--main-color);
+    box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.2);
+}
+
+#theme-selector option {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: white;
+    padding: 10px;
+    border: none; 
+}
+*/
+
+/* Fix text colors and contrast - some of these might be too general */
+/* These selectors are very broad and might override desired theme styles. 
+   Consider making them more specific or handling within theme files. */
+/*
+.ratio-info,
+.manual-entry-note,
+.game-stats p,
+.player-name, 
+.buy-in-request-details p,
+.form-group span, 
+.chip-preview p,
+.game-stats strong,
+.status,
+section p { 
+    color: white !important; 
+}
+
+.game-stats {
+    background: rgba(0, 0, 0, 0.2); 
+}
+
+.game-stats h4 {
+    color: var(--main-color);
+}
+
+.game-stats p {
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.status.pending,
+.status.success,
+.status.error {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+section {
+    color: white; 
+}
+
+label { 
+    color: white !important; 
+}
+
+.game-name,
+.chip-ratio,
+.form-group label,
+input,
+.chip-preview p,
+.chip-preview h3,
+button,
+.status {
+    color: white; 
+}
+
+.buy-in-amount,
+.buy-in-preview,
+.chip-preview span,
+.chip-preview p { 
+    color: white !important; 
+}
+
+.player-list-item,
+.player-list-item span,
+.player-list-item p { 
+    color: white !important; 
+}
+
+.stats-value,
+.amount-value,
+.chip-value {
+    color: white !important; 
+}
+*/ 

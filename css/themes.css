@@ -1,0 +1,433 @@
+/* Default Theme Overrides (example for RainbowLight, others follow same pattern) */
+[data-theme="RainbowLight"] {
+    --background-color: #f8fafc;  /* Light gray/blue background */
+    --surface-color: #ffffff;
+    
+    /* Invert text colors for light theme */
+    --text-primary: #1e293b;      /* slate-800 */
+    --text-secondary: #475569;    /* slate-600 */
+    --text-tertiary: #64748b;     /* slate-500 */
+    --text-inverse: #ffffff;
+    
+    /* Form colors for light theme */
+    --input-text: #1e293b;
+    --input-background: #ffffff;
+    --input-border: #e2e8f0;
+    --input-placeholder: #94a3b8;  /* slate-400 */
+    --label-color: #475569;       /* slate-600 */
+
+    /* Override any rainbow gradients with solid colors where appropriate */
+    --body-background: var(--background-color);
+    --card-bg: var(--surface-color);
+    --grid-line-color: rgba(0, 0, 0, 0.08);
+
+    /* Specific RainbowLight variables from later in the file */
+    --text-color: #1e293b; /* Base text for RainbowLight */
+    --header-background: #ffffff;
+    --button-background: #334155; /* Default button bg */
+    --button-text-color: #ffffff; /* Default button text */
+    color-scheme: light; 
+    --grid-square-color: rgba(var(--main-color-rgb), 0.1); 
+
+    /* Theme hue shifts for effects that might use them if not overridden */
+    --theme-hue-shift: 0; /* Example, can be specific per theme */
+    --theme-hue-drift: 0;
+}
+
+/* General theme transition */
+[data-theme] {
+    transition: all 0.3s ease; /* Smooth theme transitions */
+}
+
+/* --- Other Base Themes --- */
+[data-theme="Classic"] {
+    --main-color: #2E8B57;
+    --main-color-rgb: 46, 139, 87;
+    --secondary-color: #3CB371;
+    --secondary-color-rgb: 60, 179, 113;
+    --theme-primary-rgb: 46, 139, 87;
+    --theme-secondary-rgb: 60, 179, 113;
+    --theme-accent-rgb: 255, 59, 124; /* Default accent if not specified for theme */
+    --theme-hue-shift: 0;
+    --theme-hue-drift: 10;
+}
+
+[data-theme="Royal"] {
+    --main-color: #4169E1;
+    --main-color-rgb: 65, 105, 225;
+    --secondary-color: #1E90FF;
+    --secondary-color-rgb: 30, 144, 255;
+    --theme-primary-rgb: 65, 105, 225;
+    --theme-secondary-rgb: 30, 144, 255;
+    --theme-accent-rgb: 255, 59, 124;
+    --theme-hue-shift: 15;
+    --theme-hue-drift: 12;
+}
+
+[data-theme="Midnight"] {
+    --main-color: #2F4F4F;
+    --main-color-rgb: 47, 79, 79;
+    --secondary-color: #696969;
+    --secondary-color-rgb: 105, 105, 105;
+    --theme-primary-rgb: 47, 79, 79;
+    --theme-secondary-rgb: 105, 105, 105;
+    --theme-accent-rgb: 255, 59, 124;
+    --theme-hue-shift: 30;
+    --theme-hue-drift: 15;
+}
+
+[data-theme="Purple"] {
+    --main-color: #9370DB;
+    --main-color-rgb: 147, 112, 219;
+    --secondary-color: #8A2BE2;
+    --secondary-color-rgb: 138, 43, 226;
+    --theme-primary-rgb: 147, 112, 219;
+    --theme-secondary-rgb: 138, 43, 226;
+    --theme-accent-rgb: 255, 59, 124;
+    --theme-hue-shift: 60;
+    --theme-hue-drift: 25;
+}
+
+/* --- Rainbow Light Theme Specific Component Overrides --- */
+
+/* Add Animated Grid Pattern to Header Backdrop */
+[data-theme="RainbowLight"] .app-header .modern-backdrop {
+    --grid-size: 30px;
+    --square-size: 8px; 
+
+    background-image: 
+        radial-gradient(var(--grid-square-color) 15%, transparent 15%),
+        linear-gradient(var(--grid-line-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
+    
+    background-size: 
+        var(--grid-size) var(--grid-size), 
+        var(--grid-size) var(--grid-size), 
+        var(--grid-size) var(--grid-size); 
+
+    background-position: 
+        0 0, 
+        -1px -1px, 
+        -1px -1px;
+        
+    /* animation: animated-grid 15s linear infinite; /* Moved to animations.css */
+}
+
+/* Hide card suit symbols for this theme */
+[data-theme="RainbowLight"] .app-header .card-symbol {
+    display: none;
+}
+
+/* Apply specific background to header */
+[data-theme="RainbowLight"] .app-header {
+    background: var(--header-background);
+    border-bottom-color: var(--surface-border);
+    box-shadow: var(--card-shadow);
+}
+
+/* Style sections/cards */
+[data-theme="RainbowLight"] main > section {
+    background: var(--card-bg);
+    border-color: var(--surface-border);
+    box-shadow: var(--card-shadow);
+    color: var(--text-color); 
+}
+
+/* Style the logo text spans (color applied by JS) */
+[data-theme="RainbowLight"] .header-logo-text span {
+    /* transition: color 0.5s ease-in-out; /* Example if JS animates color */
+}
+
+/* Style buttons */
+[data-theme="RainbowLight"] .poker-button {
+    background: transparent; 
+    border: 1.5px solid var(--main-color); 
+    color: var(--main-color); 
+    text-shadow: none;
+    /* animation: none; /* Ensure no base animation interferes */
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; 
+}
+
+[data-theme="RainbowLight"] .poker-button:hover {
+    background-color: transparent; 
+    border-color: var(--main-color); 
+    color: var(--main-color); 
+    box-shadow: 0 6px 18px rgba(var(--main-color-rgb), 0.15); 
+    transform: translateY(-2px); 
+    filter: brightness(0.85); 
+    /* animation: none; */
+}
+
+[data-theme="RainbowLight"] button::before,
+[data-theme="RainbowLight"] .poker-button::before {
+    display: none !important; /* Important to override general button::before */
+    opacity: 0 !important;
+    background: none !important;
+}
+
+[data-theme="RainbowLight"] #reset-btn,
+[data-theme="RainbowLight"] .reset-button { /* Target both general and specific reset */
+    background: transparent; 
+    border: 1.5px solid var(--accent-color); 
+    color: var(--accent-color); /* JS might override this text color */
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+[data-theme="RainbowLight"] #reset-btn:hover,
+[data-theme="RainbowLight"] .reset-button:hover {
+    background-color: transparent; 
+    border-color: var(--accent-color); 
+    box-shadow: 0 6px 18px rgba(var(--accent-color-rgb), 0.15); 
+    transform: translateY(-2px); 
+    filter: brightness(0.85); 
+}
+
+/* Revert header underlines to main color OR apply rainbow */
+[data-theme="RainbowLight"] main > section h2::after {
+    background: var(--rainbow-gradient); /* Use rainbow gradient var from app.js */
+    background-size: 300% 100%; 
+    /* animation: rainbowBackgroundAnimation 10s linear infinite; /* Moved to animations.css */
+}
+
+[data-theme="RainbowLight"] main > section h2 {
+    color: var(--text-color); /* Ensure h2 text is dark for RainbowLight */
+}
+
+/* Revert hover glow to main color */
+[data-theme="RainbowLight"] main > section::before {
+    background: radial-gradient(
+        400px circle at var(--glow-x) var(--glow-y), 
+        rgba(var(--main-color-rgb), 0.2), 
+        transparent 60%
+    ); 
+    /* background-size: 100%; */
+    /* background-blend-mode: normal; */
+    /* animation: none; */ 
+    opacity: 0; 
+}
+
+[data-theme="RainbowLight"] main > section:hover::before {
+    opacity: 1; 
+}
+
+/* Adjust input/form styles for light background */
+[data-theme="RainbowLight"] input[type="text"],
+[data-theme="RainbowLight"] input[type="number"],
+[data-theme="RainbowLight"] input { /* General input for this theme */
+    background: #f1f5f9 !important; /* slate-100 - important to override general input */
+    border: 1px solid #e2e8f0 !important; /* slate-200 - important to override general input */
+    color: var(--text-color) !important; /* Should be dark, from theme vars */
+}
+
+[data-theme="RainbowLight"] input::placeholder {
+    color: #94a3b8 !important; /* slate-400 - muted placeholder */
+}
+
+[data-theme="RainbowLight"] input[type="text"]:focus,
+[data-theme="RainbowLight"] input[type="number"]:focus,
+[data-theme="RainbowLight"] input:focus {
+    background: #ffffff !important;
+    border-color: var(--main-color) !important; 
+    box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.1);
+}
+
+/* Old #theme-selector specific styling for RainbowLight */
+/* 
+[data-theme="RainbowLight"] #theme-selector option {
+    background: white;
+    color: black;
+}
+[data-theme="RainbowLight"] #theme-selector {
+    background: #f1f5f9; 
+    border: 1px solid #e2e8f0; 
+    color: var(--text-color);
+}
+[data-theme="RainbowLight"] #theme-selector:focus {
+    background: #ffffff;
+    border-color: var(--main-color); 
+    box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.1);
+}
+*/
+
+/* Adjust table styles */
+[data-theme="RainbowLight"] .table-container {
+    background: #f8fafc; 
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="RainbowLight"] thead th {
+    background: #f1f5f9; 
+    color: #475569; 
+    border-bottom: 1px solid #e2e8f0;
+}
+
+[data-theme="RainbowLight"] tbody td {
+    border-bottom: 1px solid #e2e8f0;
+    color: var(--text-color); /* Should be dark */
+}
+
+[data-theme="RainbowLight"] tbody tr:hover {
+    background: #f1f5f9;
+}
+
+[data-theme="RainbowLight"] .totals-row {
+    background: #e0f2fe; /* Light blue for totals */
+    color: #0c4a6e; /* Darker blue text */
+}
+
+[data-theme="RainbowLight"] .totals-row td {
+    border-top: 1px solid #bae6fd;
+}
+
+[data-theme="RainbowLight"] .empty-state {
+    background: #f1f5f9;
+    color: #64748b; /* Default text for empty state */
+    border-top: 1px solid #e2e8f0;
+}
+
+[data-theme="RainbowLight"] .empty-state p {
+     color: #334155 !important; /* slate-700 */
+}
+
+[data-theme="RainbowLight"] .empty-state span {
+     color: #64748b !important; /* slate-500 */
+}
+
+[data-theme="RainbowLight"] .remove-player-btn {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+[data-theme="RainbowLight"] .remove-player-btn:hover {
+    background: #fee2e2; 
+    color: #b91c1c; 
+    border-color: #fecaca;
+}
+
+[data-theme="RainbowLight"] .game-status-badge {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #64748b; /* Muted text for badge container */
+}
+
+[data-theme="RainbowLight"] .game-status-badge.active {
+    background: #dcfce7; 
+    border: 1px solid #bbf7d0;
+    color: #166534; 
+}
+
+[data-theme="RainbowLight"] .game-status-badge.inactive {
+    background: #fee2e2; 
+    border: 1px solid #fecaca;
+    color: #991b1b; 
+}
+
+[data-theme="RainbowLight"] .info-message {
+    background: #e0f2fe; 
+    border-left: 3px solid var(--main-color); /* Main color for border */
+    color: #075985; /* Darker Blue text for info */
+}
+
+[data-theme="RainbowLight"] .info-message p {
+    color: #0c4a6e !important; /* Even darker for better contrast */
+}
+
+
+/* Sparkle Styles for RainbowLight theme header */
+[data-theme="RainbowLight"] .header-sparkle {
+    display: block; 
+}
+[data-theme="RainbowLight"] .header-sparkle:nth-child(1) { top: 20%; left: 10%; animation-delay: 0s; background-color: var(--main-color); }
+[data-theme="RainbowLight"] .header-sparkle:nth-child(2) { top: 30%; left: 85%; animation-delay: 0.2s; background-color: var(--secondary-color); }
+[data-theme="RainbowLight"] .header-sparkle:nth-child(3) { top: 70%; left: 5%; animation-delay: 0.4s; background-color: var(--accent-color); }
+[data-theme="RainbowLight"] .header-sparkle:nth-child(4) { top: 80%; left: 90%; animation-delay: 0.6s; background-color: var(--main-color); }
+[data-theme="RainbowLight"] .header-sparkle:nth-child(5) { top: 50%; left: 50%; animation-delay: 0.8s; background-color: var(--main-color); } 
+[data-theme="RainbowLight"] .header-sparkle:nth-child(6) { top: 15%; left: 60%; animation-delay: 1s; background-color: var(--secondary-color); }
+[data-theme="RainbowLight"] .header-sparkle:nth-child(7) { top: 90%; left: 30%; animation-delay: 1.2s; background-color: var(--accent-color); }
+[data-theme="RainbowLight"] .header-sparkle:nth-child(8) { top: 40%; left: 20%; animation-delay: 1.4s; background-color: var(--secondary-color); } 
+
+
+/* Explicitly set player name color in table for RainbowLight */
+[data-theme="RainbowLight"] #player-table tbody td.player-name {
+    color: var(--text-color) !important; /* Should be dark as per theme var */
+}
+
+/* Explicitly set info message paragraph color for RainbowLight */
+[data-theme="RainbowLight"] #add-player .info-message p {
+    color: #475569 !important; /* slate-600, was --text-muted-color which is too light */
+}
+
+/* Explicitly set payout info text color for RainbowLight */
+[data-theme="RainbowLight"] #payout-calculator .payout-info p {
+     color: #475569 !important; /* slate-600 */
+}
+
+/* Ensure form labels are dark for RainbowLight */
+[data-theme="RainbowLight"] #create-lobby-form label,
+[data-theme="RainbowLight"] #ratio-form label,
+[data-theme="RainbowLight"] #player-form label,
+[data-theme="RainbowLight"] .form-group label {
+    color: var(--text-color) !important; /* Should be dark */
+}
+
+/* Theme Swatch overrides for RainbowLight */
+[data-theme="RainbowLight"] .theme-swatch {
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="RainbowLight"] .theme-swatch:hover {
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="RainbowLight"] .theme-swatch.active {
+    border-color: var(--text-color); /* Dark border for active swatch */
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="RainbowLight"] .theme-random-btn {
+    border-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-color); /* Ensure dice is visible */
+}
+
+[data-theme="RainbowLight"] .theme-random-btn:hover {
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Additional theme-specific variations for header elements (non-RainbowLight) */
+[data-theme="Classic"] .app-header .card-symbol {
+    text-shadow: 0 0 10px rgba(var(--theme-primary-rgb), 0.4);
+}
+
+[data-theme="Royal"] .app-header .accent-line {
+    background: linear-gradient(90deg, 
+        rgba(var(--theme-primary-rgb), 0), 
+        rgba(194, 163, 108, 0.4), /* Gold-ish for Royal */
+        rgba(var(--theme-primary-rgb), 0));
+}
+
+[data-theme="Midnight"] .app-header .card-symbol {
+    color: rgba(60, 78, 124, 0.18); /* Darker, muted */
+    text-shadow: 0 0 15px rgba(60, 78, 124, 0.3);
+}
+
+[data-theme="Purple"] .app-header .card-symbol-2,
+[data-theme="Purple"] .app-header .card-symbol-4 {
+    color: rgba(122, 80, 160, 0.15); /* Muted purple */
+}
+
+/* Remove all the cosmic-related styles (they were for a different header design) */
+.cosmic-background::before, 
+.cosmic-background::after, 
+.shooting-star, 
+.shooting-star-1, 
+.shooting-star-2,
+.shooting-star-3,
+.pulsar,
+.pulsar-1,
+.pulsar-2,
+.pulsar-3,
+.theme-constellation,
+[data-theme] .theme-constellation {
+    display: none !important; /* Ensure they are gone */
+} 
