@@ -142,17 +142,6 @@ html::after {
     to { transform: translateX(-50%); }
 }
 
-/* Old #theme-selector hover animation (dropdown style) */
-/* 
-#theme-selector:hover::before { 
-    left: 100%; 
-}
-@keyframes gradientSlide { 
-    0% { background-position: -200% 0; } 
-    100% { background-position: 200% 0; } 
-}
-*/
-
 /* Empty state animation */
 @keyframes fadeInEmpty {
     from { opacity: 0; transform: translateY(10px); }
@@ -457,9 +446,3 @@ html::after {
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
-
-/* Remove general constellation glow as it was tied to old design */
-@keyframes constellationGlow {
-    0% { opacity: 0; }
-    100% { opacity: 0; }
-} 

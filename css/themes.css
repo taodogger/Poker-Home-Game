@@ -231,24 +231,6 @@
     box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.1);
 }
 
-/* Old #theme-selector specific styling for RainbowLight */
-/* 
-[data-theme="RainbowLight"] #theme-selector option {
-    background: white;
-    color: black;
-}
-[data-theme="RainbowLight"] #theme-selector {
-    background: #f1f5f9; 
-    border: 1px solid #e2e8f0; 
-    color: var(--text-color);
-}
-[data-theme="RainbowLight"] #theme-selector:focus {
-    background: #ffffff;
-    border-color: var(--main-color); 
-    box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.1);
-}
-*/
-
 /* Adjust table styles */
 [data-theme="RainbowLight"] .table-container {
     background: #f8fafc; 

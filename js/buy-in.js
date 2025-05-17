@@ -15,7 +15,7 @@ try {
     }
 } catch (error) {
     console.error('[FIREBASE] Error initializing database:', error);
-    showError('Could not connect to the game database. Please try again later.');
+    showToast('Could not connect to the game database. Please try again later.', 'error');
 }
 
 // Get game ID and name from URL
@@ -28,28 +28,60 @@ console.log('[BUY-IN] Game name from URL:', gameName);
 
 // Theme configuration
 const themes = {
-    'Classic': {
+    'Classic Red': {
         '--main-color': '#ff4757',
         '--main-color-rgb': '255, 71, 87',
         '--secondary-color': '#ff6b81',
         '--secondary-color-rgb': '255, 107, 129',
-        '--body-background': 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
-        '--vibrant-gradient': 'linear-gradient(45deg, #ff4757, #ff6b81)'
+        '--body-background': 'linear-gradient(135deg, #2d0000, #400000)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #ff4757, #ffA0AA)'
     },
-    'Purple': {
+    'Deep Lilac': {
         '--main-color': '#9370db',
         '--main-color-rgb': '147, 112, 219',
-        '--secondary-color': '#8a2be2',
-        '--secondary-color-rgb': '138, 43, 226',
-        '--body-background': 'linear-gradient(135deg, #1a1a2d, #2d2d4a)',
-        '--vibrant-gradient': 'linear-gradient(45deg, #9370db, #8a2be2)'
+        '--secondary-color': '#aa8ff0',
+        '--secondary-color-rgb': '170, 143, 240',
+        '--body-background': 'linear-gradient(135deg, #151020, #251830)',
+        '--vibrant-gradient': 'linear-gradient(45deg, #9370db, #c8baff)'
+    },
+    'Ocean Breeze': {
+        '--main-color': '#38D2D2', // Bright Teal
+        '--main-color-rgb': '56, 210, 210',
+        '--secondary-color': '#50B9B9', // Slightly desaturated, lighter teal
+        '--secondary-color-rgb': '80, 185, 185',
+        '--body-background': 'linear-gradient(135deg, #0A1D24, #102A33)', // Darker, desaturated teal/blue-grey
+        '--vibrant-gradient': 'linear-gradient(45deg, #38D2D2, #A0E0E0)' // Bright Teal to a much lighter teal
+    },
+    'Sunset Glow': {
+        '--main-color': '#FF8C42', // Vibrant Orange
+        '--main-color-rgb': '255, 140, 66',
+        '--secondary-color': '#FFA757', // Lighter orange
+        '--secondary-color-rgb': '255, 167, 87',
+        '--body-background': 'linear-gradient(135deg, #3D1E00, #572A00)', // Darker, richer brown
+        '--vibrant-gradient': 'linear-gradient(45deg, #FF8C42, #FFD1AA)' // Vibrant Orange to pale peach
+    },
+    'Minty Fresh': {
+        '--main-color': '#50C878', // Fresh Mint Green
+        '--main-color-rgb': '80, 200, 120',
+        '--secondary-color': '#70D49A', // Lighter Mint
+        '--secondary-color-rgb': '112, 212, 154',
+        '--body-background': 'linear-gradient(135deg, #0A2A0A, #144014)', // Much darker green
+        '--vibrant-gradient': 'linear-gradient(45deg, #50C878, #A0E0B8)' // Mint to very light mint/almost white
+    },
+    'Electric Violet': {
+        '--main-color': '#BE00FE', // Bright Violet
+        '--main-color-rgb': '190, 0, 254',
+        '--secondary-color': '#D355FF', // Lighter, slightly desaturated Violet
+        '--secondary-color-rgb': '211, 85, 255',
+        '--body-background': 'linear-gradient(135deg, #200030, #300045)', // Much darker purple
+        '--vibrant-gradient': 'linear-gradient(45deg, #BE00FE, #E0B0FF)' // Violet to very light lavender
     }
 };
 
 // Set theme function
 function setTheme(themeName) {
     // Ensure themeName is valid, default to Classic if not
-    const theme = themes[themeName] || themes['Classic']; 
+    const theme = themes[themeName] || themes['Classic Red']; 
     console.log(`[THEME] Applying theme: ${themeName}`); // Log which theme is being applied
     const root = document.documentElement;
     
@@ -94,23 +126,15 @@ if (gameId && buyInDatabase) {
             updateChipPreview();
         }, (error) => {
             console.error('[FIREBASE] Error in chip ratio listener:', error);
-            showError('Error fetching game ratio. Using default.');
+            showToast('Error fetching game ratio. Using default.', 'error');
             chipRatio = 1.0;
             updateChipPreview();
         });
     } catch (error) {
         console.error('[FIREBASE] Error setting up chip ratio listener:', error);
-        showError('Error fetching game ratio. Using default.');
+        showToast('Error fetching game ratio. Using default.', 'error');
         chipRatio = 1.0;
         updateChipPreview();
-    }
-}
-
-// Show game name if available
-if (gameName) {
-    const gameNameElem = document.querySelector('h1');
-    if (gameNameElem) {
-        gameNameElem.textContent = `Join ${gameName}`;
     }
 }
 
@@ -124,22 +148,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
     setTheme(randomThemeName);
 
-    // Update chip preview when buy-in amount changes
-    const buyInAmountInput = document.getElementById('buy-in-amount');
-    if (buyInAmountInput) {
-        console.log('[BUY-IN] Attaching input listener to #buy-in-amount');
-        buyInAmountInput.addEventListener('input', () => {
-            console.log('[BUY-IN] Input event fired on #buy-in-amount');
-            updateChipPreview();
-        });
-    } else {
-        console.error('[BUY-IN] Could not find #buy-in-amount element to attach listener.');
-    }
+    // Initial chip preview update - this will run once with default/empty values
+    // The input listener, once working, will handle subsequent updates from typing.
+    updateChipPreview(); 
 
-    // Initial chip preview update in case there's a default value or ratio is already known
-    updateChipPreview();
-
-    // Load game data and set up form (moved inside DOMContentLoaded)
+    // Load game data and set up form
     if (gameId && buyInDatabase) {
         console.log('[FIREBASE] Fetching game data for ID:', gameId);
         try {
@@ -178,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateChipPreview();
             }, (error) => {
                 console.error('[FIREBASE] Error in chip ratio listener:', error);
-                showError('Error fetching game ratio. Using default.');
+                showToast('Error fetching game ratio. Using default.', 'error');
                 chipRatio = 1.0;
                 updateChipPreview();
             });
@@ -235,38 +248,59 @@ document.addEventListener('DOMContentLoaded', () => {
                     const newForm = form.cloneNode(true);
                     form.parentNode.replaceChild(newForm, form);
 
-                    // Set up form submission handler
+                    // --- NEW: Event Delegation on the newForm for #buy-in-amount --- 
+                    console.log('[BUY-IN] Attaching delegated input listener to newForm');
+                    newForm.addEventListener('input', function(event) {
+                        if (event.target && event.target.id === 'buy-in-amount') {
+                            console.log('<<<<< DELEGATED INPUT EVENT FIRED! Value: ' + event.target.value + ' >>>>>');
+                            updateChipPreview();
+                        }
+                    });
+                    // --- END NEW Event Delegation ---
+
                     newForm.addEventListener('submit', async function(e) {
                         e.preventDefault();
                         
-                        const submitButton = newForm.querySelector('button');
-                        if (submitButton) submitButton.disabled = true;
+                        const submitButton = newForm.querySelector('button[type="submit"]'); // More specific selector
+                        if (submitButton) {
+                            submitButton.disabled = true;
+                            submitButton.classList.add('loading');
+                        }
                         
-                        const playerName = document.getElementById('player-name')?.value.trim();
-                        const buyInAmount = parseFloat(document.getElementById('buy-in-amount')?.value);
+                        const playerName = newForm.querySelector('#player-name')?.value.trim(); // Query within newForm
+                        const buyInAmountValue = newForm.querySelector('#buy-in-amount')?.value; // Query within newForm
+                        const buyInAmount = parseFloat(buyInAmountValue) || 0;
                         
                         if (!playerName) {
-                            updateStatus('Please enter your name', 'error');
-                            if (submitButton) submitButton.disabled = false;
+                            showToast('Please enter your name', 'error');
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.classList.remove('loading');
+                            }
                             return;
                         }
                         
                         if (isNaN(buyInAmount) || buyInAmount <= 0) {
-                            updateStatus('Please enter a valid buy-in amount', 'error');
-                            if (submitButton) submitButton.disabled = false;
+                            showToast('Please enter a valid buy-in amount', 'error');
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.classList.remove('loading');
+                            }
                             return;
                         }
                         
-                        // Use the potentially updated chipRatio
                         const currentChipRatio = chipRatio; 
                         const chips = Math.floor(buyInAmount / currentChipRatio);
                         if (chips <= 0) {
-                            updateStatus(`Buy-in amount too low for minimum chips (Ratio: $${currentChipRatio.toFixed(2)})`, 'error');
-                            if (submitButton) submitButton.disabled = false;
+                            showToast(`Buy-in amount too low for minimum chips (Ratio: $${currentChipRatio.toFixed(2)})`, 'error');
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.classList.remove('loading');
+                            }
                             return;
                         }
                         
-                        updateStatus('Processing buy-in...', 'pending');
+                        showToast('Processing buy-in...', 'info'); // Changed from updateStatus
                         
                         try {
                             // Re-check game status before transaction
@@ -439,24 +473,34 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Note: We don't need to turn off `games/${gameId}` or `games/${gameId}/state` generally
                             // if other listeners might still be attached elsewhere, but for buy-in page, it's safe.
 
+                            // Note: updateStatus already calls showToast, so this is fine.
+                            // However, if the form is replaced on success, resetting button state here might not be seen.
+                            // The primary reset is for error cases before form replacement.
+                            if (submitButton) { // Ensure submitButton is still in scope and valid if needed after await
+                                submitButton.disabled = false; 
+                                submitButton.classList.remove('loading');
+                            }
                         } catch (error) {
                             // Catch errors from transaction or pre-check
                             console.error('[BUY-IN] Error during buy-in process:', error);
-                            updateStatus(error.message || 'An unexpected error occurred.', 'error');
-                            if (submitButton) submitButton.disabled = false; // Re-enable button on error
+                            showToast(error.message || 'An unexpected error occurred.', 'error');
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.classList.remove('loading');
+                            }
                         }
                     });
                 })
                 .catch(error => {
                     console.error('[FIREBASE] Error fetching initial game data:', error);
-                    showError(error.message || 'Could not load game data.');
+                    showToast(error.message || 'Could not load game data.', 'error');
                 });
         } catch (error) {
             console.error('[FIREBASE] Error setting up initial fetch:', error);
-            showError('Could not connect to the game. Please try again.');
+            showToast('Could not connect to the game. Please try again.', 'error');
         }
     } else {
-        showError('Invalid game link or missing database connection.');
+        showToast('Invalid game link or missing database connection.', 'error');
     }
 });
 
@@ -469,11 +513,18 @@ function updateChipPreview() {
         console.error('[PREVIEW] Buy-in amount input (#buy-in-amount) not found!');
         return;
     }
-    const buyInAmount = parseFloat(buyInAmountInput.value) || 0;
-    console.log(`[PREVIEW] Buy-in amount value: ${buyInAmount} (Type: ${typeof buyInAmount})`);
+    // --- BEGIN DEBUG LOGS ---
+    const rawInputValue = buyInAmountInput.value;
+    console.log(`[PREVIEW DEBUG] Raw input value: '${rawInputValue}' (Type: ${typeof rawInputValue})`);
+    // --- END DEBUG LOGS ---
+    const buyInAmount = parseFloat(rawInputValue) || 0;
+    console.log(`[PREVIEW] Buy-in amount value (parsed): ${buyInAmount} (Type: ${typeof buyInAmount})`);
     
-    // Ensure chipRatio is a positive number before calculating
     const currentValidRatio = (typeof chipRatio === 'number' && chipRatio > 0) ? chipRatio : 1.0;
+    // --- BEGIN DEBUG LOGS ---
+    console.log(`[PREVIEW DEBUG] chipRatio (global) for calculation: ${chipRatio} (Type: ${typeof chipRatio})`);
+    console.log(`[PREVIEW DEBUG] currentValidRatio for calculation: ${currentValidRatio} (Type: ${typeof currentValidRatio})`);
+    // --- END DEBUG LOGS ---
     if (currentValidRatio !== chipRatio) {
         console.warn(`[PREVIEW] chipRatio was invalid (${chipRatio}). Using default 1.0 for calculation.`);
     }
@@ -491,11 +542,49 @@ function updateChipPreview() {
     }
 }
 
-// Update status display
-function updateStatus(message, type = 'pending') {
-    const statusDiv = document.getElementById('status-message');
-    if (statusDiv) {
-        statusDiv.className = `status-message ${type}`;
-        statusDiv.textContent = message;
+// Function to show toast notifications
+function showToast(message, type = 'info', duration = 4000) {
+    const container = document.querySelector('.toast-container');
+    if (!container) {
+        console.error('Toast container not found!');
+        return;
     }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // Animate in
+    setTimeout(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(0)';
+    }, 10); // Small delay to allow CSS to apply before transition
+
+    // Auto-dismiss
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (toast.parentNode === container) { // Check if still child before removing
+                container.removeChild(toast);
+            }
+        }, 500); // Allow slide-out animation to complete
+    }, duration);
+}
+
+// Update status display (now uses toasts)
+function updateStatus(message, type = 'pending') { // maps to toast types
+    let toastType = 'info'; // Default for pending or unknown
+    if (type === 'success') {
+        toastType = 'success';
+    } else if (type === 'error') {
+        toastType = 'error';
+    } else if (type === 'pending') {
+        toastType = 'info'; // Or a specific 'pending' style if you create one in CSS
+        // For pending, you might want a longer duration or no auto-dismiss if it indicates an ongoing process
+        // For now, we'll use 'info' with standard duration.
+    }
+    showToast(message, toastType);
 }

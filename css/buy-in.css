@@ -1,0 +1,323 @@
+:root {
+    --font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+
+body.buy-in-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: var(--body-background, linear-gradient(135deg, #1a1a1a, #2d2d2d));
+    font-family: var(--font-family);
+    overflow: hidden; /* Prevent scrollbars during animation if elements are slightly off-screen */
+}
+
+.container {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    position: relative;
+    z-index: 2;
+    /* Entrance Animation */
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+    animation: fadeInScaleUp 0.6s 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes fadeInScaleUp {
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin: 0 0 2.5rem;
+    background: var(--vibrant-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+}
+
+#game-info {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#game-info h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+    color: white;
+}
+
+#game-info p {
+    font-size: 1rem;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.form-group {
+    margin-bottom: 2rem;
+}
+
+label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.65rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+input {
+    width: 100%;
+    height: auto;
+    padding: 0.9rem 1.25rem;
+    font-size: 1.05rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    color: white;
+    transition: all 0.2s ease-in-out;
+    -webkit-appearance: none;
+}
+
+input:focus {
+    outline: none;
+    border-color: rgba(var(--main-color-rgb), 0.7);
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 3.5px rgba(var(--main-color-rgb), 0.15);
+}
+
+.chip-preview {
+    text-align: center;
+    margin-top: 2.5rem;
+    margin-bottom: 2.5rem;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chip-preview p {
+    margin: 0.4rem 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.95rem;
+}
+
+.chip-preview p:first-of-type strong {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--main-color);
+}
+
+.chip-preview p:last-of-type {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+.poker-button {
+    display: block;
+    width: 100%;
+    padding: 0.9rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    background-color: var(--main-color);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+    text-align: center;
+}
+
+.poker-button:hover {
+    background-color: var(--secondary-color);
+}
+
+.poker-button:active {
+    transform: scale(0.98);
+}
+
+/* Button loading state */
+.poker-button .button-spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff; /* Or var(--button-text-color) if defined */
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto; /* Center spinner if text is hidden */
+}
+
+.poker-button.loading .button-text {
+    display: none; /* Hide text when loading */
+}
+
+.poker-button.loading .button-spinner {
+    display: inline-block; /* Show spinner when loading */
+}
+
+/* Optional: Adjust button appearance when loading */
+.poker-button.loading {
+    /* background-color: var(--secondary-color); /* Example: slightly different bg */
+    /* opacity: 0.8; */
+    cursor: wait;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.welcome-container {
+    background: var(--vibrant-gradient);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    color: white;
+    margin-top: 2rem;
+    animation: slideUp 0.5s ease forwards;
+}
+
+.welcome-content h2 {
+    font-size: 2rem;
+    margin: 0 0 1rem;
+    color: white;
+}
+
+.player-info {
+    margin: 1.5rem 0;
+}
+
+.player-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.close-instruction {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-top: 1.5rem;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Toast container and notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    background: white;
+    color: #333;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    animation: slideIn 0.3s ease forwards;
+    max-width: 300px;
+}
+
+.toast.success {
+    background: linear-gradient(45deg, #2ed573, #7bed9f);
+    color: white;
+}
+
+.toast.error {
+    background: linear-gradient(45deg, #ff4757, #ff6b81);
+    color: white;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* iOS/Mobile-specific fixes */
+@media screen and (max-width: 480px) {
+    .container {
+        padding: 1.5rem;
+        border-radius: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        max-width: 100%;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+    
+    input, button {
+        -webkit-appearance: none; /* Remove iOS default styling */
+        border-radius: 8px;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    .poker-button {
+        width: 100%;
+        padding: 14px;
+    }
+}
+
+/* iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+    /* Set proper body height for iOS */
+    body {
+        min-height: -webkit-fill-available;
+    }
+    
+    html {
+        height: -webkit-fill-available;
+    }
+    
+    /* Fix for input zoom on iOS */
+    input {
+        font-size: 16px;
+    }
+} 
