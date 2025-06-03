@@ -77,13 +77,8 @@
     --content-padding: 24px;
 
     /* Base theme colors */
-    /* These are repeated, ensure they are correctly defined or reconciled if values differ */
-    /* For now, including as they appear in the original :root */
-    --main-color: #1e90ff; 
-    --secondary-color: #4169e1;
-    --accent-color: #ff3b7c;
-    --background-color: #0a0a0a;
-    --surface-color: rgba(255, 255, 255, 0.1);
+    /* These were repeated, ensure they are correctly defined or reconciled if values differ */
+    /* Removing redundant declarations from lines 77-81 as they are defined above */
     
     /* Text colors */
     --text-primary: rgba(255, 255, 255, 0.95);    /* Main text */

@@ -378,27 +378,23 @@ main.app-content {
 /* Mobile adjustments for layout */
 @media (max-width: 1200px) {
     main {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 24px;
+        gap: 20px;
+        padding: 0 24px 40px;
     }
-    
     #game-lobby,
     #add-player {
-        grid-column: 1;
+        grid-column: 1 / 13; /* Half width */
     }
-    
     #players {
-        grid-column: 2;
-        grid-row: 1 / span 3;
+        grid-column: 13 / 25; /* Half width */
+        grid-row: 1 / 3; /* Span two rows */
     }
-    
     #game-controls, 
     #payout-calculator {
-        grid-column: 1;
-        grid-row: auto;
+        grid-column: 1 / 13; /* Half width, stacked below game-lobby/add-player */
+        grid-row: auto; /* Let them flow naturally */
     }
-
-    .button-group { /* Moved from components.css as it affects layout significantly here */
+    .button-group { /* Layout adjustment */
         flex-direction: column;
     }
 }
@@ -429,18 +425,18 @@ main.app-content {
         /* padding-right: 0; /* Handled by .app-header padding */
     }
     
-    .logo-wrapper { /* Moved from components.css */
+    .logo-wrapper { /* Layout adjustment */
         /* Styles related to logo position/scaling might be here if responsive */
     }
 
-    .header-logo { /* Moved from components.css */
+    .header-logo { /* Layout adjustment */
         height: 32px;
     }
     
     /* #theme-selector specific layout changes can go here if needed */
     /* .theme-swatches-container specific layout changes can go here if needed */
 
-    .ratio-reset-wrapper { /* Moved from components.css as it affects layout significantly here */
+    .ratio-reset-wrapper { /* Layout adjustment */
         flex-direction: column; 
         align-items: stretch; 
         gap: var(--spacing-sm);
@@ -485,11 +481,11 @@ main.app-content {
         --spacing-xl: 2rem;
     } */
     
-    .game-control-buttons { /* Moved from components.css as it affects layout significantly here */
+    .game-control-buttons { /* Layout adjustment */
         grid-template-columns: 1fr;
     }
     
-    .action-button { /* Moved from components.css */
+    .action-button { /* Layout adjustment */
         width: 100%;
     }
 

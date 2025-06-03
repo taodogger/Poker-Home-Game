@@ -83,7 +83,12 @@ label {
     color: var(--label-color, var(--text-secondary));
 }
 
-input[type="text"],
+/* Removing input[type="text"] and input[type="number"] styles from here.
+   These will now be primarily handled by css/components.css for consistency.
+   Page-specific overrides if absolutely necessary can be done with higher specificity
+   or within media queries below if they are viewport-dependent. */
+
+/* input[type="text"],
 input[type="number"] {
     width: 100%;
     height: auto;
@@ -96,15 +101,15 @@ input[type="number"] {
     transition: all var(--transition-standard, 0.25s ease-in-out);
     -webkit-appearance: none;
     box-sizing: border-box;
-}
+} */
 
-input[type="text"]:focus,
+/* input[type="text"]:focus,
 input[type="number"]:focus {
     outline: none;
     border-color: var(--main-color);
     background: rgba(0,0,0,0.45);
     box-shadow: 0 0 0 3.5px rgba(var(--main-color-rgb), 0.25);
-}
+} */
 
 .chip-preview {
     text-align: center;
@@ -134,7 +139,11 @@ input[type="number"]:focus {
     opacity: 0.8;
 }
 
-.poker-button {
+/* Removing the general .poker-button styles from here.
+   The base .poker-button styles will come from css/components.css.
+   Specific overrides for buy-in page (like loading state or specific IDs) remain. */
+
+/* .poker-button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -163,9 +172,9 @@ input[type="number"]:focus {
 .poker-button:active {
     transform: translateY(0px) scale(0.98);
     box-shadow: 0 3px 9px rgba(var(--main-color-rgb), 0.2);
-}
+} */
 
-.poker-button .button-spinner {
+.poker-button .button-spinner { /* These loading styles are specific to buy-in and will augment the global .poker-button */
     display: none;
     width: 20px;
     height: 20px;
@@ -296,11 +305,11 @@ input[type="number"]:focus {
         margin-bottom: var(--spacing-md, 16px);
     }
     
-    input[type="text"], 
+    /* input[type="text"], 
     input[type="number"], 
     .poker-button {
         font-size: 16px !important;
-    }
+    } */
     
     .poker-button {
         padding: 12px var(--spacing-sm, 8px);

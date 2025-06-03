@@ -509,3 +509,48 @@ section:nth-child(6) { animation-delay: 0.6s; }
     transform: translateY(0);
     transition: opacity 0.4s ease-out 0.1s, transform 0.4s ease-out 0.1s; /* Delay to start after hide */
 }
+
+/* --- NEW UI INTERACTION ANIMATIONS --- */
+
+/* Subtle Pop for general clicks (e.g., UI buttons, theme swap) */
+@keyframes subtle-pop-kf {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.97); opacity: 0.9; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-subtle-pop {
+    animation: subtle-pop-kf 0.15s ease-out;
+}
+
+/* Value Highlight for kaching/payouts and important number changes */
+@keyframes value-highlight-kf {
+    0%, 100% { 
+        color: inherit; /* Revert to original color */
+        text-shadow: none;
+    }
+    50% { 
+        color: var(--main-color); /* Or a specific gold/accent color */
+        text-shadow: 0 0 8px currentColor; /* Subtle glow */
+    }
+}
+
+.animate-value-highlight {
+    animation: value-highlight-kf 0.6s ease-in-out;
+}
+
+/* Player Remove Visual (fade and slide out) */
+@keyframes player-remove-kf {
+    0% { 
+        opacity: 1; 
+        transform: translateX(0) scale(1);
+    }
+    100% { 
+        opacity: 0; 
+        transform: translateX(20px) scale(0.9); 
+    }
+}
+
+.animate-player-remove {
+    animation: player-remove-kf 0.3s ease-in forwards; /* Forwards to keep final state */
+}

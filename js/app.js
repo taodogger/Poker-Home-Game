@@ -3,15 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[INIT] DOMContentLoaded triggered');
     // Call initialize directly - it will handle loading state internally
     initialize(); 
-    // Sound system init and resume listener remain here
+    // Sound system init. The old body click listener for resuming context is now removed.
     SoundSystem.init();
-    document.body.addEventListener('click', () => { // Resume context listener
-        if (SoundSystem.audioContext && SoundSystem.audioContext.state === 'suspended') {
-            SoundSystem.audioContext.resume().then(() => {
-                 console.log('[SOUND] AudioContext resumed successfully after user interaction.');
-            }).catch(e => console.error('[SOUND] Error resuming AudioContext:', e));
-        }
-    }, { once: true });
+    // The AudioContext is now primarily resumed on-demand by SoundSystem._ensureAudioContextRunning()
 
     // Call new UI setup functions after main initialization
     if (PokerApp.UI) {
@@ -338,6 +332,26 @@ PokerApp.UI = {
             }
         }
     },
+
+    // Method to show toast notifications
+    showToast: function(message, type = 'info', duration = 3000) {
+        // ... existing showToast code ...
+    },
+
+    // Method to update empty state display
+    updateEmptyStateVisibility: function() {
+        // ... existing updateEmptyStateVisibility code ...
+    },
+
+    // Helper to apply a temporary animation class
+    triggerAnimation: function(element, animationClass) {
+        if (element && animationClass) {
+            element.classList.add(animationClass);
+            element.addEventListener('animationend', () => {
+                element.classList.remove(animationClass);
+            }, { once: true });
+        }
+    }
 };
 
 // Core functions that need to be defined early
@@ -401,6 +415,12 @@ function updatePlayerList() {
         const row = document.createElement('tr');
         row.className = player.id === PokerApp.state.dealerId ? 'dealer' : '';
         row.setAttribute('data-player-id', player.id);
+        
+        // Animate if new player
+        if (player.isNew) {
+            PokerApp.UI.triggerAnimation(row, 'popIn'); 
+            delete player.isNew; // Remove flag after animation is triggered
+        }
         
         // Create individual cells instead of using innerHTML to maintain input state
         const nameCell = document.createElement('td');
@@ -528,7 +548,7 @@ function addPlayer(name, chips) {
         }, 50);
         
         // Save state and update Firebase
-        saveState();
+                saveState();
         if (PokerApp.state.sessionId) {
             updatePlayersInFirebase();
         }
@@ -537,17 +557,17 @@ function addPlayer(name, chips) {
     }
 
     // Create a new player
-    const player = {
-        id: PokerApp.state.nextPlayerId++,
+    const newPlayer = {
+        id: PokerApp.state.nextPlayerId++, // Increment and use current ID
         name: name,
-        initial_chips: parseInt(chips),
-        current_chips: parseInt(chips)
-        // No buyinAmount needed here
-        // No rebuys needed here for this simpler approach yet
+        initial_chips: chips,
+        current_chips: chips,
+        buy_ins: [chips], // Store initial buy-in
+        isNew: true // Flag for animation in updatePlayerList
     };
 
     // Add to state
-    PokerApp.state.players.push(player);
+    PokerApp.state.players.push(newPlayer);
     
     // Update UI first
     updatePlayerList();
@@ -555,7 +575,7 @@ function addPlayer(name, chips) {
     
     // Then trigger animation after a short delay to ensure DOM is updated
     setTimeout(() => {
-        animateNewPlayer(player.id); // Default is isUpdate = false
+        animateNewPlayer(newPlayer.id); // Default is isUpdate = false
         PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
     }, 50);
     
@@ -661,10 +681,10 @@ function setupEventListeners() {
                     
                     // Show success message
                     PokerApp.UI.showToast('Game lobby created successfully', 'success');
-                    
-                    // Save state
+    
+    // Save state
                     if (typeof saveState === 'function') {
-                        saveState();
+    saveState();
                     }
                 })
                 .catch(error => {
@@ -754,6 +774,12 @@ function setupEventListeners() {
             const ratioDisplay = document.getElementById('ratio-display');
             if (ratioDisplay) {
                 ratioDisplay.textContent = `Each chip is worth $${PokerApp.state.chipRatio.toFixed(2)}`;
+                PokerApp.UI.triggerAnimation(ratioDisplay, 'animate-value-highlight'); // Animate ratio display
+            }
+
+            const submitButton = newForm.querySelector('button[type="submit"]');
+            if (submitButton) {
+                PokerApp.UI.triggerAnimation(submitButton, 'animate-subtle-pop'); // Animate button
             }
             
             // Play Kaching sound
@@ -777,6 +803,7 @@ function setupEventListeners() {
     const calculateButton = document.getElementById('calculate-payouts');
     if (calculateButton) {
         calculateButton.addEventListener('click', function() {
+            PokerApp.UI.triggerAnimation(calculateButton, 'animate-subtle-pop'); // Animate button
             // Play Kaching sound
             if (SoundSystem && typeof SoundSystem.playKachingSound === 'function') {
                 SoundSystem.playKachingSound();
@@ -914,6 +941,7 @@ function initialize() {
                   swatch.style.border = '2px solid #e2e8f0';
              }
              swatch.addEventListener('click', () => {
+                  PokerApp.UI.triggerAnimation(swatch, 'animate-subtle-pop'); // Add animation to the clicked swatch
                   if (typeof setTheme === 'function') {
                        setTheme(themeName);
                        document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
@@ -938,13 +966,16 @@ function initialize() {
          const newRandomBtn = randomThemeBtn.cloneNode(true);
          randomThemeBtn.parentNode.replaceChild(newRandomBtn, randomThemeBtn);
          newRandomBtn.addEventListener('click', () => {
+             PokerApp.UI.triggerAnimation(newRandomBtn, 'animate-subtle-pop'); // Add animation to random theme button
              const themeNames = Object.keys(availableThemes);
-             const availableChoices = themeNames.filter(name => name !== PokerApp.state.currentTheme);
-             const randomIndex = Math.floor(Math.random() * availableChoices.length);
-             const randomTheme = availableChoices[randomIndex];
-             setTheme(randomTheme);
+             let randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
+             // Ensure a different theme is chosen if current one is selected randomly
+             while (randomThemeName === PokerApp.state.currentTheme) {
+                 randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
+             }
+             setTheme(randomThemeName);
              document.querySelectorAll('.theme-swatch').forEach(swatch => {
-                  swatch.classList.toggle('active', swatch.dataset.themeName === randomTheme);
+                  swatch.classList.toggle('active', swatch.dataset.themeName === randomThemeName);
              });
              newRandomBtn.style.transform = 'rotate(360deg)';
              setTimeout(() => { newRandomBtn.style.transform = ''; }, 300);
@@ -1778,8 +1809,8 @@ function setupGameStateListener(gameId) {
                     if (state.dealerId !== undefined) PokerApp.state.dealerId = state.dealerId;
                     if (state.chipRatio) PokerApp.state.chipRatio = state.chipRatio;
                     if (state.nextPlayerId) PokerApp.state.nextPlayerId = state.nextPlayerId;
-                    
-                    // Update UI
+
+    // Update UI
                     setTheme(PokerApp.state.theme);
                     updateUIFromState();
                 });
@@ -2294,7 +2325,7 @@ function resetGame() {
         }
         
         // First clean up any Firebase connections
-        if (PokerApp.state.sessionId) {
+    if (PokerApp.state.sessionId) {
             // Update game status to inactive in Firebase
             try {
                 firebase.database().ref(`games/${PokerApp.state.sessionId}`).update({
@@ -2832,20 +2863,41 @@ function calculatePayouts() {
 // Add removePlayer function
 function removePlayer(playerId) {
     if (!PokerApp.state.players) return;
-    
-    const index = PokerApp.state.players.findIndex(p => p.id === playerId);
-    if (index === -1) return;
-    
-    // Play remove sound before removing the player
-    SoundSystem.playRemoveSound();
-    
-    PokerApp.state.players.splice(index, 1);
-    updatePlayerList();
-    updateEmptyState();
-    saveState();
-    
-    if (PokerApp.state.sessionId) {
-        updatePlayersInFirebase();
+
+    const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+
+    if (playerRow) {
+        SoundSystem.playRemoveSound();
+        PokerApp.UI.triggerAnimation(playerRow, 'animate-player-remove');
+        
+        playerRow.addEventListener('animationend', () => {
+            const index = PokerApp.state.players.findIndex(p => p.id === playerId);
+            if (index !== -1) {
+                PokerApp.state.players.splice(index, 1);
+                console.log('[PLAYER] Removed player from state after animation:', playerId);
+            }
+            saveState();
+            updatePlayerList(); // Re-render list which will exclude the removed row
+                updateActiveSessionPlayers(); // Update Firebase if connected
+
+            if (PokerApp.state.dealerId === playerId) {
+                PokerApp.state.dealerId = null; 
+            }
+        }, { once: true });
+                } else {
+        // Fallback if row not found for animation
+        const index = PokerApp.state.players.findIndex(p => p.id === playerId);
+        if (index !== -1) {
+            PokerApp.state.players.splice(index, 1);
+            SoundSystem.playRemoveSound(); // Still play sound
+            console.log('[PLAYER] Removed player from state (row not found for animation):', playerId);
+            saveState();
+            updatePlayerList();
+            updateActiveSessionPlayers();
+            if (PokerApp.state.dealerId === playerId) {
+                PokerApp.state.dealerId = null;
+            }
+        }
     }
 }
 
@@ -2999,39 +3051,27 @@ window.editPlayerChips = editPlayerChips;
 // Function to update player chips directly from input field
 function updatePlayerChips(playerId, newValue) {
     const player = PokerApp.state.players.find(p => p.id === playerId);
-    if (!player) {
-        PokerApp.UI.showToast('Player not found', 'error');
-        return;
-    }
-    
-    const parsedAmount = parseInt(newValue);
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
-        PokerApp.UI.showToast('Please enter a valid chip amount', 'error');
-        // Revert to previous value
-        updatePlayerList();
-        return;
-    }
-    
-    // Store previous amount for comparison if needed
-    const previousAmount = player.current_chips;
-    
-    // Update player's chips
-    player.current_chips = parsedAmount;
-    
-    // Update UI with recalculated totals
-    updatePlayerList();
-    
-    // Trigger animation if value changed
-    if (parsedAmount !== previousAmount) {
+    if (player && typeof newValue === 'number' && newValue >= 0) {
+        player.current_chips = newValue;
+        saveState();
+        // updatePlayerList(); // Call this LATER or ensure animation targets the correct row
+        updateActiveSessionPlayers(); // Update Firebase
+        
+        // It's crucial that updatePlayerList runs and finishes before we try to animate the row.
+        // So, we call updatePlayerList first, then schedule the animation.
+        updatePlayerList(); 
+
+        // Ensure the row exists after updatePlayerList before animating
         setTimeout(() => {
-            animateNewPlayer(playerId, true); // Call with isUpdate = true
-        }, 50); // Small delay after UI update
-    }
-    
-    // Save state locally and to Firebase if needed
-    saveState();
-    if (PokerApp.state.sessionId) {
-        updatePlayersInFirebase();
+            const rowToAnimate = document.querySelector(`tr[data-player-id="${playerId}"]`);
+            if (rowToAnimate && typeof animateNewPlayer === 'function') {
+                 animateNewPlayer(playerId, true); // true for isUpdate
+            }
+        }, 0); // Small timeout to allow DOM update
+
+        PokerApp.UI.showToast(`${player.name}'s chips updated to ${newValue}`, 'success');
+    } else {
+        PokerApp.UI.showToast('Invalid chip update.', 'error');
     }
 }
 
@@ -3052,7 +3092,7 @@ function animateNewPlayer(playerId, isUpdate = false) { // Added isUpdate parame
     // Play appropriate sound
     if (isUpdate) {
         SoundSystem.playChipSound(); // Play chip sound for updates
-    } else {
+            } else {
         SoundSystem.playPopSound(800); // Play pop sound for new players
     }
     
@@ -3101,13 +3141,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initialize(); 
     // Sound system init and resume listener remain here
     SoundSystem.init();
-    document.body.addEventListener('click', () => { // Resume context listener
-        if (SoundSystem.audioContext && SoundSystem.audioContext.state === 'suspended') {
-            SoundSystem.audioContext.resume().then(() => {
-                 console.log('[SOUND] AudioContext resumed successfully after user interaction.');
-            }).catch(e => console.error('[SOUND] Error resuming AudioContext:', e));
-        }
-    }, { once: true });
+    // The AudioContext is now primarily resumed on-demand by SoundSystem._ensureAudioContextRunning()
 });
 
 // Refactored Initialize function
@@ -3216,6 +3250,7 @@ function initialize() {
                   swatch.style.border = '2px solid #e2e8f0';
              }
              swatch.addEventListener('click', () => {
+                  PokerApp.UI.triggerAnimation(swatch, 'animate-subtle-pop'); // Add animation to the clicked swatch
                   if (typeof setTheme === 'function') {
                        setTheme(themeName);
                        document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
@@ -3240,13 +3275,16 @@ function initialize() {
          const newRandomBtn = randomThemeBtn.cloneNode(true);
          randomThemeBtn.parentNode.replaceChild(newRandomBtn, randomThemeBtn);
          newRandomBtn.addEventListener('click', () => {
+             PokerApp.UI.triggerAnimation(newRandomBtn, 'animate-subtle-pop'); // Add animation to random theme button
              const themeNames = Object.keys(availableThemes);
-             const availableChoices = themeNames.filter(name => name !== PokerApp.state.currentTheme);
-             const randomIndex = Math.floor(Math.random() * availableChoices.length);
-             const randomTheme = availableChoices[randomIndex];
-             setTheme(randomTheme);
+             let randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
+             // Ensure a different theme is chosen if current one is selected randomly
+             while (randomThemeName === PokerApp.state.currentTheme) {
+                 randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
+             }
+             setTheme(randomThemeName);
              document.querySelectorAll('.theme-swatch').forEach(swatch => {
-                  swatch.classList.toggle('active', swatch.dataset.themeName === randomTheme);
+                  swatch.classList.toggle('active', swatch.dataset.themeName === randomThemeName);
              });
              newRandomBtn.style.transform = 'rotate(360deg)';
              setTimeout(() => { newRandomBtn.style.transform = ''; }, 300);
@@ -3347,3 +3385,22 @@ const availableThemes = {
     'Midnight': { name: 'Midnight', mainColor: '#2F4F4F', secondaryColor: '#696969' },
     'RainbowLight': { name: 'Rainbow Light', mainColor: '#f8fafc', secondaryColor: '#e0f2fe' } // Use white/light blue
 };
+
+// New function to handle chip update logic and animation
+function handleChipUpdate(playerId, newChips, rowElement) {
+    const targetPlayer = PokerApp.state.players.find(p => p.id === playerId);
+    if (targetPlayer) {
+        targetPlayer.current_chips = newChips;
+        console.log(`[CHIPS] Player ${targetPlayer.name} (ID: ${targetPlayer.id}) chips updated to: ${newChips}`);
+        saveState();
+        updateActiveSessionPlayers(); // Update Firebase if connected
+
+        if (rowElement) {
+            PokerApp.UI.triggerAnimation(rowElement, 'quickHighlight');
+        } else {
+            console.warn('[CHIPS] Row element not provided for animation for player ID:', playerId);
+        }
+    } else {
+        console.warn('[CHIPS] Target player not found for ID:', playerId);
+    }
+}

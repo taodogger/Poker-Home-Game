@@ -165,7 +165,7 @@
         -1px -1px, 
         -1px -1px;
         
-    /* animation: animated-grid 15s linear infinite; /* Moved to animations.css */
+    /* animation: animated-grid 15s linear infinite;  // This animation is now applied in animations.css */
 }
 
 /* Hide card suit symbols for this theme */
@@ -215,9 +215,9 @@
 
 [data-theme="RainbowLight"] button::before,
 [data-theme="RainbowLight"] .poker-button::before {
-    display: none !important; /* Important to override general button::before */
-    opacity: 0 !important;
-    background: none !important;
+    display: none;
+    opacity: 0;
+    background: none;
 }
 
 [data-theme="RainbowLight"] #reset-btn,
@@ -241,7 +241,7 @@
 [data-theme="RainbowLight"] main > section h2::after {
     background: var(--rainbow-gradient); /* Use rainbow gradient var from app.js */
     background-size: 300% 100%; 
-    /* animation: rainbowBackgroundAnimation 10s linear infinite; /* Moved to animations.css */
+    /* animation: rainbowBackgroundAnimation 10s linear infinite;  // This animation is now applied in animations.css */
 }
 
 [data-theme="RainbowLight"] main > section h2 {
@@ -269,20 +269,20 @@
 [data-theme="RainbowLight"] input[type="text"],
 [data-theme="RainbowLight"] input[type="number"],
 [data-theme="RainbowLight"] input { /* General input for this theme */
-    background: #f1f5f9 !important; /* slate-100 - important to override general input */
-    border: 1px solid #e2e8f0 !important; /* slate-200 - important to override general input */
-    color: var(--text-color) !important; /* Should be dark, from theme vars */
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: var(--text-color);
 }
 
 [data-theme="RainbowLight"] input::placeholder {
-    color: #94a3b8 !important; /* slate-400 - muted placeholder */
+    color: #94a3b8;
 }
 
 [data-theme="RainbowLight"] input[type="text"]:focus,
 [data-theme="RainbowLight"] input[type="number"]:focus,
 [data-theme="RainbowLight"] input:focus {
-    background: #ffffff !important;
-    border-color: var(--main-color) !important; 
+    background: #ffffff;
+    border-color: var(--main-color);
     box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.1);
 }
 
@@ -323,11 +323,11 @@
 }
 
 [data-theme="RainbowLight"] .empty-state p {
-     color: #334155 !important; /* slate-700 */
+     color: #334155;
 }
 
 [data-theme="RainbowLight"] .empty-state span {
-     color: #64748b !important; /* slate-500 */
+     color: #64748b;
 }
 
 [data-theme="RainbowLight"] .remove-player-btn {
@@ -367,7 +367,7 @@
 }
 
 [data-theme="RainbowLight"] .info-message p {
-    color: #0c4a6e !important; /* Even darker for better contrast */
+    color: #0c4a6e;
 }
 
 
@@ -387,17 +387,17 @@
 
 /* Explicitly set player name color in table for RainbowLight */
 [data-theme="RainbowLight"] #player-table tbody td.player-name {
-    color: var(--text-color) !important; /* Should be dark as per theme var */
+    color: var(--text-color);
 }
 
 /* Explicitly set info message paragraph color for RainbowLight */
 [data-theme="RainbowLight"] #add-player .info-message p {
-    color: #475569 !important; /* slate-600, was --text-muted-color which is too light */
+    color: #475569;
 }
 
 /* Explicitly set payout info text color for RainbowLight */
 [data-theme="RainbowLight"] #payout-calculator .payout-info p {
-     color: #475569 !important; /* slate-600 */
+     color: #475569;
 }
 
 /* Ensure form labels are dark for RainbowLight */
@@ -405,7 +405,7 @@
 [data-theme="RainbowLight"] #ratio-form label,
 [data-theme="RainbowLight"] #player-form label,
 [data-theme="RainbowLight"] .form-group label {
-    color: var(--text-color) !important; /* Should be dark */
+    color: var(--text-color);
 }
 
 /* Theme Swatch overrides for RainbowLight */
@@ -466,5 +466,5 @@
 .pulsar-3,
 .theme-constellation,
 [data-theme] .theme-constellation {
-    display: none !important; /* Ensure they are gone */
+    display: none !important; /* Ensure they are gone - !important kept here */
 } 
