@@ -11,10 +11,8 @@ html::after {
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  body.index-page html::after {
-    animation: noiseAnim 1s steps(10) infinite;
-  }
+body.index-page html::after {
+  animation: noiseAnim 1s steps(10) infinite;
 }
 
 @keyframes noiseAnim {
@@ -31,38 +29,36 @@ html::after {
   100% { transform: translate(2%,-2%); }
 }
 
-/* Header Specific Animations (conditional on prefers-reduced-motion) */
-@media (prefers-reduced-motion: no-preference) {
-  body.index-page .app-header .accent-line {
-    animation: accentLineDrift 8s ease-in-out infinite alternate;
-  }
-  body.index-page .app-header .light-effect {
-    animation: pulseLight 8s ease-in-out infinite;
-  }
-  body.index-page .app-header .card-symbol {
-    animation: floatSymbol 15s ease-in-out infinite;
-  }
-  body.index-page .app-header::after { /* Glint effect */
-      animation: glintEffect 8s ease-in-out infinite;
-  }
-  body.index-page .header-content::before {
-    animation: float 6s ease-in-out infinite;
-  }
-  body.index-page .header-content::after {
-    animation: float 8s ease-in-out infinite reverse;
-  }
-  body.index-page .logo-wrapper::after { /* Logo glow */
-    animation: glowPulse 4s ease-in-out infinite alternate;
-  }
-  body.index-page .logo-wrapper:hover::after {
-      opacity: 0.6;
-      transform: scale(1.1);
-      /* Removed animation here from original, rely on transition + base glowPulse */
-  }
-  /* Particle drift for .particles background */
-  body.index-page .particles::before {
-    animation: particleDrift 60s linear infinite;
-  }
+/* Header Specific Animations */
+body.index-page .app-header .accent-line {
+  animation: accentLineDrift 8s ease-in-out infinite alternate;
+}
+body.index-page .app-header .light-effect {
+  animation: pulseLight 8s ease-in-out infinite;
+}
+body.index-page .app-header .card-symbol {
+  animation: floatSymbol 15s ease-in-out infinite;
+}
+body.index-page .app-header::after { /* Glint effect */
+    animation: glintEffect 8s ease-in-out infinite;
+}
+body.index-page .header-content::before {
+  animation: float 6s ease-in-out infinite;
+}
+body.index-page .header-content::after {
+  animation: float 8s ease-in-out infinite reverse;
+}
+body.index-page .logo-wrapper::after { /* Logo glow */
+  animation: glowPulse 4s ease-in-out infinite alternate;
+}
+body.index-page .logo-wrapper:hover::after {
+    opacity: 0.6;
+    transform: scale(1.1);
+    /* Removed animation here from original, rely on transition + base glowPulse */
+}
+/* Particle drift for .particles background */
+body.index-page .particles::before {
+  animation: particleDrift 60s linear infinite;
 }
 
 /* Keyframes for Header Animations */
@@ -432,13 +428,15 @@ html::after {
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  [data-theme="RainbowLight"] .app-header .modern-backdrop {
-    animation: animated-grid 15s linear infinite;
-  }
-  [data-theme="RainbowLight"] main > section h2::after {
-    animation: rainbowBackgroundAnimation 10s linear infinite;
-  }
+[data-theme="RainbowLight"] .app-header .modern-backdrop {
+  animation: animated-grid 15s linear infinite;
+}
+[data-theme="RainbowLight"] main > section h2::after {
+  animation: rainbowBackgroundAnimation 10s linear infinite;
+}
+/* Added rule to display sparkles for RainbowLight theme */
+[data-theme="RainbowLight"] .header-sparkle {
+  display: block; 
 }
 
 @keyframes rainbowBackgroundAnimation { /* For RainbowLight h2 underlines */

@@ -45,7 +45,8 @@ PokerApp.state = {
     theme: 'Royal',
     sessionId: null,
     gameName: null,
-    lobbyActive: false
+    lobbyActive: false,
+    currentPayoutInfo: null
 };
 
 // Create UI namespace with toast functionality first
@@ -524,8 +525,12 @@ function updatePlayerList() {
 }
 
 function addPlayer(name, chips) {
-    if (!name || !chips) {
-        PokerApp.UI.showToast('Please provide both name and chip amount', 'error');
+    if (!name) {
+        PokerApp.UI.showToast('Player name cannot be empty.', 'error');
+        return false;
+    }
+    if (typeof chips !== 'number' || isNaN(chips) || chips < 0) {
+        PokerApp.UI.showToast('Chip amount must be a non-negative number (0 is allowed).', 'error');
         return false;
     }
 
@@ -715,8 +720,8 @@ function setupEventListeners() {
 
             // --- ADD NEW PLAYER LOGIC ---
             const name = nameInput.value.trim();
-            if (!name || isNaN(chips) || chips <= 0) {
-                PokerApp.UI.showToast('Please enter a valid name and chip amount', 'error');
+            if (!name || isNaN(chips) || chips < 0) { // Changed from chips <= 0
+                PokerApp.UI.showToast('Please enter a valid name and a non-negative chip amount (0 is allowed)', 'error');
                 return;
             }
 
@@ -811,6 +816,68 @@ function setupEventListeners() {
             calculatePayouts();
         });
     }
+
+    // Set up Finalize Payouts Button
+    const finalizePayoutsButton = document.getElementById('finalize-payouts-btn');
+    if (finalizePayoutsButton) {
+        finalizePayoutsButton.addEventListener('click', function() {
+            if (!PokerApp.state.sessionId || !window.database) {
+                PokerApp.UI.showToast('Game session not active or database unavailable.', 'error');
+                return;
+            }
+
+            PokerApp.UI.triggerAnimation(finalizePayoutsButton, 'animate-subtle-pop');
+
+            const payoutInfo = PokerApp.state.currentPayoutInfo; // Use local state
+
+            console.log('[FINALIZE_CLICK] Using PokerApp.state.currentPayoutInfo:', JSON.stringify(payoutInfo));
+
+            if (!payoutInfo || !payoutInfo.transactions) {
+                PokerApp.UI.showToast('Please calculate payouts first before finalizing.', 'warning');
+                console.warn('[FINALIZE_CLICK_FAIL] payoutInfo from local state issue. payoutInfo:', payoutInfo);
+                return;
+            }
+
+            if (payoutInfo.status === 'finalized') {
+                PokerApp.UI.showToast('Payouts have already been finalized and sent.', 'info');
+                // Ensure buttons are correctly reflecting this state, though updatePayoutActionButtons should handle it.
+                updatePayoutActionButtons('finalized', false);
+                return;
+            }
+            
+            if (payoutInfo.status !== 'calculated') {
+                PokerApp.UI.showToast('Payouts are not in a calculated state. Please re-calculate.', 'error');
+                console.error('[FINALIZE_CLICK_FAIL] Payout status from local state is not calculated:', payoutInfo.status);
+                updatePayoutActionButtons(payoutInfo.status, PokerApp.state.rebuysAllowed !== false);
+                return;
+            }
+
+            const updates = {};
+            updates[`games/${PokerApp.state.sessionId}/payoutInfo/status`] = 'finalized';
+            updates[`games/${PokerApp.state.sessionId}/rebuysAllowed`] = false;
+            updates[`games/${PokerApp.state.sessionId}/payoutInfo/finalizedAt`] = firebase.database.ServerValue.TIMESTAMP;
+
+            window.database.ref().update(updates)
+                .then(() => {
+                    PokerApp.UI.showToast('Payouts finalized and sent to players!', 'success');
+                    finalizePayoutsButton.disabled = true; // Disable after successful send
+                    finalizePayoutsButton.textContent = 'Payouts Sent'; // Update text
+                    if (SoundSystem && typeof SoundSystem.playSuccessSound === 'function') {
+                        SoundSystem.playSuccessSound(); 
+                    }
+                    updatePayoutActionButtons('finalized', false); // Update buttons state
+                })
+                .catch(error => {
+                    console.error('[FIREBASE] Error finalizing payouts:', error);
+                    PokerApp.UI.showToast('Error finalizing payouts.', 'error');
+                    finalizePayoutsButton.disabled = false; // Re-enable on error
+                    finalizePayoutsButton.textContent = 'Show Payouts to Players';
+                    // Determine current payout status for button update
+                    const currentStatus = payoutInfo && payoutInfo.status ? payoutInfo.status : 'calculated'; 
+                    updatePayoutActionButtons(currentStatus, PokerApp.state.rebuysAllowed !== false);
+                });
+        });
+    }
     
     // Set up Reset Button
     const resetBtn = document.getElementById('reset-btn');
@@ -832,6 +899,44 @@ function setupEventListeners() {
         
         // Also add direct onclick attribute as backup
         newResetBtn.setAttribute('onclick', 'resetGame(); return false;');
+    }
+
+    // Set up Reopen Game Button
+    const reopenGameButton = document.getElementById('reopen-game-btn');
+    if (reopenGameButton) {
+        reopenGameButton.addEventListener('click', function() {
+            if (!PokerApp.state.sessionId || !window.database) {
+                PokerApp.UI.showToast('Game session not active or database unavailable.', 'error');
+                return;
+            }
+
+            // Confirmation dialog
+            if (!confirm("Are you sure you want to re-open the game? This will clear current payout calculations and allow further changes. Players viewing payouts will be returned to the buy-in screen.")) {
+                return;
+            }
+
+            PokerApp.UI.triggerAnimation(reopenGameButton, 'animate-subtle-pop');
+            SoundSystem.playUIClickSound(); // Or a more specific sound
+
+            const updates = {};
+            updates[`games/${PokerApp.state.sessionId}/payoutInfo`] = null; // Clear payout info
+            updates[`games/${PokerApp.state.sessionId}/rebuysAllowed`] = true;
+            updates[`games/${PokerApp.state.sessionId}/state/lastReopenedAt`] = firebase.database.ServerValue.TIMESTAMP;
+
+            window.database.ref().update(updates)
+                .then(() => {
+                    PokerApp.UI.showToast('Game has been re-opened for activity!', 'success');
+                    // PokerApp.state.rebuysAllowed will be updated by the listener
+                    // PokerApp.state.payoutInfo will be updated by the listener
+                    // The listener for games/{gameId}/state will call updatePayoutActionButtons
+                    // However, we can call it directly to ensure immediate UI feedback
+                    updatePayoutActionButtons(null, true); 
+                })
+                .catch(error => {
+                    console.error('[FIREBASE] Error re-opening game:', error);
+                    PokerApp.UI.showToast('Error re-opening game.', 'error');
+                });
+        });
     }
 }
 
@@ -1851,6 +1956,16 @@ function setupGameStateListener(gameId) {
                 PokerApp.UI.showToast('Error connecting to game', 'error');
             });
         
+        // Add a specific listener for payoutInfo to directly update buttons
+        database.ref(`games/${gameId}/payoutInfo`).on('value', snapshot => {
+            const payoutInfoData = snapshot.val();
+            PokerApp.state.currentPayoutInfo = payoutInfoData; // Store payoutInfo in app state
+            const status = payoutInfoData ? payoutInfoData.status : null;
+            // Assuming PokerApp.state.rebuysAllowed is kept up-to-date by the general state listener
+            const rebuysAllowed = PokerApp.state.rebuysAllowed !== false; 
+            updatePayoutActionButtons(status, rebuysAllowed);
+        });
+        
         return true;
     } catch (error) {
         console.error('[FIREBASE] Error setting up listener:', error);
@@ -2472,7 +2587,7 @@ function calculatePayouts() {
                 from: loser.name,
                 to: winner.name,
                 chips: paymentChips,
-                cash: paymentCash
+                cash: parseFloat(paymentCash) // Store cash as number
             });
             
             const remainder = lossAmount - winner.chipDifference;
@@ -2493,7 +2608,7 @@ function calculatePayouts() {
                 from: loser.name,
                 to: winner.name,
                 chips: paymentChips,
-                cash: paymentCash
+                cash: parseFloat(paymentCash) // Store cash as number
             });
             
             winner.chipDifference -= lossAmount;
@@ -2502,7 +2617,7 @@ function calculatePayouts() {
 
     // Update cash values based on transactions
     transactions.forEach(transaction => {
-        const amount = parseFloat(transaction.cash);
+        const amount = transaction.cash; // Already a number
         const fromPlayer = playerDiffs.find(p => p.name === transaction.from);
         const toPlayer = playerDiffs.find(p => p.name === transaction.to);
         
@@ -2626,6 +2741,27 @@ function calculatePayouts() {
         console.error('[PAYOUT] Payout results element not found');
         return;
     }
+
+    // --- Save payout info to Firebase ---
+    if (PokerApp.state.sessionId && window.database) {
+        const payoutInfo = {
+            transactions: transactions,
+            calculatedAt: firebase.database.ServerValue.TIMESTAMP,
+            status: 'calculated' // Initial status
+        };
+        window.database.ref(`games/${PokerApp.state.sessionId}/payoutInfo`).set(payoutInfo)
+            .then(() => {
+                console.log('[FIREBASE] Payout info saved successfully.');
+                PokerApp.UI.showToast('Payouts calculated and saved for finalization.', 'info');
+            })
+            .catch(error => {
+                console.error('[FIREBASE] Error saving payout info:', error);
+                PokerApp.UI.showToast('Error saving payout details.', 'error');
+            });
+    } else {
+        console.warn('[PAYOUT] Cannot save payout info to Firebase: No session ID or database.');
+    }
+    // --- End Firebase save ---
 
     payoutResults.classList.remove('payout-content-showing');
     payoutResults.classList.add('payout-content-hiding');
@@ -2855,8 +2991,8 @@ function calculatePayouts() {
             }
         }, 50); // Adjust delay as needed, should be less than animation time
 
-        console.log('[PAYOUT] Results displayed');
-        PokerApp.UI.showToast('Game results calculated', 'success');
+        console.log('[PAYOUT] Results displayed locally');
+        // PokerApp.UI.showToast('Game results calculated', 'success'); // Moved toast to Firebase save confirmation
     }, 300); // This timeout should match the 'payout-content-hiding' animation duration
 }
 
@@ -3011,6 +3147,54 @@ function updateUIFromState() {
     //         window.handAnimation.setTheme(themes[PokerApp.state.theme]); // Removed
     //     } // Removed
     // } // Removed
+
+    // After updating UI from state, also update payout button states if session exists
+    if (PokerApp.state.sessionId && window.database) {
+        window.database.ref(`games/${PokerApp.state.sessionId}/payoutInfo`).once('value', snapshot => {
+            const payoutInfo = snapshot.val();
+            const rebuysAllowed = PokerApp.state.rebuysAllowed !== false; // Assuming rebuysAllowed is part of PokerApp.state
+            updatePayoutActionButtons(payoutInfo ? payoutInfo.status : null, rebuysAllowed);
+        });
+    } else {
+        updatePayoutActionButtons(null, true); // Default state if no session
+    }
+}
+
+// Function to manage the state of payout-related action buttons
+function updatePayoutActionButtons(payoutStatus, rebuysAllowed) {
+    const calculateButton = document.getElementById('calculate-payouts');
+    const finalizeButton = document.getElementById('finalize-payouts-btn');
+    const reopenButton = document.getElementById('reopen-game-btn');
+
+    if (!calculateButton || !finalizeButton || !reopenButton) {
+        console.warn("[UI_BUTTONS] One or more payout action buttons not found in the DOM.");
+        return;
+    }
+
+    // Default states
+    calculateButton.disabled = false;
+    finalizeButton.disabled = true;
+    finalizeButton.textContent = 'Show Payouts to Players';
+    reopenButton.style.display = 'none';
+    reopenButton.disabled = true;
+
+    if (payoutStatus === 'finalized') {
+        calculateButton.disabled = true;
+        finalizeButton.disabled = true;
+        finalizeButton.textContent = 'Payouts Sent';
+        reopenButton.style.display = ''; // Show the reopen button
+        reopenButton.disabled = false;
+    } else if (payoutStatus === 'calculated') {
+        calculateButton.disabled = (PokerApp.state.players && PokerApp.state.players.length < 2);
+        finalizeButton.disabled = false;
+        // finalizeButton.textContent remains 'Show Payouts to Players'
+        // reopenButton remains hidden
+    } else { // null or any other status (game open/reset)
+        calculateButton.disabled = (PokerApp.state.players && PokerApp.state.players.length < 2);
+        // finalizeButton remains disabled and with default text
+        // reopenButton remains hidden
+    }
+    console.log(`[UI_BUTTONS] Payout buttons updated. Status: ${payoutStatus}, Calculate: ${calculateButton.disabled}, Finalize: ${finalizeButton.disabled}, Reopen: ${reopenButton.style.display !== 'none'}`);
 }
 
 // Function to edit a player's current chips
@@ -3051,11 +3235,13 @@ window.editPlayerChips = editPlayerChips;
 // Function to update player chips directly from input field
 function updatePlayerChips(playerId, newValue) {
     const player = PokerApp.state.players.find(p => p.id === playerId);
-    if (player && typeof newValue === 'number' && newValue >= 0) {
-        player.current_chips = newValue;
+    const parsedNewValue = parseInt(newValue, 10); // Parse the input string to an integer
+
+    if (player && !isNaN(parsedNewValue) && parsedNewValue >= 0) { // Check if parsing was successful and value is valid
+        player.current_chips = parsedNewValue; // Use the parsed number
         saveState();
         // updatePlayerList(); // Call this LATER or ensure animation targets the correct row
-        updateActiveSessionPlayers(); // Update Firebase
+        updatePlayersInFirebase(); // Corrected function call
         
         // It's crucial that updatePlayerList runs and finishes before we try to animate the row.
         // So, we call updatePlayerList first, then schedule the animation.
@@ -3069,9 +3255,14 @@ function updatePlayerChips(playerId, newValue) {
             }
         }, 0); // Small timeout to allow DOM update
 
-        PokerApp.UI.showToast(`${player.name}'s chips updated to ${newValue}`, 'success');
+        PokerApp.UI.showToast(`${player.name}'s chips updated to ${parsedNewValue}`, 'success');
     } else {
-        PokerApp.UI.showToast('Invalid chip update.', 'error');
+        PokerApp.UI.showToast('Invalid chip update. Please enter a valid number.', 'error');
+        // If the value was invalid, we should refresh the list to revert the input field
+        // to the last known good state, preventing the invalid string from staying in the input.
+        if (player) { // Only if player context is valid
+            updatePlayerList(); 
+        }
     }
 }
 

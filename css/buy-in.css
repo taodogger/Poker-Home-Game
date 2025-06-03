@@ -459,4 +459,51 @@ input[type="number"]:focus {
     border-color: rgba(255,255,255,0.35);
     color: var(--text-primary, #EAEAEA);
     box-shadow: none;
+}
+
+/* Payout Display Area Styles */
+.payout-container h2 {
+    text-align: center;
+    color: var(--main-color, #4CAF50); /* Use theme's main color */
+    margin-bottom: var(--spacing-lg, 24px);
+    font-size: 1.8rem; /* Match rebuy form title */
+}
+
+#player-specific-payouts {
+    margin-bottom: var(--spacing-lg, 24px);
+}
+
+#player-specific-payouts .payout-instruction {
+    background-color: rgba(0,0,0,0.2);
+    padding: var(--spacing-md, 16px);
+    border-radius: var(--border-radius-sm, 12px);
+    margin-bottom: var(--spacing-sm, 8px);
+    border-left: 4px solid;
+    font-size: 1rem;
+}
+
+#player-specific-payouts .payout-owes {
+    border-left-color: var(--error-color, #ff4757); /* Reddish for owes */
+    color: var(--text-primary, #EAEAEA);
+}
+
+#player-specific-payouts .payout-owed {
+    border-left-color: var(--success-color, #2ed573); /* Greenish for owed */
+    color: var(--text-primary, #EAEAEA);
+}
+
+#player-specific-payouts .payout-even {
+    border-left-color: var(--text-secondary, #B0B0B0);
+    color: var(--text-secondary, #B0B0B0);
+    text-align: center;
+}
+
+#player-specific-payouts .payout-instruction strong {
+    font-weight: 600;
+}
+
+.payout-container .close-instruction {
+    text-align: center;
+    color: var(--text-secondary, #B0B0B0);
+    margin-top: var(--spacing-md, 16px);
 } 
