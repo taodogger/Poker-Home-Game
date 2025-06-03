@@ -446,3 +446,66 @@ html::after {
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
+
+/* Player card and section animations from index.html */
+.player-card {
+    animation: slideInFromRight 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+@keyframes slideInFromRight {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+section {
+    animation: fadeInUp 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
+    opacity: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+section:nth-child(1) { animation-delay: 0.1s; }
+section:nth-child(2) { animation-delay: 0.2s; }
+section:nth-child(3) { animation-delay: 0.3s; }
+section:nth-child(4) { animation-delay: 0.4s; }
+section:nth-child(5) { animation-delay: 0.5s; }
+section:nth-child(6) { animation-delay: 0.6s; }
+
+/* Payout Results Fade-In Animation */
+.payout-results-container.payout-results-calculating {
+    opacity: 0;
+    transform: scale(0.98);
+    transition: none; /* No transition when initially hiding */
+}
+
+.payout-results-container.payout-results-visible {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+/* If there's a specific inner wrapper for content that gets replaced */
+#payout-results.payout-content-hiding {
+    opacity: 0;
+    transform: translateY(10px); /* Optional: slight movement */
+    transition: opacity 0.3s ease-in, transform 0.3s ease-in;
+}
+
+#payout-results.payout-content-showing {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.4s ease-out 0.1s, transform 0.4s ease-out 0.1s; /* Delay to start after hide */
+}

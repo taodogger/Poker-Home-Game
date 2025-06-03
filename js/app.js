@@ -12,6 +12,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }).catch(e => console.error('[SOUND] Error resuming AudioContext:', e));
         }
     }, { once: true });
+
+    // Call new UI setup functions after main initialization
+    if (PokerApp.UI) {
+        if (typeof PokerApp.UI.setupJoinUrlCopy === 'function') PokerApp.UI.setupJoinUrlCopy();
+        if (typeof PokerApp.UI.setupGlowEffect === 'function') PokerApp.UI.setupGlowEffect();
+        if (typeof PokerApp.UI.applyInitialStyleFixes === 'function') PokerApp.UI.applyInitialStyleFixes();
+        if (typeof PokerApp.UI.initializeDebugTools === 'function') PokerApp.UI.initializeDebugTools();
+    }
 });
 
 console.log('Kapoker - Initializing...');
@@ -176,7 +184,160 @@ PokerApp.UI = {
             PokerApp.state.lobbyActive = false;
             */
         }
-    }
+    },
+    
+    // Function to set up Join URL copy functionality
+    setupJoinUrlCopy() {
+        const joinUrlContainer = document.querySelector('.join-url');
+        if (joinUrlContainer) {
+            joinUrlContainer.addEventListener('click', function() {
+                const urlText = document.getElementById('join-url-text');
+                const clickToCopy = document.querySelector('.click-to-copy');
+                
+                if (urlText && urlText.textContent) {
+                    navigator.clipboard.writeText(urlText.textContent)
+                        .then(() => {
+                            if (window.PokerApp && window.PokerApp.UI) {
+                                window.PokerApp.UI.showToast('Join URL copied to clipboard', 'success');
+                            }
+                            if (clickToCopy) {
+                                const originalText = clickToCopy.textContent;
+                                clickToCopy.textContent = 'Copied!';
+                                setTimeout(() => {
+                                    clickToCopy.textContent = originalText;
+                                }, 2000);
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy:', err);
+                            if (window.PokerApp && window.PokerApp.UI) {
+                                window.PokerApp.UI.showToast('Failed to copy URL', 'error');
+                            }
+                        });
+                }
+            });
+        }
+    },
+    
+    // Function to set up the Glow Effect on sections
+    setupGlowEffect() {
+        const sections = document.querySelectorAll('main > section');
+        sections.forEach(section => {
+            section.addEventListener('pointermove', (e) => {
+                const rect = section.getBoundingClientRect();
+                const x = e.clientX - rect.left; // x position within the element.
+                const y = e.clientY - rect.top;  // y position within the element.
+                section.style.setProperty('--glow-x', `${x}px`);
+                section.style.setProperty('--glow-y', `${y}px`);
+            });
+        });
+    },
+    
+    // Function to apply initial style fixes from index.html
+    applyInitialStyleFixes() {
+        // Fix game controls height
+        const gameControls = document.getElementById('game-controls');
+        if (gameControls) {
+            // The original query was looking for .poker-card inside gameControls.
+            // However, the current HTML structure for game-controls is:
+            // <section id="game-controls">
+            //     <div class="card-header">...</div>
+            //     <div class="card-content">...</div>
+            // </section>
+            // There isn't a direct .poker-card child. Assuming the styles should apply to the section itself or its .card-content.
+            // For now, let's assume the intent was to style the section like a card or ensure its content area is flexible.
+            // If .poker-card was a class dynamically added or expected, this might need adjustment.
+            // Given the original script targeted `.poker-card` within this section, we should check if that class is added by JS elsewhere.
+            // For now, I will apply some general fixes to gameControls itself if it needs to behave like a card.
+            // If there is a .card or .card-content, those are better targets.
+            // The original code was: 
+            // const card = gameControls.querySelector('.poker-card');
+            // if (card) { card.style.padding = '12px'; card.style.minHeight = '0'; card.style.height = 'auto'; }
+            // Since there is no .poker-card directly in the static HTML provided for game-controls section, 
+            // I will try to apply to .card-content if it exists, or the section itself as a fallback for now.
+            const cardContent = gameControls.querySelector('.card-content');
+            if (cardContent) {
+                cardContent.style.padding = '12px'; // Example, adjust as needed
+                // gameControls.style.minHeight = '0'; // Applied to section if needed
+                // gameControls.style.height = 'auto'; // Applied to section if needed
+            } else {
+                // Fallback: Apply to the section itself if .card-content isn't found or isn't the target
+                // gameControls.style.padding = '12px'; 
+                // gameControls.style.minHeight = '0';
+                // gameControls.style.height = 'auto';
+            }
+        }
+                
+        // Reduce space between header and content
+        const main = document.querySelector('main');
+        if (main) {
+            main.style.paddingTop = '8px';
+        }
+
+        // Ensure reset button is active (original selector was complex)
+        const resetButton = document.getElementById('reset-btn') || document.querySelector('button[onclick*="resetGame"]');
+        if (resetButton) {
+            resetButton.style.opacity = '1';
+            resetButton.style.pointerEvents = 'auto';
+            resetButton.style.cursor = 'pointer';
+        }
+    },
+    
+    // Function to initialize Debug Tools
+    initializeDebugTools() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('debug') === 'true' || urlParams.get('debug') === '1') {
+            const devTools = document.getElementById('dev-tools');
+            if (devTools) {
+                devTools.style.display = 'block';
+                
+                const testConnectionBtn = document.getElementById('test-connection-btn');
+                if (testConnectionBtn) {
+                    testConnectionBtn.addEventListener('click', function() {
+                        const debugLog = document.getElementById('debug-log');
+                        const now = () => new Date().toISOString().split('T')[1].split('.')[0];
+                        if (typeof window.testConnection === 'function') {
+                            window.testConnection();
+                            if (debugLog) {
+                                debugLog.innerHTML += `<div>[${now()}] Testing connection...</div>`;
+                                debugLog.scrollTop = debugLog.scrollHeight;
+                            }
+                        } else {
+                            console.error('Test connection function not available');
+                            if (debugLog) {
+                                debugLog.innerHTML += `<div style="color: #f44336;">[${now()}] Error: Test connection function not available</div>`;
+                                debugLog.scrollTop = debugLog.scrollHeight;
+                            }
+                        }
+                    });
+                }
+                
+                const forceMobileLayoutBtn = document.getElementById('force-mobile-layout-btn');
+                if (forceMobileLayoutBtn) {
+                    forceMobileLayoutBtn.addEventListener('click', function() {
+                        const debugLog = document.getElementById('debug-log');
+                        const now = () => new Date().toISOString().split('T')[1].split('.')[0];
+                        if (typeof window.forceUpdateMobileLayout === 'function') {
+                            window.forceUpdateMobileLayout();
+                            if (debugLog) {
+                                debugLog.innerHTML += `<div>[${now()}] Forcing mobile layout update...</div>`;
+                                debugLog.scrollTop = debugLog.scrollHeight;
+                            }
+                            if (window.PokerApp && window.PokerApp.UI) {
+                                window.PokerApp.UI.showToast('Mobile layout applied', 'success');
+                            }
+                        } else {
+                            console.error('Force mobile layout function not available');
+                            if (debugLog) {
+                                debugLog.innerHTML += `<div style="color: #f44336;">[${now()}] Error: Force mobile layout function not available</div>`;
+                                debugLog.scrollTop = debugLog.scrollHeight;
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    },
 };
 
 // Core functions that need to be defined early
@@ -253,7 +414,6 @@ function updatePlayerList() {
         row.appendChild(initialChipsCell);
         
         const currentChipsCell = document.createElement('td');
-        currentChipsCell.className = 'current-chips';
         
         const input = document.createElement('input');
         input.type = 'number';
@@ -877,7 +1037,11 @@ function initializeApp(firebaseAvailable = true) {
             showToast: showToast,
             createToastContainer: createToastContainer,
             updateGameStatus: updateGameStatus,
-            updateLobbyUI: updateLobbyUI
+            updateLobbyUI: updateLobbyUI,
+            setupJoinUrlCopy: PokerApp.UI.setupJoinUrlCopy,
+            setupGlowEffect: PokerApp.UI.setupGlowEffect,
+            applyInitialStyleFixes: PokerApp.UI.applyInitialStyleFixes,
+            initializeDebugTools: PokerApp.UI.initializeDebugTools
         };
     }
     
@@ -2229,11 +2393,9 @@ function calculatePayouts() {
         return;
     }
 
-    // Play payout sound when calculating
     SoundSystem.playPayoutSound();
 
     const players = PokerApp.state.players;
-    let totalDifference = 0;
     let html = ''; // Initialize html variable here
 
     console.log('[PAYOUT] Processing players:', players.length);
@@ -2427,20 +2589,25 @@ function calculatePayouts() {
             </div>
         </div>`;
     
-    // Display results
+    // Display results with animation
     const payoutResults = document.getElementById('payout-results');
     if (!payoutResults) {
         console.error('[PAYOUT] Payout results element not found');
         return;
     }
 
-    payoutResults.innerHTML = html;
-    
-    // Add styles for the new display
-    if (!document.querySelector('#payout-styles')) {
-        const style = document.createElement('style');
-        style.id = 'payout-styles';
-        style.textContent = `
+    payoutResults.classList.remove('payout-content-showing');
+    payoutResults.classList.add('payout-content-hiding');
+
+    // Allow fade-out to happen, then update content and fade-in
+    setTimeout(() => {
+        payoutResults.innerHTML = html;
+        
+        // Add styles for the new display
+        if (!document.querySelector('#payout-styles')) {
+            const style = document.createElement('style');
+            style.id = 'payout-styles';
+            style.textContent = `
             .payout-wrapper {
                 background: rgba(0, 0, 0, 0.2);
                 border-radius: 12px;
@@ -2640,14 +2807,26 @@ function calculatePayouts() {
                 }
             }
         `;
-        document.head.appendChild(style);
-    }
-    
-    // Scroll to the results
-    payoutResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    
-    console.log('[PAYOUT] Results displayed');
-    PokerApp.UI.showToast('Game results calculated', 'success');
+            document.head.appendChild(style);
+        }
+
+        payoutResults.classList.remove('payout-content-hiding');
+        // Force reflow before adding the class to trigger animation
+        void payoutResults.offsetWidth;
+        payoutResults.classList.add('payout-content-showing');
+
+        // Scroll to the results
+        // Delay scroll slightly to allow fade-in to start
+        setTimeout(() => {
+            // Ensure the element is still in the DOM and visible before scrolling
+            if (document.body.contains(payoutResults) && payoutResults.offsetParent !== null) {
+                 payoutResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 50); // Adjust delay as needed, should be less than animation time
+
+        console.log('[PAYOUT] Results displayed');
+        PokerApp.UI.showToast('Game results calculated', 'success');
+    }, 300); // This timeout should match the 'payout-content-hiding' animation duration
 }
 
 // Add removePlayer function

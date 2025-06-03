@@ -23,51 +23,15 @@
         :root {
             /* Keep page-specific overrides if any, otherwise remove */
             /* --vibrant-gradient, --glow-effect, etc. now defined globally */
-             --font-primary: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; /* Can keep if font is specific */
         }
         
         /* REMOVED redundant rules previously handled here */
         
-        /* Keep Player cards specific animations if desired, or move */
-        .player-card {
-            /* ... existing styles ... */
-            animation: slideInFromRight 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-            opacity: 0;
-            transform: translateX(30px);
-        }
+        /* Player card specific animations MOVED to animations.css */
 
         /* REMOVED placeholder hover rule */
 
-        @keyframes slideInFromRight {
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        /* Keep Section animations if desired, or move */
-        section {
-            animation: fadeInUp 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
-            opacity: 0;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        section:nth-child(1) { animation-delay: 0.1s; }
-        section:nth-child(2) { animation-delay: 0.2s; }
-        section:nth-child(3) { animation-delay: 0.3s; }
-        section:nth-child(4) { animation-delay: 0.4s; }
-        section:nth-child(5) { animation-delay: 0.5s; }
-        section:nth-child(6) { animation-delay: 0.6s; }
+        /* Section animations MOVED to animations.css */
         
         /* REMOVED placeholder game status badge rule */
         /* ... other specific styles ... */
@@ -337,176 +301,7 @@
     <script src="js/soundSystem.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Initialize -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof initialize === 'function') {
-                initialize();
-            }
-            
-            // Set up theme selector
-            /* REMOVE: const themeSelector = document.getElementById('theme-selector');
-            if (themeSelector) {
-                themeSelector.addEventListener('change', function(e) {
-                    if (typeof setTheme === 'function') {
-                        setTheme(e.target.value);
-                    }
-                });
-            } */
-
-            // Set up join URL copy functionality
-            const joinUrlContainer = document.querySelector('.join-url');
-            if (joinUrlContainer) {
-                joinUrlContainer.addEventListener('click', function() {
-                    const urlText = document.getElementById('join-url-text');
-                    const clickToCopy = document.querySelector('.click-to-copy');
-                    
-                    if (urlText && urlText.textContent) {
-                        navigator.clipboard.writeText(urlText.textContent)
-                            .then(() => {
-                                if (window.PokerApp && window.PokerApp.UI) {
-                                    window.PokerApp.UI.showToast('Join URL copied to clipboard', 'success');
-                                }
-                                if (clickToCopy) {
-                                    const originalText = clickToCopy.textContent;
-                                    clickToCopy.textContent = 'Copied!';
-                                    setTimeout(() => {
-                                        clickToCopy.textContent = originalText;
-                                    }, 2000);
-                                }
-                            })
-                            .catch(err => {
-                                console.error('Failed to copy:', err);
-                                if (window.PokerApp && window.PokerApp.UI) {
-                                    window.PokerApp.UI.showToast('Failed to copy URL', 'error');
-                                }
-                            });
-                    }
-                });
-            }
-            
-            // Check for debug mode via URL parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('debug') === 'true' || urlParams.get('debug') === '1') {
-                // Show developer tools section
-                const devTools = document.getElementById('dev-tools');
-                if (devTools) {
-                    devTools.style.display = 'block';
-                    
-                    // Set up test connection button
-                    const testConnectionBtn = document.getElementById('test-connection-btn');
-                    if (testConnectionBtn) {
-                        testConnectionBtn.addEventListener('click', function() {
-                            if (typeof window.testConnection === 'function') {
-                                window.testConnection();
-                                
-                                // Log to debug area
-                                const debugLog = document.getElementById('debug-log');
-                                if (debugLog) {
-                                    const now = new Date().toISOString().split('T')[1].split('.')[0];
-                                    debugLog.innerHTML += `<div>[${now}] Testing connection...</div>`;
-                                    debugLog.scrollTop = debugLog.scrollHeight;
-                                }
-                            } else {
-                                console.error('Test connection function not available');
-                                
-                                // Log to debug area
-                                const debugLog = document.getElementById('debug-log');
-                                if (debugLog) {
-                                    const now = new Date().toISOString().split('T')[1].split('.')[0];
-                                    debugLog.innerHTML += `<div style="color: #f44336;">[${now}] Error: Test connection function not available</div>`;
-                                    debugLog.scrollTop = debugLog.scrollHeight;
-                                }
-                            }
-                        });
-                    }
-                    
-                    // Set up force mobile layout button
-                    const forceMobileLayoutBtn = document.getElementById('force-mobile-layout-btn');
-                    if (forceMobileLayoutBtn) {
-                        forceMobileLayoutBtn.addEventListener('click', function() {
-                            if (typeof window.forceUpdateMobileLayout === 'function') {
-                                window.forceUpdateMobileLayout();
-                                
-                                // Log to debug area
-                                const debugLog = document.getElementById('debug-log');
-                                if (debugLog) {
-                                    const now = new Date().toISOString().split('T')[1].split('.')[0];
-                                    debugLog.innerHTML += `<div>[${now}] Forcing mobile layout update...</div>`;
-                                    debugLog.scrollTop = debugLog.scrollHeight;
-                                }
-                                
-                                // Show toast
-                                if (window.PokerApp && window.PokerApp.UI) {
-                                    window.PokerApp.UI.showToast('Mobile layout applied', 'success');
-                                }
-                            } else {
-                                console.error('Force mobile layout function not available');
-                                
-                                // Log to debug area
-                                const debugLog = document.getElementById('debug-log');
-                                if (debugLog) {
-                                    const now = new Date().toISOString().split('T')[1].split('.')[0];
-                                    debugLog.innerHTML += `<div style="color: #f44336;">[${now}] Error: Force mobile layout function not available</div>`;
-                                    debugLog.scrollTop = debugLog.scrollHeight;
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-            
-            // --- Glow Effect Logic ---
-            const sections = document.querySelectorAll('main > section');
-            sections.forEach(section => {
-                section.addEventListener('pointermove', (e) => {
-                    const rect = section.getBoundingClientRect();
-                    const x = e.clientX - rect.left; // x position within the element.
-                    const y = e.clientY - rect.top;  // y position within the element.
-                    section.style.setProperty('--glow-x', `${x}px`);
-                    section.style.setProperty('--glow-y', `${y}px`);
-                });
-            });
-            // --- End Glow Effect Logic ---
-        });
-    </script>
-
-    <!-- Add this script at the end of the body tag -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Fix theme selector position
-            /* REMOVE: const themeSelector = document.getElementById('theme-selector');
-            if (themeSelector) {
-                themeSelector.style.marginLeft = 'auto';
-                themeSelector.style.position = 'absolute';
-                themeSelector.style.right = '24px';
-            } */
-            
-            // Fix game controls height
-            const gameControls = document.getElementById('game-controls');
-            if (gameControls) {
-                const card = gameControls.querySelector('.poker-card');
-                if (card) {
-                    card.style.padding = '12px';
-                    card.style.minHeight = '0';
-                    card.style.height = 'auto';
-                }
-            }
-            
-            // Reduce space between header and content
-            const main = document.querySelector('main');
-            if (main) {
-                main.style.paddingTop = '8px';
-            }
-
-            // Ensure reset button is active
-            const resetButton = document.querySelector('#reset-game, button[onclick*="resetGame"]');
-            if (resetButton) {
-                resetButton.style.opacity = '1';
-                resetButton.style.pointerEvents = 'auto';
-                resetButton.style.cursor = 'pointer';
-            }
-        });
-    </script>
+    <!-- Initialize - MOVED TO app.js -->
+    <!-- Script with DOMContentLoaded and style fixes - MOVED TO app.js -->
 </body>
 </html>

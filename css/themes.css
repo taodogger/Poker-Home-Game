@@ -77,15 +77,70 @@
 }
 
 [data-theme="Purple"] {
-    --main-color: #9370DB;
-    --main-color-rgb: 147, 112, 219;
-    --secondary-color: #8A2BE2;
-    --secondary-color-rgb: 138, 43, 226;
-    --theme-primary-rgb: 147, 112, 219;
-    --theme-secondary-rgb: 138, 43, 226;
-    --theme-accent-rgb: 255, 59, 124;
-    --theme-hue-shift: 60;
+    --main-color: #A086D3; /* Softer Amethyst */
+    --main-color-rgb: 160, 134, 211;
+    --secondary-color: #B5A0E0; /* Muted Lilac */
+    --secondary-color-rgb: 181, 160, 224;
+    --theme-primary-rgb: 160, 134, 211;
+    --theme-secondary-rgb: 181, 160, 224;
+    --theme-accent-rgb: 255, 105, 180; /* Softer pink accent */
+    --theme-hue-shift: 60; /* Keep for consistency if used elsewhere */
     --theme-hue-drift: 25;
+    --vibrant-gradient: linear-gradient(145deg, hsl(260, 45%, 75%), hsl(265, 35%, 60%));
+}
+
+/* --- NEW SOFTER THEMES --- */
+
+[data-theme="OceanMist"] {
+    --main-color: #6BB7B7; /* Desaturated Teal */
+    --main-color-rgb: 107, 183, 183;
+    --secondary-color: #8FCACA; /* Lighter Desaturated Teal */
+    --secondary-color-rgb: 143, 202, 202;
+    --theme-primary-rgb: 107, 183, 183;
+    --theme-secondary-rgb: 143, 202, 202;
+    --theme-accent-rgb: 255, 160, 122; /* Soft coral accent */
+    --theme-hue-shift: 0; 
+    --theme-hue-drift: 5;
+    --vibrant-gradient: linear-gradient(145deg, hsl(180, 35%, 70%), hsl(175, 30%, 55%));
+}
+
+[data-theme="SunsetCalm"] {
+    --main-color: #E8A07D; /* Muted Coral/Orange */
+    --main-color-rgb: 232, 160, 125;
+    --secondary-color: #F2C0A8; /* Soft Peach */
+    --secondary-color-rgb: 242, 192, 168;
+    --theme-primary-rgb: 232, 160, 125;
+    --theme-secondary-rgb: 242, 192, 168;
+    --theme-accent-rgb: 135, 206, 235; /* Sky blue accent */
+    --theme-hue-shift: -20;
+    --theme-hue-drift: 8;
+    --vibrant-gradient: linear-gradient(145deg, hsl(20, 60%, 75%), hsl(30, 50%, 65%));
+}
+
+[data-theme="ForestWhisper"] {
+    --main-color: #7FA97F; /* Muted Olive Green */
+    --main-color-rgb: 127, 169, 127;
+    --secondary-color: #A0C0A0; /* Lighter Muted Green */
+    --secondary-color-rgb: 160, 192, 160;
+    --theme-primary-rgb: 127, 169, 127;
+    --theme-secondary-rgb: 160, 192, 160;
+    --theme-accent-rgb: 210, 180, 140; /* Tan accent */
+    --theme-hue-shift: 120;
+    --theme-hue-drift: 3;
+    --vibrant-gradient: linear-gradient(145deg, hsl(120, 25%, 70%), hsl(115, 18%, 55%));
+}
+
+[data-theme="LavenderHaze"] {
+    --main-color: #B3A5D1; /* Soft Lavender */
+    --main-color-rgb: 179, 165, 209;
+    --secondary-color: #D0C7E8; /* Very Pale Lilac */
+    --secondary-color-rgb: 208, 199, 232;
+    --theme-primary-rgb: 179, 165, 209;
+    --theme-secondary-rgb: 208, 199, 232;
+    --theme-accent-rgb: 119, 136, 153; /* Slate gray accent */
+    --theme-hue-shift: 260;
+    --theme-hue-drift: 7;
+    --vibrant-gradient: linear-gradient(145deg, hsl(260, 35%, 80%), hsl(255, 25%, 68%));
 }
 
 /* --- Rainbow Light Theme Specific Component Overrides --- */

@@ -97,6 +97,8 @@ if (gameName) {
 
 // Get chip ratio from Firebase
 let chipRatio = 1.0;
+let currentPlayerName = null; // Variable to store the player's name after first buy-in
+
 if (gameId && buyInDatabase) {
     console.log('[FIREBASE] Setting up chip ratio listener for game:', gameId);
     try {
@@ -148,11 +150,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
     setTheme(randomThemeName);
 
+    // --- Check localStorage for existing player session for this game ---
+    let restoredPlayer = false;
+    try {
+        const storedGameId = localStorage.getItem('kapoker-lastGameId');
+        const storedPlayerName = localStorage.getItem('kapoker-lastPlayerName');
+        // Attempt to get gameName from URL params, default to 'the game' if not found for the message
+        const gameNameForMessage = urlParams.get('game-name') || 'the game'; 
+
+        if (storedGameId === gameId && storedPlayerName) {
+            currentPlayerName = storedPlayerName;
+            restoredPlayer = true;
+            console.log(`[LOCALSTORAGE] Restored session for player: ${currentPlayerName} in game: ${gameId}`);
+
+            const initialForm = document.getElementById('buy-in-form');
+            const gameInfoArea = document.getElementById('game-info');
+            const mainTitle = document.querySelector('h1');
+            if(initialForm) initialForm.style.display = 'none';
+            if(gameInfoArea) gameInfoArea.style.display = 'none';
+            if(mainTitle) mainTitle.style.display = 'none';
+
+            const welcomeMessageArea = document.getElementById('welcome-message-area');
+            if (welcomeMessageArea) {
+                welcomeMessageArea.innerHTML = `
+                    <div class="welcome-content">
+                        <h2>Welcome back, ${currentPlayerName}!</h2>
+                        <p>You're in ${gameNameForMessage}.</p>
+                        <p>The host is managing the game.</p>
+                        <button id="rebuy-action-button" class="poker-button secondary-button">Rebuy Chips</button>
+                        <p class="close-instruction" style="margin-top: 15px;">You can close this window if no action is needed.</p>
+                    </div>
+                `;
+                welcomeMessageArea.style.display = '';
+                const rebuyActionButton = document.getElementById('rebuy-action-button');
+                if (rebuyActionButton) {
+                    rebuyActionButton.addEventListener('click', () => {
+                        showRebuyForm(); 
+                    });
+                }
+            }
+        } else {
+            console.log('[LOCALSTORAGE] No matching session found in localStorage.');
+        }
+    } catch (lsError) {
+        console.warn('[LOCALSTORAGE] Error reading state:', lsError);
+    }
+    // --- End localStorage check ---
+
     // Initial chip preview update - this will run once with default/empty values
-    // The input listener, once working, will handle subsequent updates from typing.
-    updateChipPreview(); 
+    // Only run if not restoring player, otherwise form is hidden
+    if (!restoredPlayer) {
+        updateChipPreview(); 
+    }
 
     // Load game data and set up form
+    // If player restored, we still need game data for ratio etc., but form setup part might differ slightly
     if (gameId && buyInDatabase) {
         console.log('[FIREBASE] Fetching game data for ID:', gameId);
         try {
@@ -243,6 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error('[ERROR] Buy-in form not found');
                         return;
                     }
+                    // If player was restored, the form is already hidden and might not need this default setup immediately.
+                    // However, the form clone and listener attachment is crucial if they *cancel* a rebuy and somehow get back to it,
+                    // or if we decide to show it again later. For now, let this run, but be mindful.
+                    // The main concern is that `newForm.addEventListener('submit', ...)` needs to be attached for rebuys to work.
 
                     // Remove any existing listeners and create fresh form
                     const newForm = form.cloneNode(true);
@@ -299,8 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             return;
                         }
-                        
-                        showToast('Processing buy-in...', 'info'); // Changed from updateStatus
                         
                         try {
                             // Re-check game status before transaction
@@ -437,33 +491,64 @@ document.addEventListener('DOMContentLoaded', () => {
                             }); // End Transaction
 
                             // --- Transaction Successful: Show Confirmation ---
-                            const container = document.querySelector('.container');
+                            const welcomeMessageArea = document.getElementById('welcome-message-area');
+                            const buyInForm = document.getElementById('buy-in-form');
+                            const gameInfoArea = document.getElementById('game-info');
+
                             // Use the 'chips' variable calculated *before* the transaction for the success message
-                            const purchasedChips = chips; 
-                            if (container) {
+                            const purchasedChips = chips;
+                            if (welcomeMessageArea && buyInForm) {
+                                currentPlayerName = playerUpdateDetails.name; // Store player name globally for the session
+
+                                // --- Store player state in localStorage ---
+                                try {
+                                    localStorage.setItem('kapoker-lastGameId', gameId);
+                                    localStorage.setItem('kapoker-lastPlayerName', currentPlayerName);
+                                    console.log(`[LOCALSTORAGE] Saved state: gameId=${gameId}, playerName=${currentPlayerName}`);
+                                } catch (lsError) {
+                                    console.warn('[LOCALSTORAGE] Error saving state:', lsError);
+                                    // Non-critical, so we don't block UX for this
+                                }
+                                // --- End localStorage save ---
+
                                 let successMessageHTML = '';
                                 if (buyInAction === 'joined') {
                                     successMessageHTML = `
-                                        <h2>🎉 Welcome to ${gameDataCheck.name}!</h2>
+                                        <h2>Welcome to ${gameDataCheck.name}!</h2>
                                         <p>You've successfully joined with ${purchasedChips} chips.</p>
                                     `;
                                 } else { // 'rebought'
                                     successMessageHTML = `
-                                        <h2>�� Chips Added!</h2>
+                                        <h2>Chips Added!</h2>
                                         <p>Added ${purchasedChips} chips to ${playerUpdateDetails.name}.</p>
                                         <p>Your new total is ${playerUpdateDetails.totalChips} chips.</p>
                                     `;
                                 }
 
-                                container.innerHTML = `
-                                    <div class="welcome-container">
-                                        <div class="welcome-content">
-                                            ${successMessageHTML}
-                                            <p>The host will manage the game from here.</p>
-                                            <p class="close-instruction">You can close this window now.</p>
-                                        </div>
+                                welcomeMessageArea.innerHTML = `
+                                    <div class="welcome-content">
+                                        ${successMessageHTML}
+                                        <p>The host will manage the game from here.</p>
+                                        <p class="close-instruction">You can close this window now.</p>
+                                        <button id="rebuy-action-button" class="poker-button secondary-button">Rebuy for ${currentPlayerName}</button>
                                     </div>
                                 `;
+                                
+                                // Hide the main form and game info, show the welcome message
+                                if(buyInForm) buyInForm.style.display = 'none';
+                                if(gameInfoArea) gameInfoArea.style.display = 'none'; // Also hide game title during welcome/rebuy
+                                document.querySelector('h1').style.display = 'none'; // Hide "Player Buy-in" title
+
+                                welcomeMessageArea.style.display = '';
+
+                                // Attach listener for the new rebuy button
+                                const rebuyActionButton = document.getElementById('rebuy-action-button');
+                                if (rebuyActionButton) {
+                                    rebuyActionButton.addEventListener('click', () => {
+                                        // Logic to show rebuy form will be added in the next step
+                                        showRebuyForm();
+                                    });
+                                }
                             }
 
                             // --- Clean up Firebase listeners ---
@@ -500,7 +585,111 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Could not connect to the game. Please try again.', 'error');
         }
     } else {
-        showToast('Invalid game link or missing database connection.', 'error');
+        // Handle case where gameId or buyInDatabase is not available
+        const gameInfo = document.getElementById('game-info');
+        if (gameInfo) {
+            gameInfo.innerHTML = '<h2>Error: Game ID not found. Cannot load buy-in page.</h2>';
+        }
+        const form = document.getElementById('buy-in-form');
+        if (form) {
+            form.style.display = 'none'; // Hide form if no gameId
+        }
+        showToast('Game ID missing. Cannot initialize buy-in.', 'error');
+    }
+
+    // --- Rebuy Functionality --- 
+    const welcomeMessageArea = document.getElementById('welcome-message-area');
+    const rebuyFormArea = document.getElementById('rebuy-form-area');
+    const rebuyPlayerNameDisplay = document.getElementById('rebuy-player-name-display');
+    const rebuyAmountInput = document.getElementById('rebuy-amount');
+    const rebuyChipAmountDisplay = document.getElementById('rebuy-chip-amount');
+    const chipRatioRebuyDisplay = document.getElementById('chip-ratio-rebuy');
+    const confirmRebuyButton = document.getElementById('confirm-rebuy-button');
+    const cancelRebuyButton = document.getElementById('cancel-rebuy-button');
+    const mainBuyInForm = document.getElementById('buy-in-form'); // The original form
+    const mainPlayerNameInput = document.getElementById('player-name');
+    const mainBuyInAmountInput = document.getElementById('buy-in-amount');
+
+    function updateRebuyChipPreview() {
+        const amount = parseFloat(rebuyAmountInput.value) || 0;
+        const chips = amount > 0 && chipRatio > 0 ? Math.floor(amount / chipRatio) : 0;
+        if(rebuyChipAmountDisplay) rebuyChipAmountDisplay.textContent = chips;
+        if(chipRatioRebuyDisplay) chipRatioRebuyDisplay.textContent = chipRatio.toFixed(2);
+    }
+
+    window.showRebuyForm = function() { 
+        if (welcomeMessageArea) welcomeMessageArea.style.display = 'none';
+        if (rebuyFormArea) {
+            if(rebuyPlayerNameDisplay) rebuyPlayerNameDisplay.textContent = currentPlayerName || 'Player';
+            if(rebuyAmountInput) rebuyAmountInput.value = ''; 
+            updateRebuyChipPreview(); 
+            rebuyFormArea.style.display = '';
+
+            // Reset the confirm rebuy button state
+            if (confirmRebuyButton) {
+                confirmRebuyButton.disabled = false;
+                confirmRebuyButton.classList.remove('loading');
+            }
+        }
+    };
+
+    if (rebuyAmountInput) {
+        rebuyAmountInput.addEventListener('input', updateRebuyChipPreview);
+    }
+
+    if (confirmRebuyButton && mainBuyInForm && mainPlayerNameInput && mainBuyInAmountInput) {
+        confirmRebuyButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const rebuyAmount = parseFloat(rebuyAmountInput.value);
+
+            if (isNaN(rebuyAmount) || rebuyAmount <= 0) {
+                showToast('Please enter a valid rebuy amount', 'error');
+                return;
+            }
+
+            const currentMainForm = document.getElementById('buy-in-form');
+            if (!currentMainForm) {
+                showToast('Error: Main buy-in form not found.', 'error');
+                return;
+            }
+
+            const playerNameInputInActiveForm = currentMainForm.querySelector('#player-name');
+            const buyInAmountInputInActiveForm = currentMainForm.querySelector('#buy-in-amount');
+
+            if (!playerNameInputInActiveForm) {
+                showToast('Error preparing rebuy. Player name field missing in form.', 'error');
+                return;
+            }
+            if (!buyInAmountInputInActiveForm) {
+                showToast('Error preparing rebuy. Amount field missing in form.', 'error');
+                return;
+            }
+
+            // Populate the active main form with rebuy details
+            playerNameInputInActiveForm.value = currentPlayerName;
+            buyInAmountInputInActiveForm.value = rebuyAmount.toString();
+
+            // Hide rebuy form and show loading on its button
+            if (rebuyFormArea) rebuyFormArea.style.display = 'none';
+            confirmRebuyButton.disabled = true;
+            confirmRebuyButton.classList.add('loading');
+            
+            // No longer show a toast here, the main form's submit handler will show one if needed.
+            // showToast('Processing rebuy...', 'info'); 
+
+            // Programmatically submit the main form
+            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+            currentMainForm.dispatchEvent(submitEvent);
+            
+            // Button state will be reset by the main form's submit handler (on success/error)
+        });
+    }
+
+    if (cancelRebuyButton && welcomeMessageArea && rebuyFormArea) {
+        cancelRebuyButton.addEventListener('click', () => {
+            rebuyFormArea.style.display = 'none';
+            welcomeMessageArea.style.display = ''; // Show the welcome/success message again
+        });
     }
 });
 
