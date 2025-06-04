@@ -239,9 +239,8 @@ PokerApp.UI = {
             //     <div class="card-header">...</div>
             //     <div class="card-content">...</div>
             // </section>
-            // There isn't a direct .poker-card child. Assuming the styles should apply to the section itself or its .card-content.
-            // For now, let's assume the intent was to style the section like a card or ensure its content area is flexible.
-            // If .poker-card was a class dynamically added or expected, this might need adjustment.
+            // There isn't a direct .poker-card child. Assuming the styles should apply to the section itself or ensure its content area is flexible.
+            // If .card or .card-content was a class dynamically added or expected, this might need adjustment.
             // Given the original script targeted `.poker-card` within this section, we should check if that class is added by JS elsewhere.
             // For now, I will apply some general fixes to gameControls itself if it needs to behave like a card.
             // If there is a .card or .card-content, those are better targets.
@@ -691,6 +690,10 @@ function setupEventListeners() {
                     if (typeof saveState === 'function') {
     saveState();
                     }
+                    // Play Kaching sound on successful lobby creation
+                    if (SoundSystem && typeof SoundSystem.playKachingSound === 'function') {
+                        SoundSystem.playKachingSound();
+                    }
                 })
                 .catch(error => {
                     console.error('[FIREBASE] Error saving game:', error);
@@ -787,10 +790,10 @@ function setupEventListeners() {
                 PokerApp.UI.triggerAnimation(submitButton, 'animate-subtle-pop'); // Animate button
             }
             
-            // Play Kaching sound
-            if (SoundSystem && typeof SoundSystem.playKachingSound === 'function') {
-                SoundSystem.playKachingSound();
-            }
+            // Play Kaching sound - REMOVED
+            // if (SoundSystem && typeof SoundSystem.playKachingSound === 'function') {
+            //     SoundSystem.playKachingSound();
+            // }
             
             PokerApp.UI.showToast('Chip ratio updated', 'success');
             
@@ -799,7 +802,17 @@ function setupEventListeners() {
             
             // Update Firebase if connected
             if (PokerApp.state.sessionId) {
-                updateGameStateInFirebase({ chipRatio: PokerApp.state.chipRatio });
+                updateGameStateInFirebase({ chipRatio: PokerApp.state.chipRatio }); // This updates games/<gameId>/state/chipRatio
+
+                // ALSO UPDATE THE TOP-LEVEL RATIO that buy-in.js listens to
+                window.database.ref(`games/${PokerApp.state.sessionId}/ratio`).set(PokerApp.state.chipRatio)
+                    .then(() => {
+                        console.log('[FIREBASE] Top-level game ratio updated successfully for buy-ins.');
+                    })
+                    .catch(error => {
+                        console.error('[FIREBASE] Error updating top-level game ratio for buy-ins:', error);
+                        PokerApp.UI.showToast('Error syncing ratio for new buy-ins. Please try again.', 'error');
+                    });
             }
         });
     }
@@ -1295,12 +1308,15 @@ function setupMobileCompatibility() {
         if (appContent) {
             // Simply add a "mobile-layout" class instead of inline styles
             appContent.classList.add('mobile-layout');
+            appContent.style.display = 'flex';
+            appContent.style.flexDirection = 'column';
+            appContent.style.gap = '15px'; // Use gap for spacing
             
             // Make all sections full width and ensure content is visible
             document.querySelectorAll('section, .poker-card').forEach(section => {
                 section.style.width = '100%';
                 section.style.maxWidth = 'none';
-                section.style.margin = '0 0 15px 0';
+                // section.style.margin = '0 0 15px 0'; // Remove individual margin
                 section.style.boxSizing = 'border-box';
                 section.style.minHeight = 'auto';
                 section.style.height = 'auto';
@@ -1335,13 +1351,14 @@ window.forceUpdateMobileLayout = window.forceUpdateMobileLayout || function() {
         // Apply mobile-friendly styles anyway
         appContent.style.display = 'flex';
         appContent.style.flexDirection = 'column';
+        appContent.style.gap = '15px'; // Use gap for spacing
         appContent.style.width = '100%';
         
         // Make all sections full width
         document.querySelectorAll('section, .poker-card').forEach(section => {
             section.style.width = '100%';
             section.style.maxWidth = 'none';
-            section.style.margin = '0 0 15px 0';
+            // section.style.margin = '0 0 15px 0'; // Remove individual margin
             section.style.boxSizing = 'border-box';
         });
         
@@ -1437,6 +1454,24 @@ const themes = {
         ]),
         'icon': '🌈'
     },
+    // Adding the new BananaBlake theme
+    'Banana Bonanza': { // Renamed from BananaBlake
+        '--main-color': '#4A4A4A', // Dark Grey
+        '--main-color-rgb': '74, 74, 74',
+        '--secondary-color': '#5A5A5A', // Slightly Lighter Grey
+        '--secondary-color-rgb': '90, 90, 90',
+        '--accent-color': '#FCEC52', // Banana Yellow
+        '--background-color': '#1E1E1E', // Very Dark Grey/Almost Black
+        '--surface-color': 'rgba(50, 50, 50, 0.5)', // Darker Grey for surfaces
+        '--text-color': '#E0E0E0', // Light Grey
+        '--text-muted-color': '#A0A0A0', // Muted Grey
+        '--body-background': 'linear-gradient(135deg, #181818, #282828)', // Dark grey gradient
+        '--vibrant-gradient': 'linear-gradient(45deg, #4A4A4A, #FCEC52)', // Grey to Yellow
+        '--card-bg': 'rgba(30, 30, 30, 0.6)', // Very dark card background
+        '--glow-effect': '0 0 20px rgba(252, 236, 82, 0.4)', // Yellow glow
+        '--logo-colors': JSON.stringify(['#FCEC52', '#FFD700', '#FFE875']), // Shades of yellow for logo if needed
+        'icon': '🍌'
+    }
 };
 
 // Function to set the theme
@@ -1578,7 +1613,7 @@ function animateLogoLetters() {
         logoColors = ['#fb7185', '#facc15', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6'];
     }
 
-    if (logoColors.length === 0) return; // Don't run if no colors
+    if (logoColors.length === 0) return null; // Return null if no colors to avoid issues
 
     let intervalId = null;
 
@@ -1606,6 +1641,14 @@ function animateLogoLetters() {
     // Return a function to stop the animation if needed elsewhere
     return () => {
         if (intervalId) clearInterval(intervalId);
+        // Reset letter colors and transitions when animation is stopped
+        if (logoElement) { // Check if logoElement is still valid
+            const spansToReset = logoElement.querySelectorAll('span');
+            spansToReset.forEach(span => {
+                span.style.color = ''; // Clear inline color
+                span.style.transition = ''; // Clear inline transition
+            });
+        }
     };
 }
 
@@ -1676,14 +1719,26 @@ function initializeThemeSpecificFeatures(themeName) {
         window.stopResetBtnAnimation();
         window.stopResetBtnAnimation = null;
     }
+    if (window.stopBananaAnimation) { // Stop banana animation if active
+        window.stopBananaAnimation();
+        window.stopBananaAnimation = null;
+    }
+    if (window.stopRandomBoatAnimation) { // Stop random boat animation if active
+        window.stopRandomBoatAnimation();
+        window.stopRandomBoatAnimation = null;
+    }
 
     if (themeName === 'RainbowLight') {
         // Start new animations and store the stop functions
         window.stopLogoAnimation = animateLogoLetters();
         window.stopHeaderAnimation = animateElementColorCycle('.card-header h2');
         window.stopResetBtnAnimation = animateElementColorCycle('#reset-btn');
+    } else if (themeName === 'Banana Bonanza') { // Renamed from BananaBlake
+        window.stopLogoAnimation = animateLogoLetters(); // Add this line
+        window.stopBananaAnimation = startBananaAnimation(); // Start full-screen banana animation
+        window.stopRandomBoatAnimation = startRandomBananaBoatAnimation(); // Start header banana boat animation
     } else {
-        // Ensure styles are reset if not RainbowLight
+        // Ensure styles are reset if not RainbowLight (or BananaBlake for its specific elements)
         const logoElement = document.getElementById('text-logo');
          if (logoElement) {
             const letterSpans = logoElement.querySelectorAll('span');
@@ -1995,14 +2050,14 @@ function cleanupFirebaseListeners() {
 // Function to generate a unique game ID
 function generateGameId() {
     // Create a random string of characters for the game ID
-    const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; // Uppercase alphanumeric
     let result = '';
     
     // Add timestamp component for uniqueness
-    const timestamp = Date.now().toString(36);
+    const timestamp = Date.now().toString(36); // This will be lowercase alphanumeric
     
-    // Add 10 random characters
-    for (let i = 0; i < 10; i++) {
+    // Add 4 random uppercase characters
+    for (let i = 0; i < 4; i++) {
         result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
     
@@ -2048,8 +2103,8 @@ function generateQrCode(url) {
         console.log('[QR] Creating new QR code in element:', qrWrapper);
         new QRCode(qrWrapper, {
             text: url,
-            width: 220, // Increase size
-            height: 220, // Increase size
+            width: 200, // Adjusted size
+            height: 200, // Adjusted size
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
@@ -2093,8 +2148,8 @@ function ensureQrCodeVisible() {
                 if (typeof QRCode !== 'undefined') {
                     new QRCode(qrWrapper, {
                         text: joinUrl,
-                        width: 220, // Increase size
-                        height: 220, // Increase size
+                        width: 200, // Adjusted size
+                        height: 200, // Adjusted size
                         colorDark: "#000000",
                         colorLight: "#ffffff",
                         correctLevel: QRCode.CorrectLevel.H
@@ -3574,7 +3629,8 @@ const availableThemes = {
     'Classic': { name: 'Classic', mainColor: '#2E8B57', secondaryColor: '#3CB371' },
     'Purple': { name: 'Purple', mainColor: '#9370DB', secondaryColor: '#8A2BE2' },
     'Midnight': { name: 'Midnight', mainColor: '#2F4F4F', secondaryColor: '#696969' },
-    'RainbowLight': { name: 'Rainbow Light', mainColor: '#f8fafc', secondaryColor: '#e0f2fe' } // Use white/light blue
+    'RainbowLight': { name: 'Rainbow Light', mainColor: '#f8fafc', secondaryColor: '#e0f2fe' }, // Use white/light blue
+    'Banana Bonanza': { name: 'Banana Bonanza', mainColor: '#4A4A4A', secondaryColor: '#FCEC52' } // Renamed from BananaBlake
 };
 
 // New function to handle chip update logic and animation
@@ -3594,4 +3650,93 @@ function handleChipUpdate(playerId, newChips, rowElement) {
     } else {
         console.warn('[CHIPS] Target player not found for ID:', playerId);
     }
+}
+
+// New functions for BananaBlake theme animation
+function startBananaAnimation() {
+    let container = document.getElementById('banana-float-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'banana-float-container';
+        document.body.appendChild(container);
+    }
+    container.innerHTML = ''; // Clear previous bananas
+
+    const numBananas = 20; // Number of bananas
+    for (let i = 0; i < numBananas; i++) {
+        const banana = document.createElement('div');
+        banana.className = 'floating-banana';
+        
+        // Random horizontal start position
+        banana.style.left = `${Math.random() * 100}vw`;
+        
+        // Random animation duration and delay for variety
+        banana.style.animationDuration = `${Math.random() * 8 + 7}s`; // Duration between 7s and 15s
+        banana.style.animationDelay = `${Math.random() * 10}s`;       // Delay up to 10s
+        
+        // Set CSS custom property for scale, to be used by the animation
+        const randomScale = Math.random() * 0.5 + 0.6; // e.g. 0.6 to 1.1
+        banana.style.setProperty('--banana-scale', randomScale);
+        
+        // Apply varied initial transformations for different orientations
+        const randomZRotation = Math.random() * 90 - 45; // -45 to 45 degrees
+        const randomSkewX = Math.random() * 30 - 15;   // -15 to 15 degrees skew
+        const horizontalFlip = Math.random() < 0.5 ? 'scaleX(-1)' : 'scaleX(1)'; // 50% chance to flip
+
+        banana.style.transform = `${horizontalFlip} rotate(${randomZRotation}deg) skewX(${randomSkewX}deg)`;
+
+        container.appendChild(banana);
+    }
+
+    return () => { // Return a stop function
+        if (container && container.parentNode) {
+            container.parentNode.removeChild(container);
+        }
+        window.stopBananaAnimation = null;
+    };
+}
+
+// New function to animate the banana boat in the header randomly
+function startRandomBananaBoatAnimation() {
+    const boat = document.querySelector('.banana-boat-header-graphic');
+    if (!boat) {
+        console.warn('[BananaBoat] Header boat element not found for animation.');
+        return () => {}; // Return a no-op stop function
+    }
+
+    let animationInterval = null;
+
+    const animateBoat = () => {
+        // Range for random rotation (e.g., -5 to 5 degrees)
+        const randomRotation = Math.random() * 10 - 5;
+        // Range for random horizontal translation (e.g., -40% to 40% of boat width, relative to its centered position)
+        // The boat is 130px wide. Let's allow it to move, say, up to 30% of viewport width L/R from center.
+        // Max left: boat's right edge is at 10% vw. Max right: boat's left edge is at 90% vw.
+        // Initial boat center is 50% vw. Boat width is ~130px.
+        // Let's try translating it relative to its current centered position by a random pixel value.
+        // A wider range, e.g., -150px to 150px from its CSS-defined centered position.
+        const randomTranslateX = Math.random() * 300 - 150; // Boat moves -150px to +150px horizontally
+
+        // The boat is already centered by transform: translateX(-50%) and left: 50% in CSS.
+        // So, this new randomTranslateX will be *in addition* to that centering.
+        boat.style.transform = `translateX(calc(-50% + ${randomTranslateX}px)) rotate(${randomRotation}deg)`;
+    };
+
+    // Initial animation call
+    animateBoat(); 
+
+    // Set interval to change animation periodically
+    // The CSS transition is 2s, so interval should be longer to allow animation to finish
+    animationInterval = setInterval(animateBoat, 3000 + Math.random() * 2000); // Change every 3-5 seconds
+
+    // Return a function to stop the animation
+    return () => {
+        if (animationInterval) {
+            clearInterval(animationInterval);
+            animationInterval = null;
+            console.log('[BananaBoat] Stopped header boat animation.');
+        }
+        // Optionally reset boat transform to a default or initial state
+        // boat.style.transform = 'translateX(0px) rotate(0deg)'; 
+    };
 }

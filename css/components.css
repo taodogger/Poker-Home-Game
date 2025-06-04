@@ -689,12 +689,11 @@ button:hover::before {
 }
 
 .theme-swatch {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
+    border: 2px solid #A0A0A0; /* CHANGED to solid, opaque neutral light grey */
     cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.2s ease-in-out;
     position: relative;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     background: linear-gradient(135deg, var(--swatch-main-color, #ccc) 70%, var(--swatch-secondary-color, #aaa) 70%);

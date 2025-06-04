@@ -68,11 +68,11 @@ const SoundSystem = {
         oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.5, now + 0.06); // Faster, shorter sweep
         
         gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.20, now + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0.6, now + 0.01); // Increased from 0.35
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15); // Shorter decay
         
         noiseGain.gain.setValueAtTime(0, now);
-        noiseGain.gain.linearRampToValueAtTime(0.08, now + 0.005);
+        noiseGain.gain.linearRampToValueAtTime(0.25, now + 0.005); // Increased from 0.15
         noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
 
         oscillator.start(now);
@@ -97,7 +97,7 @@ const SoundSystem = {
         oscillator.frequency.exponentialRampToValueAtTime(900, now + 0.05); // Slight downward for more 'tick'
         
         gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.1, now + 0.003); // Sharper attack
+        gainNode.gain.linearRampToValueAtTime(0.4, now + 0.003); // Sharper attack, Increased from 0.2
         gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
         
         oscillator.start(now);
@@ -116,7 +116,7 @@ const SoundSystem = {
         kaAttackOsc.frequency.setValueAtTime(3200, now);
         kaAttackOsc.frequency.exponentialRampToValueAtTime(2000, now + 0.02);
         kaAttackGain.gain.setValueAtTime(0, now);
-        kaAttackGain.gain.linearRampToValueAtTime(0.15, now + 0.002); // Very short sharp attack
+        kaAttackGain.gain.linearRampToValueAtTime(0.15, now + 0.002); // Reduced from 0.5
         kaAttackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
         kaAttackOsc.connect(kaAttackGain);
         kaAttackGain.connect(this.audioContext.destination);
@@ -133,7 +133,7 @@ const SoundSystem = {
         kaBodyFilter.frequency.setValueAtTime(1500, now + 0.01);
         kaBodyFilter.Q.value = 5;
         kaBodyGain.gain.setValueAtTime(0, now + 0.01);
-        kaBodyGain.gain.linearRampToValueAtTime(0.1, now + 0.01 + 0.005);
+        kaBodyGain.gain.linearRampToValueAtTime(0.1, now + 0.01 + 0.005); // Reduced from 0.35
         kaBodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.01 + 0.06);
         kaBodyOsc.connect(kaBodyFilter);
         kaBodyFilter.connect(kaBodyGain);
@@ -147,10 +147,10 @@ const SoundSystem = {
         const ringGain = this.audioContext.createGain();
         ringGain.connect(this.audioContext.destination);
         ringGain.gain.setValueAtTime(0, chingTime);
-        ringGain.gain.linearRampToValueAtTime(0.25, chingTime + 0.02); // Bell attack
+        ringGain.gain.linearRampToValueAtTime(0.2, chingTime + 0.02); // Bell attack, Reduced from 0.7
         // Amplitude wobble for realism
-        ringGain.gain.linearRampToValueAtTime(0.2, chingTime + 0.15);
-        ringGain.gain.linearRampToValueAtTime(0.25, chingTime + 0.3);
+        ringGain.gain.linearRampToValueAtTime(0.15, chingTime + 0.15); // Reduced from 0.6
+        ringGain.gain.linearRampToValueAtTime(0.2, chingTime + 0.3); // Reduced from 0.7
         ringGain.gain.exponentialRampToValueAtTime(0.001, chingTime + 0.7); // Longer decay
 
         const freqs = [baseRingFreq, baseRingFreq * 1.503, baseRingFreq * 2.201]; // Harmonic partials for bell
@@ -194,7 +194,7 @@ const SoundSystem = {
         punchFilter.connect(punchGain);
         punchGain.connect(this.audioContext.destination);
         punchGain.gain.setValueAtTime(0, now);
-        punchGain.gain.linearRampToValueAtTime(0.25, now + 0.005);
+        punchGain.gain.linearRampToValueAtTime(0.7, now + 0.005); // Increased from 0.4
         punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
         punchNoise.start(now);
         punchNoise.stop(now + 0.08);
@@ -215,7 +215,7 @@ const SoundSystem = {
             osc.frequency.exponentialRampToValueAtTime(startFreq * 0.3, startTime + totalDuration * 0.7);
 
             gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.12, startTime + 0.01); // Softer than punch
+            gain.gain.linearRampToValueAtTime(0.35, startTime + 0.01); // Softer than punch, Increased from 0.2
             gain.gain.exponentialRampToValueAtTime(0.001, startTime + totalDuration * 0.8);
 
             osc.start(startTime);
@@ -248,7 +248,7 @@ const SoundSystem = {
         filterNode.Q.value = 3.5; 
 
         gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.12, now + 0.005); // Slightly softer attack
+        gainNode.gain.linearRampToValueAtTime(0.45, now + 0.005); // Slightly softer attack, Increased from 0.25
         gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
         mainOscillator.start(now);
@@ -264,7 +264,7 @@ const SoundSystem = {
         const chingGain = this.audioContext.createGain();
         chingGain.connect(this.audioContext.destination);
         chingGain.gain.setValueAtTime(0, now);
-        chingGain.gain.linearRampToValueAtTime(0.22, now + 0.015);
+        chingGain.gain.linearRampToValueAtTime(0.7, now + 0.015); // Increased from 0.4
         chingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5); // Fairly long ring
 
         const chingFreqs = [baseChingFreq, baseChingFreq * 1.6, baseChingFreq * 2.5]; // Different harmonic series
@@ -306,7 +306,7 @@ const SoundSystem = {
             mechOsc.frequency.exponentialRampToValueAtTime(200 - i * 30, registerStartTime + (i * registerSoundInterval) + 0.04);
             
             mechGain.gain.setValueAtTime(0, registerStartTime + (i * registerSoundInterval));
-            mechGain.gain.linearRampToValueAtTime(0.12, registerStartTime + (i * registerSoundInterval) + 0.003);
+            mechGain.gain.linearRampToValueAtTime(0.35, registerStartTime + (i * registerSoundInterval) + 0.003); // Increased from 0.2
             mechGain.gain.exponentialRampToValueAtTime(0.001, registerStartTime + (i * registerSoundInterval) + 0.04);
             
             mechOsc.start(registerStartTime + (i * registerSoundInterval));
@@ -339,7 +339,7 @@ const SoundSystem = {
         puffFilter.connect(puffGain);
         puffGain.connect(this.audioContext.destination);
         puffGain.gain.setValueAtTime(0, now);
-        puffGain.gain.linearRampToValueAtTime(0.1, now + 0.002);
+        puffGain.gain.linearRampToValueAtTime(0.35, now + 0.002); // Increased from 0.2
         puffGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
         puff.start(now);
         puff.stop(now + 0.03);
@@ -357,7 +357,7 @@ const SoundSystem = {
         oscillator.frequency.exponentialRampToValueAtTime(70, now + 0.01 + duration);
         
         gainNode.gain.setValueAtTime(0, now + 0.01);
-        gainNode.gain.linearRampToValueAtTime(0.15, now + 0.01 + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01 + 0.01); // Increased from 0.3
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.01 + duration);
         
         oscillator.start(now + 0.01);
