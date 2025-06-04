@@ -2523,6 +2523,7 @@ function resetGame() {
         PokerApp.state.sessionId = null;
         PokerApp.state.gameName = null;
         PokerApp.state.lobbyActive = false;
+        // PokerApp.state.chipRatio = 1.0; // Explicitly reset chip ratio - THIS LINE IS REMOVED
         
         // Reset player counter
         window._lastPlayerCount = 0;
@@ -2541,6 +2542,29 @@ function resetGame() {
                 qrWrapper.innerHTML = '';
             }
         }
+
+        // Reset Payout Section
+        PokerApp.state.currentPayoutInfo = null;
+        const payoutResultsDiv = document.getElementById('payout-results');
+        if (payoutResultsDiv) {
+            payoutResultsDiv.innerHTML = `
+                <div class="no-payouts-message">
+                    <p>No payouts calculated yet</p>
+                    <span>Update final chip counts and click calculate</span>
+                </div>
+            `;
+        }
+        const finalizePayoutsBtn = document.getElementById('finalize-payouts-btn');
+        const reopenGameBtn = document.getElementById('reopen-game-btn');
+        const calculatePayoutsBtn = document.getElementById('calculate-payouts');
+
+        if (calculatePayoutsBtn) calculatePayoutsBtn.disabled = false;
+        if (finalizePayoutsBtn) {
+            finalizePayoutsBtn.style.display = 'inline-flex'; // Or 'block' depending on original display
+            finalizePayoutsBtn.disabled = false;
+        }
+        if (reopenGameBtn) reopenGameBtn.style.display = 'none';
+
 
         // Clean up animation elements
         resetCurtain.classList.remove('active');
@@ -3193,6 +3217,13 @@ function updateUIFromState() {
         
     // Update lobby UI
     PokerApp.UI.updateLobbyUI(PokerApp.state.lobbyActive);
+
+    // Update chip ratio display
+    const ratioDisplay = document.getElementById('ratio-display');
+    if (ratioDisplay) {
+        const currentChipRatio = PokerApp.state.chipRatio || 1.0;
+        ratioDisplay.textContent = `Each chip is worth $${currentChipRatio.toFixed(2)}`;
+    }
     
     // Initialize HandAnimation only if container exists
     // const container = document.getElementById('dealer-wheel'); // Removed
@@ -3234,7 +3265,6 @@ function updatePayoutActionButtons(payoutStatus, rebuysAllowed) {
     reopenButton.disabled = true;
 
     if (payoutStatus === 'finalized') {
-        calculateButton.disabled = true;
         finalizeButton.disabled = true;
         finalizeButton.textContent = 'Payouts Sent';
         reopenButton.style.display = ''; // Show the reopen button

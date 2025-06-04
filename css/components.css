@@ -735,3 +735,14 @@ button:hover::before {
     border-color: rgba(255, 255, 255, 0.6);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
+
+/* Style poker buttons within the payout calculator for consistent width */
+#payout-calculator .card-content .poker-button {
+    width: 100%;
+    margin-bottom: 12px; /* Add consistent spacing */
+}
+
+/* Remove bottom margin from the last button in this group */
+#payout-calculator .card-content .poker-button:last-of-type {
+    margin-bottom: 0;
+}
