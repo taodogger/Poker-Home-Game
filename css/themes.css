@@ -34,6 +34,42 @@
     --theme-hue-drift: 0;
 }
 
+@keyframes animated-grid { /* For RainbowLight header backdrop */
+  0% {
+    background-position: 
+        0 0, 
+        -1px -1px, 
+        -1px -1p-1;
+    opacity: 0.5; 
+  }
+  50% {
+     opacity: 1; 
+  }
+  100% {
+    background-position: 
+        var(--grid-size) var(--grid-size), 
+        -1px -1px, 
+        -1px -1px;
+    opacity: 0.5; 
+  }
+}
+
+[data-theme="RainbowLight"] .app-header .modern-backdrop {
+  animation: animated-grid 15s linear infinite;
+}
+[data-theme="RainbowLight"] main > section h2::after {
+  animation: rainbowBackgroundAnimation 10s linear infinite;
+}
+[data-theme="RainbowLight"] .header-sparkle {
+  display: block; 
+}
+
+@keyframes rainbowBackgroundAnimation { /* For RainbowLight h2 underlines */
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 /* General theme transition */
 [data-theme] {
     transition: all 0.3s ease; /* Smooth theme transitions */
@@ -471,7 +507,7 @@
 } 
 
 /* BananaBlake Theme */
-body[data-theme='Banana Bonanza'] {
+[data-theme='Banana Bonanza'] {
     --main-color: #4A4A4A; 
     --main-color-rgb: 74, 74, 74;
     --secondary-color: #5A5A5A;
@@ -492,133 +528,133 @@ body[data-theme='Banana Bonanza'] {
     --header-background: #181818; /* Solid dark header for contrast */
 }
 
-body[data-theme='Banana Bonanza'] .app-header {
+[data-theme='Banana Bonanza'] .app-header {
     background: var(--header-background);
 }
 
-body[data-theme='Banana Bonanza'] #text-logo span {
+[data-theme='Banana Bonanza'] #text-logo span {
     color: #FCEC52; /* Banana yellow for logo text */
 }
 
 /* Theme Swatch for BananaBlake */
-body[data-theme='Banana Bonanza'] .theme-swatch {
+[data-theme='Banana Bonanza'] .theme-swatch {
     border: 2px solid #A0A0A0; /* Neutral solid light grey border */
 }
 
-body[data-theme='Banana Bonanza'] .theme-swatch:hover {
+[data-theme='Banana Bonanza'] .theme-swatch:hover {
     border: 2px solid #FFFFFF; /* White solid border on hover */
     box-shadow: 0 0 0 2px #888888, 0 0 5px rgba(0,0,0,0.1); 
 }
 
-body[data-theme='Banana Bonanza'] .theme-swatch.active {
+[data-theme='Banana Bonanza'] .theme-swatch.active {
     border: 2px solid #FFFFFF; /* White solid border when active */
     box-shadow: 0 0 0 2px #888888, 0 0 8px rgba(0,0,0,0.15); 
 }
 
 /* Banana Bonanza Button Styles */
-body[data-theme='Banana Bonanza'] .poker-button {
+[data-theme='Banana Bonanza'] .poker-button {
     background: var(--accent-color);
     color: #3D2B00; /* Dark brown text for contrast on yellow */
     border: 1px solid rgba(61, 43, 0, 0.3); /* Dark brown border */
     box-shadow: 0 4px 10px rgba(var(--accent-color-rgb, 252, 236, 82), 0.3);
 }
 
-body[data-theme='Banana Bonanza'] .poker-button:hover {
+[data-theme='Banana Bonanza'] .poker-button:hover {
     background: #FFEB3B; /* Slightly lighter yellow */
     color: #3D2B00;
     box-shadow: 0 6px 15px rgba(var(--accent-color-rgb, 252, 236, 82), 0.4);
     transform: translateY(-2px);
 }
 
-body[data-theme='Banana Bonanza'] .poker-button:active {
+[data-theme='Banana Bonanza'] .poker-button:active {
     background: #FBC02D; /* Darker yellow */
     color: #3D2B00;
     transform: translateY(0px);
 }
 
-body[data-theme='Banana Bonanza'] .poker-button .button-icon {
+[data-theme='Banana Bonanza'] .poker-button .button-icon {
     color: #3D2B00; /* Ensure icon matches text color */
 }
 
 /* Specific button overrides for Banana Bonanza if needed */
-body[data-theme='Banana Bonanza'] .reset-button,
-body[data-theme='Banana Bonanza'] #reset-btn {
+[data-theme='Banana Bonanza'] .reset-button,
+[data-theme='Banana Bonanza'] #reset-btn {
     background: var(--accent-color);
     color: #3D2B00; /* Dark brown text */
     border: 1px solid rgba(61, 43, 0, 0.3);
 }
 
-body[data-theme='Banana Bonanza'] .reset-button:hover,
-body[data-theme='Banana Bonanza'] #reset-btn:hover {
+[data-theme='Banana Bonanza'] .reset-button:hover,
+[data-theme='Banana Bonanza'] #reset-btn:hover {
     background: #FFEB3B; /* Lighter yellow */
     color: #3D2B00;
 }
 
-body[data-theme='Banana Bonanza'] .action-button.start-button,
-body[data-theme='Banana Bonanza'] .action-button.simulate-button,
-body[data-theme='Banana Bonanza'] .action-button.end-button {
+[data-theme='Banana Bonanza'] .action-button.start-button,
+[data-theme='Banana Bonanza'] .action-button.simulate-button,
+[data-theme='Banana Bonanza'] .action-button.end-button {
     background: var(--accent-color);
     color: #3D2B00; /* Dark brown text */
     border: 1px solid rgba(61, 43, 0, 0.3);
      box-shadow: 0 5px 15px rgba(var(--accent-color-rgb, 252, 236, 82),0.4);
 }
 
-body[data-theme='Banana Bonanza'] .action-button.start-button:hover,
-body[data-theme='Banana Bonanza'] .action-button.simulate-button:hover,
-body[data-theme='Banana Bonanza'] .action-button.end-button:hover {
+[data-theme='Banana Bonanza'] .action-button.start-button:hover,
+[data-theme='Banana Bonanza'] .action-button.simulate-button:hover,
+[data-theme='Banana Bonanza'] .action-button.end-button:hover {
     background: #FFEB3B; /* Lighter yellow */
     color: #3D2B00;
 }
 
 /* Banana Bonanza - Additional UI Accents */
-body[data-theme='Banana Bonanza'] input[type="text"]:focus,
-body[data-theme='Banana Bonanza'] input[type="number"]:focus,
-body[data-theme='Banana Bonanza'] input:focus {
+[data-theme='Banana Bonanza'] input[type="text"]:focus,
+[data-theme='Banana Bonanza'] input[type="number"]:focus,
+[data-theme='Banana Bonanza'] input:focus {
     border-color: var(--accent-color);
     box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 252, 236, 82), 0.3);
 }
 
-body[data-theme='Banana Bonanza'] .form-group:focus-within label {
+[data-theme='Banana Bonanza'] .form-group:focus-within label {
     color: var(--accent-color);
 }
 
-body[data-theme='Banana Bonanza'] tbody tr:hover {
+[data-theme='Banana Bonanza'] tbody tr:hover {
     background: rgba(var(--accent-color-rgb, 252, 236, 82), 0.1);
 }
 
-body[data-theme='Banana Bonanza'] tr.totals-row {
+[data-theme='Banana Bonanza'] tr.totals-row {
     background: rgba(var(--accent-color-rgb, 252, 236, 82), 0.2);
     color: var(--accent-color); /* Yellowish text for emphasis */
     border-top: 1px solid rgba(var(--accent-color-rgb, 252, 236, 82), 0.4);
 }
-body[data-theme='Banana Bonanza'] tr.totals-row td {
+[data-theme='Banana Bonanza'] tr.totals-row td {
     color: var(--accent-color); /* Ensure text in cells is also yellow */
 }
 
 
-body[data-theme='Banana Bonanza'] main > section h2::after {
+[data-theme='Banana Bonanza'] main > section h2::after {
     background: var(--accent-color);
 }
 
-body[data-theme='Banana Bonanza'] .game-status-badge.active {
+[data-theme='Banana Bonanza'] .game-status-badge.active {
     background: rgba(var(--accent-color-rgb, 252, 236, 82), 0.2);
     border-color: rgba(var(--accent-color-rgb, 252, 236, 82), 0.4);
 }
-body[data-theme='Banana Bonanza'] .game-status-badge.active span {
+[data-theme='Banana Bonanza'] .game-status-badge.active span {
     background-color: var(--accent-color);
 }
 
-body[data-theme='Banana Bonanza'] .info-message {
+[data-theme='Banana Bonanza'] .info-message {
     background: rgba(var(--accent-color-rgb, 252, 236, 82), 0.1);
     border-left: 3px solid var(--accent-color);
 }
 
-body[data-theme='Banana Bonanza'] .info-message .info-icon {
+[data-theme='Banana Bonanza'] .info-message .info-icon {
     color: var(--accent-color);
 }
 
 /* Distinct Header for BananaBlake */
-body[data-theme='Banana Bonanza'] .app-header {
+[data-theme='Banana Bonanza'] .app-header {
     background: #1A1A1A !important; /* Very dark grey, almost black, added !important for specificity */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     position: relative; /* For pseudo-elements like banana boat */
@@ -627,19 +663,19 @@ body[data-theme='Banana Bonanza'] .app-header {
 }
 
 /* Hide default decorative header elements for BananaBlake theme */
-body[data-theme='Banana Bonanza'] .app-header .header-pattern,
-body[data-theme='Banana Bonanza'] .app-header .modern-backdrop,
-body[data-theme='Banana Bonanza'] .app-header .gradient-layer,
-body[data-theme='Banana Bonanza'] .app-header .pattern-overlay,
-body[data-theme='Banana Bonanza'] .app-header .accent-line,
-body[data-theme='Banana Bonanza'] .app-header .light-effect,
-body[data-theme='Banana Bonanza'] .app-header .card-symbol,
-body[data-theme='Banana Bonanza'] .app-header .header-sparkle {
+[data-theme='Banana Bonanza'] .app-header .header-pattern,
+[data-theme='Banana Bonanza'] .app-header .modern-backdrop,
+[data-theme='Banana Bonanza'] .app-header .gradient-layer,
+[data-theme='Banana Bonanza'] .app-header .pattern-overlay,
+[data-theme='Banana Bonanza'] .app-header .accent-line,
+[data-theme='Banana Bonanza'] .app-header .light-effect,
+[data-theme='Banana Bonanza'] .app-header .card-symbol,
+[data-theme='Banana Bonanza'] .app-header .header-sparkle {
     display: none !important;
 }
 
 /* NEW DETAILED Banana Boat Styles for BananaBlake Theme */
-body[data-theme='Banana Bonanza'] .banana-boat-header-graphic {
+[data-theme='Banana Bonanza'] .banana-boat-header-graphic {
     position: absolute;
     bottom: 4px; /* Sit boat on top of the 22px high waves that are at bottom:0 */
     left: 50%; 
@@ -652,7 +688,7 @@ body[data-theme='Banana Bonanza'] .banana-boat-header-graphic {
 }
 
 /* Banana Body */
-body[data-theme='Banana Bonanza'] .banana-body {
+[data-theme='Banana Bonanza'] .banana-body {
     position: absolute;
     width: 90px;
     height: 35px; /* Slightly taller for more curve */
@@ -667,7 +703,7 @@ body[data-theme='Banana Bonanza'] .banana-body {
 }
 
 /* Banana Stem */
-body[data-theme='Banana Bonanza'] .banana-stem {
+[data-theme='Banana Bonanza'] .banana-stem {
     position: absolute;
     width: 7px;
     height: 14px;
@@ -681,7 +717,7 @@ body[data-theme='Banana Bonanza'] .banana-stem {
 }
 
 /* Banana Tip */
-body[data-theme='Banana Bonanza'] .banana-tip {
+[data-theme='Banana Bonanza'] .banana-tip {
     position: absolute;
     width: 7px;
     height: 7px;
@@ -693,7 +729,7 @@ body[data-theme='Banana Bonanza'] .banana-tip {
 }
 
 /* Boat Hull */
-body[data-theme='Banana Bonanza'] .boat-hull {
+[data-theme='Banana Bonanza'] .boat-hull {
     position: absolute;
     width: 100%; 
     height: 25px; 
@@ -706,7 +742,7 @@ body[data-theme='Banana Bonanza'] .boat-hull {
 }
 
 /* Full-width Header Waves for BananaBlake Theme */
-body[data-theme='Banana Bonanza'] .app-header::after { /* Using ::after on the main header */
+body.index-page[data-theme='Banana Bonanza'] .app-header::after { /* Using ::after on the main header */
     content: '';
     position: absolute;
     left: 0;
@@ -718,7 +754,7 @@ body[data-theme='Banana Bonanza'] .app-header::after { /* Using ::after on the m
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 22'%3E%3Cpath d='M0 20 L10 4 L20 17 L30 2 L40 14 L50 8 L60 20 V22 H0 Z' fill='%233A80B1'/%3E%3C/svg%3E");
     background-repeat: repeat-x;
     background-size: 60px 22px; 
-    animation: animatedWaves 3s linear infinite; 
+    animation: animatedWaves 2s linear infinite alternate; 
     z-index: 1; 
     pointer-events: none;
 }
@@ -814,7 +850,7 @@ body[data-theme='Banana Bonanza'] .app-header::after { /* Using ::after on the m
 } 
 
 /* Hide pseudo-elements on header-content for BananaBlake theme */
-body[data-theme='Banana Bonanza'] .header-content::before,
-body[data-theme='Banana Bonanza'] .header-content::after {
+[data-theme='Banana Bonanza'] .header-content::before,
+[data-theme='Banana Bonanza'] .header-content::after {
     display: none !important;
 } 

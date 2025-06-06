@@ -407,44 +407,6 @@ body.index-page .particles::before {
     50% { opacity: 1; transform: scale(1.2); }
 }
 
-/* RainbowLight Theme Specific Animations (moved from themes.css) */
-@keyframes animated-grid { /* For RainbowLight header backdrop */
-  0% {
-    background-position: 
-        0 0, 
-        -1px -1px, 
-        -1px -1px;
-    opacity: 0.5; 
-  }
-  50% {
-     opacity: 1; 
-  }
-  100% {
-    background-position: 
-        var(--grid-size) var(--grid-size), 
-        -1px -1px, 
-        -1px -1px;
-    opacity: 0.5; 
-  }
-}
-
-[data-theme="RainbowLight"] .app-header .modern-backdrop {
-  animation: animated-grid 15s linear infinite;
-}
-[data-theme="RainbowLight"] main > section h2::after {
-  animation: rainbowBackgroundAnimation 10s linear infinite;
-}
-/* Added rule to display sparkles for RainbowLight theme */
-[data-theme="RainbowLight"] .header-sparkle {
-  display: block; 
-}
-
-@keyframes rainbowBackgroundAnimation { /* For RainbowLight h2 underlines */
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
 /* Player card and section animations from index.html */
 .player-card {
     animation: slideInFromRight 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
@@ -551,4 +513,39 @@ section:nth-child(6) { animation-delay: 0.6s; }
 
 .animate-player-remove {
     animation: player-remove-kf 0.3s ease-in forwards; /* Forwards to keep final state */
+}
+
+/* --- Buy-in Success Animations --- */
+@keyframes text-pop-in-kf {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(10px);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.05) translateY(0);
+    }
+    100% {
+        transform: scale(1) translateY(0);
+    }
+}
+
+.animate-text-pop-in {
+    animation: text-pop-in-kf 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes fade-in-up-sm-kf {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up-sm {
+    opacity: 0; /* Start hidden */
+    animation: fade-in-up-sm-kf 0.4s ease-out forwards;
 }

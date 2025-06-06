@@ -93,12 +93,22 @@ function setTheme(themeName) {
 // Update document title with game name if available
 if (gameName) {
     document.title = `Join ${gameName} - Kapoker`;
+    const buyInTitle = document.querySelector('.buy-in-title');
+    if (buyInTitle) {
+        buyInTitle.textContent = `Join ${gameName}`;
+    }
 }
 
 // Get chip ratio from Firebase
-let chipRatio = 1.0;
-let currentPlayerName = null; // Variable to store the player's name after first buy-in
-let isPayoutScreenVisible = false; // Flag to track if payout screen is active
+const BuyInPage = {
+    state: {
+        chipRatio: 1.0,
+        currentPlayerName: null,
+        isPayoutScreenVisible: false,
+        currentPayoutStatus: null,
+        rebuysAllowed: true,
+    }
+};
 
 if (gameId && buyInDatabase) {
     console.log('[FIREBASE] Setting up chip ratio listener for game:', gameId);
@@ -110,33 +120,33 @@ if (gameId && buyInDatabase) {
             if (snapshot.exists()) {
                 const parsedRatio = parseFloat(receivedRatio);
                 if (typeof parsedRatio === 'number' && !isNaN(parsedRatio) && parsedRatio > 0) {
-                    chipRatio = parsedRatio;
-                    console.log(`[FIREBASE] Successfully parsed and set chipRatio: ${chipRatio}`);
+                    BuyInPage.state.chipRatio = parsedRatio;
+                    console.log(`[FIREBASE] Successfully parsed and set chipRatio: ${BuyInPage.state.chipRatio}`);
                     isValidRatio = true;
                 } else {
-                    chipRatio = 1.0;
+                    BuyInPage.state.chipRatio = 1.0;
                     console.warn(`[FIREBASE] Invalid ratio received (${receivedRatio}). Using default 1.0`);
                 }
             } else {
                 console.log('[FIREBASE] No chip ratio found, using default of 1.0');
-                chipRatio = 1.0;
+                BuyInPage.state.chipRatio = 1.0;
             }
             
             const chipRatioElement = document.getElementById('chip-ratio');
-            if(chipRatioElement) chipRatioElement.textContent = chipRatio.toFixed(2);
+            if(chipRatioElement) chipRatioElement.textContent = BuyInPage.state.chipRatio.toFixed(2);
             
             console.log('[FIREBASE] Calling updateChipPreview after ratio update.');
             updateChipPreview();
         }, (error) => {
             console.error('[FIREBASE] Error in chip ratio listener:', error);
             showToast('Error fetching game ratio. Using default.', 'error');
-            chipRatio = 1.0;
+            BuyInPage.state.chipRatio = 1.0;
             updateChipPreview();
         });
     } catch (error) {
         console.error('[FIREBASE] Error setting up chip ratio listener:', error);
         showToast('Error fetching game ratio. Using default.', 'error');
-        chipRatio = 1.0;
+        BuyInPage.state.chipRatio = 1.0;
         updateChipPreview();
     }
 }
@@ -158,8 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.log('[BUY-IN_LOAD] Payouts ARE finalized on load.');
                         const storedPlayerName = localStorage.getItem('kapoker-lastPlayerName');
                         if (storedPlayerName) {
-                            currentPlayerName = storedPlayerName; // Set it for displayPlayerPayouts
-                            console.log(`[BUY-IN_LOAD] Found player ${currentPlayerName}, displaying payouts.`);
+                            BuyInPage.state.currentPlayerName = storedPlayerName; // Set it for displayPlayerPayouts
+                            console.log(`[BUY-IN_LOAD] Found player ${BuyInPage.state.currentPlayerName}, displaying payouts.`);
                             displayPlayerPayouts(payoutInfo.transactions);
                             return true; // Signal that payouts were handled
                         } else {
@@ -201,48 +211,28 @@ function setupStandardUI() {
         const gameNameForMessage = urlParams.get('game-name') || 'the game';
 
         if (storedGameId === gameId && storedPlayerName) {
-            currentPlayerName = storedPlayerName;
+            BuyInPage.state.currentPlayerName = storedPlayerName;
             restoredPlayer = true;
-            console.log(`[UI_SETUP] Restored session for player: ${currentPlayerName}`);
-            // Display Welcome Message (Rebuy option)
-            const initialForm = document.getElementById('buy-in-form');
-            const gameInfoArea = document.getElementById('game-info');
-            const mainTitle = document.querySelector('h1.buy-in-title');
-            if(initialForm) initialForm.style.display = 'none';
-            if(gameInfoArea) gameInfoArea.style.display = 'none';
-            if(mainTitle) mainTitle.style.display = 'none';
+            console.log(`[UI_SETUP] Restored session for player: ${BuyInPage.state.currentPlayerName}`);
+            
+            // Show welcome message, which includes the rebuy button.
+            showUIPanel('welcome', { gameName: gameNameForMessage, playerName: BuyInPage.state.currentPlayerName });
 
-            const welcomeMessageArea = document.getElementById('welcome-message-area');
-            if (welcomeMessageArea) {
-                welcomeMessageArea.innerHTML = `
-                    <div class="welcome-content">
-                        <h2>Welcome back, ${currentPlayerName}!</h2>
-                        <p>You're in ${gameNameForMessage}.</p>
-                        <p id="buy-in-status-message">The host is managing the game.</p>
-                        <button id="rebuy-action-button" class="poker-button secondary-button">Rebuy for ${currentPlayerName}</button>
-                        <p class="close-instruction" style="margin-top: 15px;">You can close this window if no action is needed.</p>
-                    </div>
-                `;
-                welcomeMessageArea.style.display = '';
-                attachWelcomeAreaButtonListeners();
-            }
         } else {
             console.log('[UI_SETUP] No session to restore. Displaying initial buy-in form.');
-            updateChipPreview(); // For initial buy-in form
+            showUIPanel('buy-in');
         }
     } catch (lsError) {
         console.warn('[UI_SETUP] Error during session restoration:', lsError);
-        updateChipPreview(); // Fallback for initial buy-in form
+        showUIPanel('buy-in'); // Fallback to initial buy-in form
     }
 
     // Always set up listeners if payouts weren't displayed on load
     listenForRebuyAndPayoutStatus();
     
-    // Setup for the initial buy-in form (if not a restored player shown the welcome message)
-    // This was previously part of setupInitialFormAndListeners, now more targeted
-    if (!restoredPlayer) {
-        initializeBuyInFormFunctionality();
-    }
+    // Setup for the initial buy-in form. This now just fetches data and sets up the listener.
+    // The UI is shown via showUIPanel.
+    initializeBuyInFormFunctionality();
     initializeRebuyFormFunctionality(); // Always init rebuy form logic in case it's needed later
 }
 
@@ -287,7 +277,7 @@ function initializeBuyInFormFunctionality() {
             // Ensure global chipRatio variable is also set from this initial fetch if it's more current
             const initialGameRatio = parseFloat(game.ratio);
             if (typeof initialGameRatio === 'number' && !isNaN(initialGameRatio) && initialGameRatio > 0) {
-                chipRatio = initialGameRatio;
+                BuyInPage.state.chipRatio = initialGameRatio;
             }
             updateChipPreview(); // Update preview with potentially new ratio
 
@@ -333,7 +323,7 @@ function initializeBuyInFormFunctionality() {
                     return;
                 }
 
-                const currentChipRatio = chipRatio;
+                const currentChipRatio = BuyInPage.state.chipRatio;
                 const chips = Math.floor(buyInAmount / currentChipRatio);
                 if (chips <= 0) {
                     showToast(`Buy-in amount $${buyInAmount.toFixed(2)} is too low for minimum chips (Ratio: $${currentChipRatio.toFixed(2)})`, 'error');
@@ -351,86 +341,51 @@ function initializeBuyInFormFunctionality() {
                     let buyInAction = 'joined';
                     let playerUpdateDetails = {};
 
-                    await buyInDatabase.ref(`games/${gameId}/state`).transaction((currentState) => {
-                        // ... (Full transaction logic as in the original file: robust state init, player exists check, add/update player, update nextId)
-                        // For brevity, this part is not fully re-typed here but should be the complete transaction logic from before.
-                        // Ensure it uses playerNameValue and chips.
-                        // --- Start of Transaction Logic Placeholder ---
-                        if (!currentState) {
-                            currentState = { players: [], nextPlayerId: 1, lastUpdate: Date.now(), lastPlayer: null };
+                    await buyInDatabase.ref(`games/${gameId}/state`).transaction(
+                        (currentState) => buyInTransaction(currentState, playerNameValue, chips)
+                    ).then((result) => {
+                        if (!result.committed) {
+                            throw new Error("Buy-in transaction was not committed. Please try again.");
                         }
-                        currentState.players = currentState.players || [];
-                        if (!Array.isArray(currentState.players)) {
-                            currentState.players = Object.values(currentState.players).filter(p => p != null);
+                        // The result.snapshot contains the new state, from which we can get details.
+                        const newLastPlayer = result.snapshot.child("lastPlayer").val();
+                        if (newLastPlayer.name.toLowerCase().trim() === playerNameValue.toLowerCase().trim()) {
+                             buyInAction = newLastPlayer.action;
+                             if(buyInAction === 'rebuy') {
+                                 playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.addedChips, totalChips: newLastPlayer.current_chips };
+                             } else {
+                                 playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.initial_chips };
+                             }
+                        } else {
+                            // This case is unlikely but a good fallback.
+                            console.warn("Transaction player doesn't match current player. Re-finding.");
+                            const players = Object.values(result.snapshot.child("players").val() || {});
+                            const finalPlayerState = players.find(p => p.name.toLowerCase().trim() === playerNameValue.toLowerCase().trim());
+                            if(finalPlayerState) {
+                                playerUpdateDetails = { name: finalPlayerState.name, chips: 'some', totalChips: finalPlayerState.current_chips };
+                                buyInAction = 'rebought';
+                            }
                         }
-                        if (typeof currentState.nextPlayerId !== 'number' || currentState.nextPlayerId <= 0) {
-                            currentState.nextPlayerId = Math.max(0, ...currentState.players.map(p => p?.id || 0)) + 1;
-                        }
-                        currentState.lastPlayer = currentState.lastPlayer === undefined ? null : currentState.lastPlayer;
-                        currentState.lastUpdate = currentState.lastUpdate || Date.now();
-
-                        const normalizedNewName = playerNameValue.toLowerCase().trim();
-                        const existingPlayerIndex = currentState.players.findIndex(p => p && p.name && p.name.toLowerCase().trim() === normalizedNewName);
-                        let playerForNotification = null;
-
-                        if (existingPlayerIndex !== -1) { // Player exists - rebuy logic from main form
-                            const existingPlayer = currentState.players[existingPlayerIndex];
-                            const currentInitial = parseInt(existingPlayer.initial_chips) || 0;
-                            const currentCurrent = parseInt(existingPlayer.current_chips) || 0;
-                            const addedChips = parseInt(chips) || 0;
-                            const updatedPlayer = { ...existingPlayer, initial_chips: currentInitial + addedChips, current_chips: currentCurrent + addedChips, lastBuyIn: Date.now() };
-                            currentState.players[existingPlayerIndex] = updatedPlayer;
-                            playerForNotification = { ...updatedPlayer, action: 'rebuy', addedChips: addedChips };
-                            buyInAction = 'rebought';
-                            playerUpdateDetails = { name: updatedPlayer.name, chips: addedChips, totalChips: updatedPlayer.current_chips };
-                        } else { // New player
-                            const newPlayer = { id: currentState.nextPlayerId, name: playerNameValue, initial_chips: chips, current_chips: chips, joinedAt: Date.now(), active: true };
-                            currentState.players.push(newPlayer);
-                            playerForNotification = { ...newPlayer, action: 'join' };
-                            currentState.nextPlayerId++;
-                            buyInAction = 'joined';
-                            playerUpdateDetails = { name: newPlayer.name, chips: newPlayer.initial_chips };
-                        }
-                        currentState.lastUpdate = Date.now();
-                        currentState.lastPlayer = playerForNotification;
-                        return currentState;
-                        // --- End of Transaction Logic Placeholder ---
                     });
 
                     // --- Transaction Successful: UI Update ---
-                    currentPlayerName = playerUpdateDetails.name; // Set global currentPlayerName
+                    BuyInPage.state.currentPlayerName = playerUpdateDetails.name; // Set global currentPlayerName
                     localStorage.setItem('kapoker-lastGameId', gameId);
-                    localStorage.setItem('kapoker-lastPlayerName', currentPlayerName);
+                    localStorage.setItem('kapoker-lastPlayerName', BuyInPage.state.currentPlayerName);
 
-                    const welcomeMessageArea = document.getElementById('welcome-message-area');
-                    const gameInfoAreaForHide = document.getElementById('game-info');
-                    const mainTitleForHide = document.querySelector('h1.buy-in-title');
-                    
-                    if(newForm) newForm.style.display = 'none';
-                    if(gameInfoAreaForHide) gameInfoAreaForHide.style.display = 'none';
-                    if(mainTitleForHide) mainTitleForHide.style.display = 'none';
-
-                    let successMessageHTML = '';
                     const gameDisplayName = gameDataForSubmit.name || 'the game';
-                    if (buyInAction === 'joined') {
-                        successMessageHTML = `<h2>Welcome to ${gameDisplayName}!</h2><p>You've successfully joined with ${chips} chips.</p>`;
-                    } else { 
-                        successMessageHTML = `<h2>Chips Added!</h2><p>Added ${chips} chips to ${playerUpdateDetails.name}.</p><p>Your new total is ${playerUpdateDetails.totalChips} chips.</p>`;
-                    }
 
-                    if (welcomeMessageArea) {
-                        welcomeMessageArea.innerHTML = `
-                            <div class="welcome-content">
-                                ${successMessageHTML}
-                                <p id="buy-in-status-message">The host is managing the game.</p>
-                                <button id="rebuy-action-button" class="poker-button secondary-button">Rebuy for ${currentPlayerName}</button>
-                                <p class="close-instruction" style="margin-top: 15px;">You can close this window now.</p>
-                            </div>
-                        `;
-                        welcomeMessageArea.style.display = '';
-                        attachWelcomeAreaButtonListeners(); // Attach listeners for the new rebuy button
-                    }
-                    // listenForRebuyAndPayoutStatus() is already active from setupStandardUI()
+                    // This structure ensures all necessary data is passed to the UI function
+                    const welcomeData = {
+                        buyInAction: buyInAction, // This will be 'join' or 'rebuy'
+                        playerName: playerUpdateDetails.name,
+                        gameName: gameDisplayName,
+                        addedChips: playerUpdateDetails.chips, // For a join, this is the total. For a rebuy, this is the added amount.
+                        totalChips: playerUpdateDetails.totalChips // This is only defined for a rebuy.
+                    };
+
+                    showUIPanel('welcome', welcomeData);
+
                     if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading');}
 
                 } catch (error) {
@@ -464,28 +419,15 @@ function initializeRebuyFormFunctionality() {
     function updateRebuyChipPreview() {
         if (!rebuyAmountInput) return;
         const amount = parseFloat(rebuyAmountInput.value) || 0;
-        const chips = amount > 0 && chipRatio > 0 ? Math.floor(amount / chipRatio) : 0;
+        const chips = amount > 0 && BuyInPage.state.chipRatio > 0 ? Math.floor(amount / BuyInPage.state.chipRatio) : 0;
         if(rebuyChipAmountDisplay) rebuyChipAmountDisplay.textContent = chips;
-        if(chipRatioRebuyDisplay) chipRatioRebuyDisplay.textContent = chipRatio.toFixed(2);
+        if(chipRatioRebuyDisplay) chipRatioRebuyDisplay.textContent = BuyInPage.state.chipRatio.toFixed(2);
     }
 
     // Make showRebuyForm globally accessible if it's called from HTML, or ensure it's called by a listener set up here.
     // If attachWelcomeAreaButtonListeners sets up the #rebuy-action-button, then this is fine.
     window.showRebuyForm = function() { 
-        if (welcomeMessageArea) welcomeMessageArea.style.display = 'none';
-        if (rebuyFormArea) {
-            if(rebuyPlayerNameDisplay && currentPlayerName) rebuyPlayerNameDisplay.textContent = currentPlayerName;
-            else if (rebuyPlayerNameDisplay) rebuyPlayerNameDisplay.textContent = 'Player'; // Fallback
-            
-            if(rebuyAmountInput) rebuyAmountInput.value = ''; 
-            updateRebuyChipPreview(); 
-            rebuyFormArea.style.display = '';
-
-            if (confirmRebuyButton) {
-                confirmRebuyButton.disabled = false;
-                confirmRebuyButton.classList.remove('loading');
-            }
-        }
+        showUIPanel('rebuy', { playerName: BuyInPage.state.currentPlayerName });
     };
 
     if (rebuyAmountInput) {
@@ -517,12 +459,12 @@ function initializeRebuyFormFunctionality() {
                 showToast('Error preparing rebuy. Critical form fields missing.', 'error');
                 return;
             }
-            if (!currentPlayerName) {
+            if (!BuyInPage.state.currentPlayerName) {
                 showToast('Error: Player name not set for rebuy.', 'error');
                 return;
             }
 
-            playerNameInputInMainForm.value = currentPlayerName;
+            playerNameInputInMainForm.value = BuyInPage.state.currentPlayerName;
             buyInAmountInputInMainForm.value = rebuyAmount.toString();
 
             if (rebuyFormArea) rebuyFormArea.style.display = 'none';
@@ -538,19 +480,51 @@ function initializeRebuyFormFunctionality() {
 
     if (cancelRebuyButton) {
         cancelRebuyButton.addEventListener('click', () => {
-            if (rebuyFormArea) rebuyFormArea.style.display = 'none';
-            if (welcomeMessageArea) welcomeMessageArea.style.display = ''; // Show welcome again
+            showUIPanel('welcome', { playerName: BuyInPage.state.currentPlayerName });
         });
     }
 }
 
-// listenForRebuyAndPayoutStatus, displayPlayerPayouts, etc. remain mostly the same
-// ... but ensure listener detachment in listenForRebuyAndPayoutStatus is solid.
+// Extracted transaction logic for clarity
+function buyInTransaction(currentState, playerName, chips) {
+    if (!currentState) {
+        currentState = { players: [], nextPlayerId: 1, lastUpdate: Date.now(), lastPlayer: null };
+    }
+    currentState.players = currentState.players || [];
+    if (!Array.isArray(currentState.players)) {
+        currentState.players = Object.values(currentState.players).filter(p => p != null);
+    }
+    if (typeof currentState.nextPlayerId !== 'number' || currentState.nextPlayerId <= 0) {
+        currentState.nextPlayerId = Math.max(0, ...currentState.players.map(p => p?.id || 0)) + 1;
+    }
+
+    const normalizedNewName = playerName.toLowerCase().trim();
+    const existingPlayerIndex = currentState.players.findIndex(p => p && p.name && p.name.toLowerCase().trim() === normalizedNewName);
+    let playerForNotification = null;
+
+    if (existingPlayerIndex !== -1) { // Player exists - rebuy logic
+        const existingPlayer = currentState.players[existingPlayerIndex];
+        const currentInitial = parseInt(existingPlayer.initial_chips) || 0;
+        const currentCurrent = parseInt(existingPlayer.current_chips) || 0;
+        const addedChips = parseInt(chips) || 0;
+        const updatedPlayer = { ...existingPlayer, initial_chips: currentInitial + addedChips, current_chips: currentCurrent + addedChips, lastBuyIn: Date.now() };
+        currentState.players[existingPlayerIndex] = updatedPlayer;
+        playerForNotification = { ...updatedPlayer, action: 'rebuy', addedChips: addedChips };
+    } else { // New player
+        const newPlayer = { id: currentState.nextPlayerId, name: playerName, initial_chips: chips, current_chips: chips, joinedAt: Date.now(), active: true };
+        currentState.players.push(newPlayer);
+        playerForNotification = { ...newPlayer, action: 'join' };
+        currentState.nextPlayerId++;
+    }
+    currentState.lastUpdate = Date.now();
+    currentState.lastPlayer = playerForNotification;
+    return currentState;
+}
 
 // Update chip preview calculation (now uses the global chipRatio)
 function updateChipPreview() {
     // Add logs for debugging
-    console.log(`[PREVIEW] updateChipPreview called. Current Ratio: ${chipRatio} (Type: ${typeof chipRatio})`);
+    console.log(`[PREVIEW] updateChipPreview called. Current Ratio: ${BuyInPage.state.chipRatio} (Type: ${typeof BuyInPage.state.chipRatio})`);
     const buyInAmountInput = document.getElementById('buy-in-amount');
     if (!buyInAmountInput) {
         console.error('[PREVIEW] Buy-in amount input (#buy-in-amount) not found!');
@@ -563,13 +537,13 @@ function updateChipPreview() {
     const buyInAmount = parseFloat(rawInputValue) || 0;
     console.log(`[PREVIEW] Buy-in amount value (parsed): ${buyInAmount} (Type: ${typeof buyInAmount})`);
     
-    const currentValidRatio = (typeof chipRatio === 'number' && chipRatio > 0) ? chipRatio : 1.0;
+    const currentValidRatio = (typeof BuyInPage.state.chipRatio === 'number' && BuyInPage.state.chipRatio > 0) ? BuyInPage.state.chipRatio : 1.0;
     // --- BEGIN DEBUG LOGS ---
-    console.log(`[PREVIEW DEBUG] chipRatio (global) for calculation: ${chipRatio} (Type: ${typeof chipRatio})`);
+    console.log(`[PREVIEW DEBUG] chipRatio (global) for calculation: ${BuyInPage.state.chipRatio} (Type: ${typeof BuyInPage.state.chipRatio})`);
     console.log(`[PREVIEW DEBUG] currentValidRatio for calculation: ${currentValidRatio} (Type: ${typeof currentValidRatio})`);
     // --- END DEBUG LOGS ---
-    if (currentValidRatio !== chipRatio) {
-        console.warn(`[PREVIEW] chipRatio was invalid (${chipRatio}). Using default 1.0 for calculation.`);
+    if (currentValidRatio !== BuyInPage.state.chipRatio) {
+        console.warn(`[PREVIEW] chipRatio was invalid (${BuyInPage.state.chipRatio}). Using default 1.0 for calculation.`);
     }
 
     const chipAmount = Math.floor(buyInAmount / currentValidRatio);
@@ -604,78 +578,92 @@ function listenForRebuyAndPayoutStatus() {
         console.log('[STATUS_LISTEN] Missing gameId or database. Cannot listen for status updates.');
         return;
     }
-    console.log('[STATUS_LISTEN] Setting up listeners for rebuyAllowed and payoutInfo for game:', gameId);
+    console.log('[STATUS_LISTEN] Setting up focused listeners for game state:', gameId);
 
     const gameRef = buyInDatabase.ref(`games/${gameId}`);
-    // Store the listener function to allow detachment
-    const gameListener = (snapshot) => {
-        if (!snapshot.exists()) {
-            console.log('[STATUS_LISTEN] Game data not found or no longer exists.');
-            showToast('Game session not found. It may have ended or been reset by the host.', 'error');
-            hideAllMainUISections();
-            isPayoutScreenVisible = false; // Ensure flag is reset
-            // Potentially try to re-initialize or guide user if game truly gone
-            // For now, just detach and show error.
-            gameRef.off('value', gameListener); // Detach listener if game is gone
-            return;
+
+    // Listener for connection status to help debug connection-related issues
+    buyInDatabase.ref('.info/connected').on('value', (snapshot) => {
+        if (snapshot.val() === false) {
+            console.warn('[FIREBASE_CONN] Firebase connection lost.');
+            showToast('Connection lost, attempting to reconnect...', 'error');
+        } else {
+            console.log('[FIREBASE_CONN] Firebase connection established.');
         }
-
-        const gameData = snapshot.val();
-        const payoutInfo = gameData.payoutInfo;
-        const rebuysAllowed = gameData.rebuysAllowed !== false;
-
-        // Scenario 1: Payouts are finalized by host.
-        if (payoutInfo && payoutInfo.status === 'finalized' && payoutInfo.transactions) {
-            if (!isPayoutScreenVisible) {
-                console.log('[STATUS_LISTEN] Payouts are FINALIZED. Triggering display.');
-                payoutDataCache = payoutInfo; // Cache the data
-                displayPlayerPayouts(payoutInfo.transactions); // This sets isPayoutScreenVisible = true
-                // Do NOT detach listener here anymore.
-                return; // Payout screen is now active, no further UI updates in this branch for this event
-            }
-            // If payout screen is already visible and status is still finalized, do nothing further here.
-            // This prevents re-rendering if other minor gameData changes occur.
-            return; 
-        }
-        
-        // Scenario 2: Payouts were visible but are no longer finalized (host reopened or reset).
-        // This also covers cases where payoutInfo becomes null or status changes from 'finalized'.
-        if (isPayoutScreenVisible && (!payoutInfo || payoutInfo.status !== 'finalized')) {
-            console.log('[STATUS_LISTEN] Payouts no longer finalized or cleared. Reverting to standard UI.');
-            showToast('The host has re-opened the game or reset payouts. Reloading session...', 'info');
-            // hideAllMainUISections() is called by displayPlayerPayouts if it was the last one to hide things,
-            // but to be safe, call it here if we are explicitly moving away from payouts.
-            // However, setupStandardUI will likely re-show necessary parts.
-            // The key is to ensure isPayoutScreenVisible is false BEFORE setupStandardUI.
-            
-            // Hide the payout display area explicitly
-            const payoutDisplayAreaElement = document.getElementById('payout-display-area');
-            if(payoutDisplayAreaElement) payoutDisplayAreaElement.style.display = 'none';
-            isPayoutScreenVisible = false; // Critical: update flag BEFORE standard UI setup
-
-            // Clear any player-specific content that might have been in the main container
-            const initialContainer = document.querySelector('body > .container:not(.payout-container)');
-            if(initialContainer) initialContainer.style.display = ''; // Make sure main container is visible again
-
-            setupStandardUI(); // Re-initialize the standard view (welcome/buy-in)
-            // setupStandardUI will re-attach listeners if necessary and show appropriate UI.
-            return; // Standard UI is now active
-        }
-
-        // Scenario 3: Payout screen is not visible, and payouts are not (yet) finalized.
-        // This means we are in the standard buy-in/welcome flow.
-        if (!isPayoutScreenVisible) {
-            currentRebuysAllowed = rebuysAllowed;
-            currentPayoutStatus = payoutInfo ? payoutInfo.status : null;
-            // Update welcome area UI (e.g., rebuy button status, messages about payout calculation)
-            updateWelcomeAreaUI(); 
-        }
-    };
-
-    gameRef.on('value', gameListener, (error) => {
-        console.error('[STATUS_LISTEN] Error listening to game data:', error);
-        showToast('Error syncing with game state.', 'error');
     });
+
+    // 1. Listen specifically for payout status changes
+    const payoutRef = gameRef.child('payoutInfo');
+    payoutRef.on('value', (snapshot) => {
+        const payoutInfo = snapshot.val();
+        const status = payoutInfo ? payoutInfo.status : null;
+        BuyInPage.state.currentPayoutStatus = status;
+
+        if (status === 'finalized' && payoutInfo.transactions) {
+            if (!BuyInPage.state.isPayoutScreenVisible) {
+                console.log('[STATUS_LISTEN/PAYOUT] Payouts are FINALIZED. Triggering display.');
+                displayPlayerPayouts(payoutInfo.transactions);
+            }
+        } else if (BuyInPage.state.isPayoutScreenVisible && status !== 'finalized') {
+            console.log('[STATUS_LISTEN/PAYOUT] Payouts no longer finalized. Reverting to standard UI.');
+            showToast('The host has re-opened the game.', 'info');
+            revertToStandardUI();
+        }
+    }, (error) => {
+        console.error('[STATUS_LISTEN/PAYOUT] Error listening to payoutInfo:', error);
+        showToast('Error syncing payout status.', 'error');
+    });
+
+    // 2. Listen specifically for rebuy status changes
+    const rebuyRef = gameRef.child('rebuysAllowed');
+    rebuyRef.on('value', (snapshot) => {
+        // Coerce to boolean. `undefined` or `true` means rebuys are allowed.
+        const rebuysAllowed = snapshot.val() !== false;
+        BuyInPage.state.rebuysAllowed = rebuysAllowed;
+        console.log(`[STATUS_LISTEN/REBUY] Rebuys allowed status changed to: ${rebuysAllowed}`);
+        if (!BuyInPage.state.isPayoutScreenVisible) {
+            updateWelcomeAreaUI();
+        }
+    }, (error) => {
+        console.error('[STATUS_LISTEN/REBUY] Error listening to rebuysAllowed:', error);
+        showToast('Error syncing rebuy status.', 'error');
+    });
+
+    // 3. Listen for game activity status (e.g., host resets the game)
+    const activeRef = gameRef.child('active');
+    activeRef.on('value', (snapshot) => {
+        if (snapshot.val() === false) {
+            console.log('[STATUS_LISTEN/ACTIVE] Game has been deactivated or reset by the host.');
+            showToast('Game session has ended.', 'error');
+            
+            // Detach all listeners for this game to prevent memory leaks
+            payoutRef.off();
+            rebuyRef.off();
+            activeRef.off();
+
+            hideAllMainUISections();
+            // Show a definitive "Game Over" message
+            const mainContainer = document.querySelector('body > .container:not(.payout-container)');
+            if (mainContainer) {
+                 mainContainer.innerHTML = '<h1>This game session has ended.</h1><p>Please close this window or get a new link from the host.</p>';
+                 mainContainer.style.display = '';
+            }
+        }
+    }, (error) => {
+        console.error('[STATUS_LISTEN/ACTIVE] Error listening to game activity:', error);
+    });
+}
+
+// New helper function to revert from payout screen to standard UI
+function revertToStandardUI() {
+    const payoutDisplayAreaElement = document.getElementById('payout-display-area');
+    if(payoutDisplayAreaElement) payoutDisplayAreaElement.style.display = 'none';
+    BuyInPage.state.isPayoutScreenVisible = false; 
+
+    const initialContainer = document.querySelector('body > .container:not(.payout-container)');
+    if(initialContainer) initialContainer.style.display = ''; 
+
+    setupStandardUI(); 
 }
 
 function updateWelcomeAreaUI() {
@@ -695,20 +683,20 @@ function updateWelcomeAreaUI() {
     }
 
     if (rebuyActionButton) {
-        if (currentRebuysAllowed) {
+        if (BuyInPage.state.rebuysAllowed) {
             rebuyActionButton.style.display = '';
             rebuyActionButton.disabled = false;
-            if(currentPlayerName) rebuyActionButton.textContent = `Rebuy for ${currentPlayerName}`;
+            if(BuyInPage.state.currentPlayerName) rebuyActionButton.textContent = `Rebuy for ${BuyInPage.state.currentPlayerName}`;
         } else {
             rebuyActionButton.style.display = 'none';
         }
     }
 
     if (statusMessageEl) {
-        if (!currentRebuysAllowed) {
-            if (currentPayoutStatus === 'calculated') {
+        if (!BuyInPage.state.rebuysAllowed) {
+            if (BuyInPage.state.currentPayoutStatus === 'calculated') {
                 statusMessageEl.textContent = 'Rebuys closed. Payouts calculated by host, awaiting finalization...';
-            } else if (currentPayoutStatus !== 'finalized') { // Only show this if not yet finalized
+            } else if (BuyInPage.state.currentPayoutStatus !== 'finalized') { // Only show this if not yet finalized
                 statusMessageEl.textContent = 'Rebuys closed. Awaiting final payout information from host.';
             }
             // If finalized, this whole welcome area will be hidden by displayPlayerPayouts
@@ -743,47 +731,171 @@ function hideAllMainUISections() {
     if (welcomeArea) welcomeArea.style.display = 'none';
     if (rebuyArea) rebuyArea.style.display = 'none';
     
-    isPayoutScreenVisible = false; // Reset flag when hiding main UI to show payouts
+    BuyInPage.state.isPayoutScreenVisible = false; // Reset flag when hiding main UI to show payouts
     console.log('[UI] All main UI sections hidden. Payout screen visibility: false.');
 }
 
 function displayPlayerPayouts(transactions) {
-    hideAllMainUISections(); // Hide all other primary sections
+    showUIPanel('payouts', { transactions: transactions, playerName: BuyInPage.state.currentPlayerName });
+}
 
-    const payoutDisplayArea = document.getElementById('payout-display-area');
-    const playerSpecificPayoutsDiv = document.getElementById('player-specific-payouts');
+function showUIPanel(panelName, data = {}) {
+    console.log(`[UI] Showing panel: ${panelName} with data:`, data);
 
-    if (!payoutDisplayArea || !playerSpecificPayoutsDiv) {
-        console.error('[PAYOUTS] Payout display elements not found.');
-        isPayoutScreenVisible = false; // Ensure flag is correct if elements are missing
-        return;
-    }
+    // Define all panels
+    const panels = {
+        'buy-in': document.getElementById('buy-in-form'),
+        'welcome': document.getElementById('welcome-message-area'),
+        'rebuy': document.getElementById('rebuy-form-area'),
+        'payouts': document.getElementById('payout-display-area'),
+        'game-info': document.getElementById('game-info'),
+        'main-title': document.querySelector('h1.buy-in-title'),
+    };
 
-    let payoutHTML = '';
-    let hasTransactions = false;
-
-    transactions.forEach(t => {
-        if (t.from === currentPlayerName) {
-            payoutHTML += `<p class="payout-instruction payout-owes">You owe <strong>${t.to}</strong>: $${t.cash.toFixed(2)} (${t.chips} chips)</p>`;
-            hasTransactions = true;
-        } else if (t.to === currentPlayerName) {
-            payoutHTML += `<p class="payout-instruction payout-owed"><strong>${t.from}</strong> owes you: $${t.cash.toFixed(2)} (${t.chips} chips)</p>`;
-            hasTransactions = true;
+    // Hide all panels first
+    for (const key in panels) {
+        if (panels[key]) {
+            panels[key].style.display = 'none';
         }
-    });
-
-    if (!hasTransactions) {
-        payoutHTML = '<p class="payout-instruction payout-even">You are all settled up! No payments needed.</p>';
     }
-
-    playerSpecificPayoutsDiv.innerHTML = payoutHTML;
-    payoutDisplayArea.style.display = ''; // Show the payout area
-    isPayoutScreenVisible = true; // Set flag when payout screen is shown
     
-    // Scroll to the payout area for visibility
-    payoutDisplayArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    BuyInPage.state.isPayoutScreenVisible = false;
 
-    console.log('[PAYOUTS] Displayed payout information for', currentPlayerName);
+    // Show the requested panel and configure it
+    switch (panelName) {
+        case 'buy-in':
+            if (panels['buy-in']) panels['buy-in'].style.display = '';
+            if (panels['game-info']) panels['game-info'].style.display = '';
+            if (panels['main-title']) panels['main-title'].style.display = '';
+            updateChipPreview();
+            break;
+
+        case 'welcome':
+            if (panels['welcome']) {
+                let welcomeHTML;
+                // This is a success buy-in event with animations
+                if (data.buyInAction) {
+                    const isJoin = data.buyInAction === 'join';
+                    const title = isJoin ? `Welcome, ${data.playerName}!` : 'Chips Added!';
+                    
+                    const addedAmount = isJoin ? data.addedChips : data.addedChips;
+                    const totalAmount = isJoin ? data.addedChips : data.totalChips;
+
+                    // Start counters from 0 for a join, or previous total for a rebuy
+                    const initialAdded = 0;
+                    const initialTotal = isJoin ? 0 : totalAmount - addedAmount;
+
+                    welcomeHTML = `
+                        <div class="welcome-content">
+                            <h2 class="animate-text-pop-in">${title}</h2>
+                            
+                            <div class="buy-in-summary animate-fade-in-up-sm" style="animation-delay: 0.1s;">
+                                ${isJoin ? `
+                                    <div>
+                                        <span class="summary-label">You've joined with</span>
+                                        <strong id="total-chips-animated" class="summary-value">${initialTotal.toLocaleString()}</strong>
+                                        <span class="summary-label-small">chips</span>
+                                    </div>
+                                ` : `
+                                    <div>
+                                        <span class="summary-label">Added</span>
+                                        <strong id="added-chips-animated" class="summary-value">${initialAdded.toLocaleString()}</strong>
+                                        <span class="summary-label-small">chips</span>
+                                    </div>
+                                    <div class="summary-divider"></div>
+                                    <div>
+                                        <span class="summary-label">Your new total is</span>
+                                        <strong id="total-chips-animated" class="summary-value">${initialTotal.toLocaleString()}</strong>
+                                        <span class="summary-label-small">chips</span>
+                                    </div>
+                                `}
+                            </div>
+
+                            <p id="buy-in-status-message" class="animate-fade-in-up-sm" style="animation-delay: 0.3s;">The host is managing the game.</p>
+                            <button id="rebuy-action-button" class="poker-button secondary-button animate-fade-in-up-sm" style="animation-delay: 0.4s;">Rebuy for ${data.playerName}</button>
+                            <p class="close-instruction animate-fade-in-up-sm" style="animation-delay: 0.5s;">You can close this window if no action is needed.</p>
+                        </div>
+                    `;
+                    panels['welcome'].innerHTML = welcomeHTML;
+
+                    // Use a short timeout to ensure elements are in the DOM before animating
+                    setTimeout(() => {
+                        const addedChipsEl = document.getElementById('added-chips-animated');
+                        const totalChipsEl = document.getElementById('total-chips-animated');
+
+                        if (!isJoin && addedChipsEl) {
+                            animateValue(addedChipsEl, initialAdded, addedAmount, 800);
+                        }
+                        if (totalChipsEl) {
+                            animateValue(totalChipsEl, initialTotal, totalAmount, 1000);
+                        }
+                    }, 50);
+
+                } else { // This is the simple "welcome back" for a restored session
+                    const gameNameForMessage = data.gameName || 'the game';
+                    welcomeHTML = `
+                        <div class="welcome-content">
+                            <h2>Welcome back, ${data.playerName}!</h2>
+                            <p>You're in ${gameNameForMessage}.</p>
+                            <p id="buy-in-status-message">The host is managing the game.</p>
+                            <button id="rebuy-action-button" class="poker-button secondary-button">Rebuy for ${data.playerName}</button>
+                            <p class="close-instruction" style="margin-top: 15px;">You can close this window if no action is needed.</p>
+                        </div>
+                    `;
+                    panels['welcome'].innerHTML = welcomeHTML;
+                }
+
+                panels['welcome'].style.display = '';
+                attachWelcomeAreaButtonListeners();
+                updateWelcomeAreaUI();
+            }
+            break;
+
+        case 'rebuy':
+            if (panels['rebuy']) {
+                const rebuyPlayerNameDisplay = document.getElementById('rebuy-player-name-display');
+                const rebuyAmountInput = document.getElementById('rebuy-amount');
+                const confirmRebuyButton = document.getElementById('confirm-rebuy-button');
+
+                if (rebuyPlayerNameDisplay) rebuyPlayerNameDisplay.textContent = data.playerName || 'Player';
+                if (rebuyAmountInput) rebuyAmountInput.value = '';
+                if (confirmRebuyButton) {
+                    confirmRebuyButton.disabled = false;
+                    confirmRebuyButton.classList.remove('loading');
+                }
+                panels['rebuy'].style.display = '';
+                // The rebuy form has its own preview logic, which we can call here
+                const rebuyPreviewUpdater = initializeRebuyFormFunctionality.updateRebuyChipPreview;
+                if(typeof rebuyPreviewUpdater === 'function') rebuyPreviewUpdater();
+            }
+            break;
+
+        case 'payouts':
+             BuyInPage.state.isPayoutScreenVisible = true;
+            if (panels['payouts']) {
+                const playerSpecificPayoutsDiv = document.getElementById('player-specific-payouts');
+                if (playerSpecificPayoutsDiv && data.transactions) {
+                    let payoutHTML = '';
+                    let hasTransactions = false;
+                    data.transactions.forEach(t => {
+                        if (t.from === BuyInPage.state.currentPlayerName) {
+                            payoutHTML += `<p class="payout-instruction payout-owes">You owe <strong>${t.to}</strong>: $${t.cash.toFixed(2)} (${t.chips} chips)</p>`;
+                            hasTransactions = true;
+                        } else if (t.to === BuyInPage.state.currentPlayerName) {
+                            payoutHTML += `<p class="payout-instruction payout-owed"><strong>${t.from}</strong> owes you: $${t.cash.toFixed(2)} (${t.chips} chips)</p>`;
+                            hasTransactions = true;
+                        }
+                    });
+                    if (!hasTransactions) {
+                        payoutHTML = '<p class="payout-instruction payout-even">You are all settled up! No payments needed.</p>';
+                    }
+                    playerSpecificPayoutsDiv.innerHTML = payoutHTML;
+                }
+                panels['payouts'].style.display = '';
+                panels['payouts'].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            break;
+    }
 }
 
 // Function to show toast notifications
@@ -831,4 +943,19 @@ function updateStatus(message, type = 'pending') { // maps to toast types
         // For now, we'll use 'info' with standard duration.
     }
     showToast(message, toastType);
+}
+
+function animateValue(element, start, end, duration) {
+    if (!element) return;
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const currentValue = Math.floor(progress * (end - start) + start);
+        element.textContent = currentValue.toLocaleString();
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        }
+    };
+    window.requestAnimationFrame(step);
 }

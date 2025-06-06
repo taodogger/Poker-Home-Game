@@ -17,28 +17,6 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/themes.css">
-    <style>
-        /* Modern Kahoot/Igloo style additions - REMOVED REDUNDANT RULES */
-        /* :root variables moved to styles.css or kept if page-specific */
-        :root {
-            /* Keep page-specific overrides if any, otherwise remove */
-            /* --vibrant-gradient, --glow-effect, etc. now defined globally */
-        }
-        
-        /* REMOVED redundant rules previously handled here */
-        
-        /* Player card specific animations MOVED to animations.css */
-
-        /* REMOVED placeholder hover rule */
-
-        /* Section animations MOVED to animations.css */
-        
-        /* REMOVED placeholder game status badge rule */
-        /* ... other specific styles ... */
-
-        /* REMOVED redundant header styles */
-
-    </style>
 </head>
 <body class="index-page">
     <!-- Use modern background effects -->
@@ -118,10 +96,10 @@
                 
                 <div id="qr-code-container" class="qr-code-section" style="display: none;">
                     <h3>Join the Game</h3>
-                    <div class="qr-wrapper" style="background-color: white; padding: 15px; border-radius: 8px; display: inline-block;"></div>
-                    <div class="join-url" style="margin-top: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; cursor: pointer;">
-                        <span id="join-url-text" style="word-break: break-all;"></span>
-                        <div class="click-to-copy" style="font-size: 0.8rem; opacity: 0.8; margin-top: 5px;">Click to copy</div>
+                    <div class="qr-wrapper"></div>
+                    <div class="join-url">
+                        <span id="join-url-text"></span>
+                        <div class="click-to-copy">Click to copy</div>
                     </div>
                 </div>
             </div>
@@ -260,7 +238,7 @@
                 <button id="calculate-payouts" class="poker-button">
                     <span class="button-icon">💰</span> Calculate Payouts
                 </button>
-                <button id="finalize-payouts-btn" class="poker-button" style="background-color: var(--secondary-color);">
+                <button id="finalize-payouts-btn" class="poker-button">
                     <span class="button-icon">📲</span> Show Payouts to Players
                 </button>
                 <button id="reopen-game-btn" class="poker-button secondary-action" style="display: none; background-color: var(--warning-color, #f0ad4e); border-color: var(--warning-color, #eea236);">
