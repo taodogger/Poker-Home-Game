@@ -552,9 +552,26 @@ function addPlayer(name, chips) {
         }, 50);
         
         // Save state and update Firebase
-                saveState();
+        saveState();
         if (PokerApp.state.sessionId) {
-            updatePlayersInFirebase();
+            // Transactionally update the player's chips in Firebase
+            const playersRef = window.database.ref(`games/${PokerApp.state.sessionId}/state/players`);
+            playersRef.transaction(function(players) {
+                if (players) {
+                    if (!Array.isArray(players)) {
+                        players = Object.values(players).filter(p => p != null);
+                    }
+                    const playerToUpdate = players.find(p => p && p.name.toLowerCase() === name.toLowerCase());
+                    if (playerToUpdate) {
+                        playerToUpdate.current_chips += parseInt(chips);
+                        playerToUpdate.initial_chips += parseInt(chips);
+                    }
+                }
+                return players;
+            }).catch(error => {
+                console.error("Chip addition transaction failed:", error);
+                PokerApp.UI.showToast('Failed to sync chip addition.', 'error');
+            });
         }
         
         return true;
@@ -583,10 +600,45 @@ function addPlayer(name, chips) {
         PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
     }, 50);
     
-    // Save state and update Firebase
+    // Save state and update Firebase transactionally
     saveState();
     if (PokerApp.state.sessionId) {
-        updatePlayersInFirebase();
+        const stateRef = window.database.ref(`games/${PokerApp.state.sessionId}/state`);
+        stateRef.transaction(function(currentState) {
+            if (currentState) {
+                if (!currentState.players) currentState.players = [];
+                if (!Array.isArray(currentState.players)) {
+                    currentState.players = Object.values(currentState.players).filter(p => p != null);
+                }
+
+                const playerExists = currentState.players.some(p => p.name.toLowerCase() === name.toLowerCase());
+                if (playerExists) {
+                    // This case is now handled by the existing player check above,
+                    // but this is a safeguard within the transaction.
+                    // We will let the transaction for existing players handle it.
+                    return currentState;
+                }
+                
+                // Determine the next ID based on the state inside the transaction
+                const nextId = currentState.nextPlayerId || (Math.max(0, ...currentState.players.map(p => p.id || 0)) + 1);
+
+                const playerToAdd = {
+                    id: nextId,
+                    name: name,
+                    initial_chips: chips,
+                    current_chips: chips,
+                    joinedAt: Date.now(),
+                    active: true
+                };
+
+                currentState.players.push(playerToAdd);
+                currentState.nextPlayerId = nextId + 1;
+            }
+            return currentState;
+        }).catch(error => {
+            console.error("Add player transaction failed:", error);
+            PokerApp.UI.showToast('Failed to sync new player with database.', 'error');
+        });
     }
     
     return true;
@@ -3080,39 +3132,54 @@ function removePlayer(playerId) {
     if (!PokerApp.state.players) return;
 
     const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+    const playerIndex = PokerApp.state.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) {
+        console.warn(`[PLAYER] removePlayer called for non-existent player ID: ${playerId}`);
+        return;
+    }
+
+    const performRemove = () => {
+        // Optimistically remove from local state for immediate UI feedback.
+        const removedPlayer = PokerApp.state.players.splice(playerIndex, 1);
+        console.log('[PLAYER] Optimistically removed player from state:', removedPlayer[0]?.name);
+
+        if (PokerApp.state.dealerId === playerId) {
+            PokerApp.state.dealerId = null; 
+        }
+
+        saveState();
+        updatePlayerList(); // Re-render list which will exclude the removed row
+
+        // Now, transactionally update Firebase
+        if (PokerApp.state.sessionId && window.database) {
+            const playersRef = window.database.ref(`games/${PokerApp.state.sessionId}/state/players`);
+            playersRef.transaction(function(players) {
+                if (players) {
+                    if (!Array.isArray(players)) {
+                        players = Object.values(players).filter(p => p != null);
+                    }
+                    return players.filter(p => p && p.id !== playerId);
+                }
+                return players;
+            }).catch(error => {
+                console.error("Remove player transaction failed:", error);
+                PokerApp.UI.showToast(`Failed to sync removal for ${removedPlayer[0]?.name}.`, 'error');
+                // Consider adding logic to reload state from Firebase to correct the UI
+            });
+        }
+    };
 
     if (playerRow) {
         SoundSystem.playRemoveSound();
         PokerApp.UI.triggerAnimation(playerRow, 'animate-player-remove');
         
-        playerRow.addEventListener('animationend', () => {
-            const index = PokerApp.state.players.findIndex(p => p.id === playerId);
-            if (index !== -1) {
-                PokerApp.state.players.splice(index, 1);
-                console.log('[PLAYER] Removed player from state after animation:', playerId);
-            }
-            saveState();
-            updatePlayerList(); // Re-render list which will exclude the removed row
-                updateActiveSessionPlayers(); // Update Firebase if connected
-
-            if (PokerApp.state.dealerId === playerId) {
-                PokerApp.state.dealerId = null; 
-            }
-        }, { once: true });
-                } else {
-        // Fallback if row not found for animation
-        const index = PokerApp.state.players.findIndex(p => p.id === playerId);
-        if (index !== -1) {
-            PokerApp.state.players.splice(index, 1);
-            SoundSystem.playRemoveSound(); // Still play sound
-            console.log('[PLAYER] Removed player from state (row not found for animation):', playerId);
-            saveState();
-            updatePlayerList();
-            updateActiveSessionPlayers();
-            if (PokerApp.state.dealerId === playerId) {
-                PokerApp.state.dealerId = null;
-            }
-        }
+        // The optimistic update and Firebase call happen AFTER the animation.
+        playerRow.addEventListener('animationend', performRemove, { once: true });
+    } else {
+        // Fallback if row not found for animation, perform removal immediately.
+        SoundSystem.playRemoveSound(); // Still play sound
+        console.log(`[PLAYER] Removed player from state (row not found for animation): ${playerId}`);
+        performRemove();
     }
 }
 
@@ -3323,29 +3390,48 @@ function updatePlayerChips(playerId, newValue) {
     const parsedNewValue = parseInt(newValue, 10); // Parse the input string to an integer
 
     if (player && !isNaN(parsedNewValue) && parsedNewValue >= 0) { // Check if parsing was successful and value is valid
+        // Optimistic UI update for responsiveness
         player.current_chips = parsedNewValue; // Use the parsed number
         saveState();
-        // updatePlayerList(); // Call this LATER or ensure animation targets the correct row
-        updatePlayersInFirebase(); // Corrected function call
-        
-        // It's crucial that updatePlayerList runs and finishes before we try to animate the row.
-        // So, we call updatePlayerList first, then schedule the animation.
         updatePlayerList(); 
 
-        // Ensure the row exists after updatePlayerList before animating
+        // Animate the row to give user feedback
         setTimeout(() => {
             const rowToAnimate = document.querySelector(`tr[data-player-id="${playerId}"]`);
-            if (rowToAnimate && typeof animateNewPlayer === 'function') {
+            if (rowToAnimate) {
                  animateNewPlayer(playerId, true); // true for isUpdate
             }
-        }, 0); // Small timeout to allow DOM update
+        }, 0);
 
         PokerApp.UI.showToast(`${player.name}'s chips updated to ${parsedNewValue}`, 'success');
+
+        // Transactional update to Firebase to prevent race conditions
+        if (PokerApp.state.sessionId && window.database) {
+            const playersRef = window.database.ref(`games/${PokerApp.state.sessionId}/state/players`);
+            playersRef.transaction(function(players) {
+                if (players) {
+                    // Firebase can return arrays as objects, so we need to be careful
+                    if (!Array.isArray(players)) {
+                        players = Object.values(players).filter(p => p != null);
+                    }
+                    const playerIndex = players.findIndex(p => p && p.id === playerId);
+                    if (playerIndex > -1) {
+                        players[playerIndex].current_chips = parsedNewValue;
+                    }
+                }
+                return players; // Return the modified array to Firebase
+            }).catch(error => {
+                console.error("Chip update transaction failed: ", error);
+                PokerApp.UI.showToast(`Failed to sync chip update for ${player.name}.`, 'error');
+                // It would be good practice to reload state from Firebase here to fix any UI desync.
+            });
+        }
+
     } else {
         PokerApp.UI.showToast('Invalid chip update. Please enter a valid number.', 'error');
-        // If the value was invalid, we should refresh the list to revert the input field
-        // to the last known good state, preventing the invalid string from staying in the input.
-        if (player) { // Only if player context is valid
+        // If the value was invalid, refresh the list to revert the input field
+        // to the last known good state.
+        if (player) {
             updatePlayerList(); 
         }
     }
