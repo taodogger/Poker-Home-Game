@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof PokerApp.UI.setupJoinUrlCopy === 'function') PokerApp.UI.setupJoinUrlCopy();
         if (typeof PokerApp.UI.setupGlowEffect === 'function') PokerApp.UI.setupGlowEffect();
         if (typeof PokerApp.UI.applyInitialStyleFixes === 'function') PokerApp.UI.applyInitialStyleFixes();
-        if (typeof PokerApp.UI.initializeDebugTools === 'function') PokerApp.UI.initializeDebugTools();
     }
 });
 
@@ -274,62 +273,6 @@ PokerApp.UI = {
             resetButton.style.opacity = '1';
             resetButton.style.pointerEvents = 'auto';
             resetButton.style.cursor = 'pointer';
-        }
-    },
-    
-    // Function to initialize Debug Tools
-    initializeDebugTools() {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('debug') === 'true' || urlParams.get('debug') === '1') {
-            const devTools = document.getElementById('dev-tools');
-            if (devTools) {
-                devTools.style.display = 'block';
-                
-                const testConnectionBtn = document.getElementById('test-connection-btn');
-                if (testConnectionBtn) {
-                    testConnectionBtn.addEventListener('click', function() {
-                        const debugLog = document.getElementById('debug-log');
-                        const now = () => new Date().toISOString().split('T')[1].split('.')[0];
-                        if (typeof window.testConnection === 'function') {
-                            window.testConnection();
-                            if (debugLog) {
-                                debugLog.innerHTML += `<div>[${now()}] Testing connection...</div>`;
-                                debugLog.scrollTop = debugLog.scrollHeight;
-                            }
-                        } else {
-                            console.error('Test connection function not available');
-                            if (debugLog) {
-                                debugLog.innerHTML += `<div style="color: #f44336;">[${now()}] Error: Test connection function not available</div>`;
-                                debugLog.scrollTop = debugLog.scrollHeight;
-                            }
-                        }
-                    });
-                }
-                
-                const forceMobileLayoutBtn = document.getElementById('force-mobile-layout-btn');
-                if (forceMobileLayoutBtn) {
-                    forceMobileLayoutBtn.addEventListener('click', function() {
-                        const debugLog = document.getElementById('debug-log');
-                        const now = () => new Date().toISOString().split('T')[1].split('.')[0];
-                        if (typeof window.forceUpdateMobileLayout === 'function') {
-                            window.forceUpdateMobileLayout();
-                            if (debugLog) {
-                                debugLog.innerHTML += `<div>[${now()}] Forcing mobile layout update...</div>`;
-                                debugLog.scrollTop = debugLog.scrollHeight;
-                            }
-                            if (window.PokerApp && window.PokerApp.UI) {
-                                window.PokerApp.UI.showToast('Mobile layout applied', 'success');
-                            }
-                        } else {
-                            console.error('Force mobile layout function not available');
-                            if (debugLog) {
-                                debugLog.innerHTML += `<div style="color: #f44336;">[${now()}] Error: Force mobile layout function not available</div>`;
-                                debugLog.scrollTop = debugLog.scrollHeight;
-                            }
-                        }
-                    });
-                }
-            }
         }
     },
 
@@ -1242,7 +1185,6 @@ function initializeApp(firebaseAvailable = true) {
             setupJoinUrlCopy: PokerApp.UI.setupJoinUrlCopy,
             setupGlowEffect: PokerApp.UI.setupGlowEffect,
             applyInitialStyleFixes: PokerApp.UI.applyInitialStyleFixes,
-            initializeDebugTools: PokerApp.UI.initializeDebugTools
         };
     }
     

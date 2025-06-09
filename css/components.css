@@ -31,6 +31,10 @@ tbody td {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+tbody tr {
+    transition: background-color 0.2s ease-in-out;
+}
+
 tbody tr:hover {
     background: rgba(255, 255, 255, 0.05);
 }
@@ -132,14 +136,15 @@ input:focus { /* General focus */
 }
 
 .form-group:focus-within label {
-    /* transform: translateY(-2px); /* Example: subtle lift for label */
+    transform: translateY(-2px); /* Example: subtle lift for label */
     color: var(--main-color); /* Highlight label color */
 }
 
 /* Form group refinements for specific text elements inside */
 .form-group span,
 .form-group p { /* These were very general, ensure they don't override specific component text */
-    /* color: white !important; /* Consider removing !important if possible */
+    position: relative;
+    overflow: hidden;
 }
 
 /* Button improvements - Modernized Base */
@@ -174,6 +179,12 @@ input:focus { /* General focus */
 .poker-button:active {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(var(--main-color-rgb), 0.3);
+}
+
+.poker-button:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--button-shadow-hover);
+    filter: brightness(1.1);
 }
 
 /* Specific button overrides */
@@ -298,31 +309,26 @@ input:focus { /* General focus */
 
 /* Remove Player Button */
 .remove-player-btn {
-    width: 36px; 
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.05); 
-    color: rgba(255, 255, 255, 0.7); 
-    border: 1px solid rgba(255, 255, 255, 0.1); 
-    border-radius: var(--border-radius-sm); 
-    transition: all var(--transition-standard);
+    background: transparent;
+    border: none;
+    color: rgba(255, 100, 100, 0.7); /* Reddish color for delete */
+    font-size: 1.5rem; /* Larger for better click target */
+    padding: 0 10px;
     cursor: pointer;
-    font-size: 1.1rem; 
-    line-height: 1;
+    line-height: 1; /* Ensure vertical alignment */
+    transition: all 0.2s ease-in-out;
+    text-shadow: 0 0 5px rgba(255, 100, 100, 0.5);
+    font-weight: bold; /* Make the 'X' bolder */
 }
 
 .remove-player-btn:hover {
-    background: linear-gradient(135deg, #ff5252, #c62828); 
-    color: white; 
-    border-color: rgba(255, 87, 87, 0.5); 
-    transform: scale(1.1) translateY(-1px); 
-    box-shadow: 0 4px 10px rgba(255, 87, 87, 0.2);
+    color: rgb(255, 50, 50);
+    transform: scale(1.2);
 }
 
+/* Make sure the hover effect on the button doesn't get a weird overlay from parent hover states */
 .remove-player-btn:hover::before { /* Prevent general button hover overlay */
-    opacity: 0;
+    content: none;
 }
 
 
