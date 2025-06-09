@@ -18,6 +18,20 @@ try {
     showToast('Could not connect to the game database. Please try again later.', 'error');
 }
 
+// New helper function to update the chip preview in the rebuy form.
+// It's moved here to be accessible from other functions like showUIPanel.
+function updateRebuyChipPreview() {
+    const rebuyAmountInput = document.getElementById('rebuy-amount');
+    const rebuyChipAmountDisplay = document.getElementById('rebuy-chip-amount');
+    const chipRatioRebuyDisplay = document.getElementById('chip-ratio-rebuy');
+
+    if (!rebuyAmountInput) return;
+    const amount = parseFloat(rebuyAmountInput.value) || 0;
+    const chips = amount > 0 && BuyInPage.state.chipRatio > 0 ? Math.floor(amount / BuyInPage.state.chipRatio) : 0;
+    if(rebuyChipAmountDisplay) rebuyChipAmountDisplay.textContent = chips;
+    if(chipRatioRebuyDisplay) chipRatioRebuyDisplay.textContent = BuyInPage.state.chipRatio.toFixed(2);
+}
+
 // Get game ID and name from URL
 const urlParams = new URLSearchParams(window.location.search);
 const gameId = urlParams.get('gameId') || urlParams.get('game-id');
@@ -299,100 +313,7 @@ function initializeBuyInFormFunctionality() {
 
             newForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const submitButton = newForm.querySelector('button[type="submit"]');
-                if (submitButton) {
-                    submitButton.disabled = true;
-                    submitButton.classList.add('loading');
-                }
-
-                const playerNameInput = newForm.querySelector('#player-name');
-                const buyInAmountInput = newForm.querySelector('#buy-in-amount');
-                
-                const playerNameValue = playerNameInput ? playerNameInput.value.trim() : null;
-                const buyInAmountValue = buyInAmountInput ? buyInAmountInput.value : null;
-                const buyInAmount = parseFloat(buyInAmountValue) || 0;
-
-                if (!playerNameValue) {
-                    showToast('Please enter your name', 'error');
-                    if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
-                    return;
-                }
-                if (isNaN(buyInAmount) || buyInAmount <= 0) {
-                    showToast('Please enter a valid buy-in amount', 'error');
-                    if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
-                    return;
-                }
-
-                const currentChipRatio = BuyInPage.state.chipRatio;
-                const chips = Math.floor(buyInAmount / currentChipRatio);
-                if (chips <= 0) {
-                    showToast(`Buy-in amount $${buyInAmount.toFixed(2)} is too low for minimum chips (Ratio: $${currentChipRatio.toFixed(2)})`, 'error');
-                    if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
-                    return;
-                }
-
-                try {
-                    const gameSnapshotCheck = await buyInDatabase.ref(`games/${gameId}`).once('value');
-                    const gameDataForSubmit = gameSnapshotCheck.val();
-                    if (!gameDataForSubmit || !gameDataForSubmit.active) {
-                        throw new Error('Game is no longer active');
-                    }
-
-                    let buyInAction = 'joined';
-                    let playerUpdateDetails = {};
-
-                    await buyInDatabase.ref(`games/${gameId}/state`).transaction(
-                        (currentState) => buyInTransaction(currentState, playerNameValue, chips)
-                    ).then((result) => {
-                        if (!result.committed) {
-                            throw new Error("Buy-in transaction was not committed. Please try again.");
-                        }
-                        // The result.snapshot contains the new state, from which we can get details.
-                        const newLastPlayer = result.snapshot.child("lastPlayer").val();
-                        if (newLastPlayer.name.toLowerCase().trim() === playerNameValue.toLowerCase().trim()) {
-                             buyInAction = newLastPlayer.action;
-                             if(buyInAction === 'rebuy') {
-                                 playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.addedChips, totalChips: newLastPlayer.current_chips };
-                             } else {
-                                 playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.initial_chips };
-                             }
-                        } else {
-                            // This case is unlikely but a good fallback.
-                            console.warn("Transaction player doesn't match current player. Re-finding.");
-                            const players = Object.values(result.snapshot.child("players").val() || {});
-                            const finalPlayerState = players.find(p => p.name.toLowerCase().trim() === playerNameValue.toLowerCase().trim());
-                            if(finalPlayerState) {
-                                playerUpdateDetails = { name: finalPlayerState.name, chips: 'some', totalChips: finalPlayerState.current_chips };
-                                buyInAction = 'rebought';
-                            }
-                        }
-                    });
-
-                    // --- Transaction Successful: UI Update ---
-                    BuyInPage.state.currentPlayerName = playerUpdateDetails.name; // Set global currentPlayerName
-                    localStorage.setItem('kapoker-lastGameId', gameId);
-                    localStorage.setItem('kapoker-lastPlayerName', BuyInPage.state.currentPlayerName);
-
-                    const gameDisplayName = gameDataForSubmit.name || 'the game';
-
-                    // This structure ensures all necessary data is passed to the UI function
-                    const welcomeData = {
-                        buyInAction: buyInAction, // This will be 'join' or 'rebuy'
-                        playerName: playerUpdateDetails.name,
-                        gameName: gameDisplayName,
-                        addedChips: playerUpdateDetails.chips, // For a join, this is the total. For a rebuy, this is the added amount.
-                        totalChips: playerUpdateDetails.totalChips // This is only defined for a rebuy.
-                    };
-
-                    showUIPanel('welcome', welcomeData);
-
-                    if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading');}
-
-                } catch (error) {
-                    console.error('[BUY-IN] Error during buy-in form submission:', error);
-                    showToast(error.message || 'An unexpected error occurred.', 'error');
-                    if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
-                }
+                await handleBuyInSubmit(this);
             });
         })
         .catch(error => {
@@ -403,85 +324,251 @@ function initializeBuyInFormFunctionality() {
         });
 }
 
+async function handleBuyInSubmit(form) {
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.classList.add('loading');
+    }
+
+    const playerNameInput = form.querySelector('#player-name');
+    const buyInAmountInput = form.querySelector('#buy-in-amount');
+    
+    const playerNameValue = playerNameInput ? playerNameInput.value.trim() : null;
+    const buyInAmountValue = buyInAmountInput ? buyInAmountInput.value : null;
+    const buyInAmount = parseFloat(buyInAmountValue) || 0;
+
+    if (!playerNameValue) {
+        showToast('Please enter your name', 'error');
+        if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
+        return;
+    }
+    if (isNaN(buyInAmount) || buyInAmount <= 0) {
+        showToast('Please enter a valid buy-in amount', 'error');
+        if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
+        return;
+    }
+
+    const currentChipRatio = BuyInPage.state.chipRatio;
+    const chips = Math.floor(buyInAmount / currentChipRatio);
+    if (chips <= 0) {
+        showToast(`Buy-in amount $${buyInAmount.toFixed(2)} is too low for minimum chips (Ratio: $${currentChipRatio.toFixed(2)})`, 'error');
+        if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
+        return;
+    }
+
+    try {
+        const gameSnapshotCheck = await buyInDatabase.ref(`games/${gameId}`).once('value');
+        const gameDataForSubmit = gameSnapshotCheck.val();
+        if (!gameDataForSubmit || !gameDataForSubmit.active) {
+            throw new Error('Game is no longer active');
+        }
+
+        let buyInAction = 'joined';
+        let playerUpdateDetails = {};
+
+        await buyInDatabase.ref(`games/${gameId}/state`).transaction(
+            (currentState) => buyInTransaction(currentState, playerNameValue, chips)
+        ).then((result) => {
+            if (!result.committed) {
+                throw new Error("Buy-in transaction was not committed. Please try again.");
+            }
+            // The result.snapshot contains the new state, from which we can get details.
+            const newLastPlayer = result.snapshot.child("lastPlayer").val();
+            if (newLastPlayer.name.toLowerCase().trim() === playerNameValue.toLowerCase().trim()) {
+                 buyInAction = newLastPlayer.action;
+                 if(buyInAction === 'rebuy') {
+                     playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.addedChips, totalChips: newLastPlayer.current_chips };
+                 } else {
+                     playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.initial_chips };
+                 }
+            } else {
+                // This case is unlikely but a good fallback.
+                console.warn("Transaction player doesn't match current player. Re-finding.");
+                const players = Object.values(result.snapshot.child("players").val() || {});
+                const finalPlayerState = players.find(p => p.name.toLowerCase().trim() === playerNameValue.toLowerCase().trim());
+                if(finalPlayerState) {
+                    playerUpdateDetails = { name: finalPlayerState.name, chips: 'some', totalChips: finalPlayerState.current_chips };
+                    buyInAction = 'rebought';
+                }
+            }
+        });
+
+        // --- Transaction Successful: UI Update ---
+        BuyInPage.state.currentPlayerName = playerUpdateDetails.name; // Set global currentPlayerName
+        localStorage.setItem('kapoker-lastGameId', gameId);
+        localStorage.setItem('kapoker-lastPlayerName', BuyInPage.state.currentPlayerName);
+
+        const gameDisplayName = gameDataForSubmit.name || 'the game';
+
+        // This structure ensures all necessary data is passed to the UI function
+        const welcomeData = {
+            buyInAction: buyInAction, // This will be 'join' or 'rebuy'
+            playerName: playerUpdateDetails.name,
+            gameName: gameDisplayName,
+            addedChips: playerUpdateDetails.chips, // For a join, this is the total. For a rebuy, this is the added amount.
+            totalChips: playerUpdateDetails.totalChips // This is only defined for a rebuy.
+        };
+
+        showUIPanel('welcome', welcomeData);
+
+        if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading');}
+
+    } catch (error) {
+        console.error('[BUY-IN] Error during buy-in form submission:', error);
+        showToast(error.message || 'An unexpected error occurred.', 'error');
+        if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
+    }
+}
+
 function initializeRebuyFormFunctionality() {
     console.log('[REBUY_FORM] Initializing rebuy form functionality.');
 
-    const welcomeMessageArea = document.getElementById('welcome-message-area');
     const rebuyFormArea = document.getElementById('rebuy-form-area');
-    const rebuyPlayerNameDisplay = document.getElementById('rebuy-player-name-display');
-    const rebuyAmountInput = document.getElementById('rebuy-amount');
-    const rebuyChipAmountDisplay = document.getElementById('rebuy-chip-amount');
-    const chipRatioRebuyDisplay = document.getElementById('chip-ratio-rebuy');
-    const confirmRebuyButton = document.getElementById('confirm-rebuy-button');
-    const cancelRebuyButton = document.getElementById('cancel-rebuy-button');
-    // Note: mainBuyInForm, mainPlayerNameInput, mainBuyInAmountInput are part of initializeBuyInFormFunctionality
-
-    function updateRebuyChipPreview() {
-        if (!rebuyAmountInput) return;
-        const amount = parseFloat(rebuyAmountInput.value) || 0;
-        const chips = amount > 0 && BuyInPage.state.chipRatio > 0 ? Math.floor(amount / BuyInPage.state.chipRatio) : 0;
-        if(rebuyChipAmountDisplay) rebuyChipAmountDisplay.textContent = chips;
-        if(chipRatioRebuyDisplay) chipRatioRebuyDisplay.textContent = BuyInPage.state.chipRatio.toFixed(2);
+    // To prevent duplicate listeners, we clone the form area and re-attach listeners to the clone.
+    if (!rebuyFormArea) {
+        console.error('[REBUY_FORM] Rebuy form area not found. Cannot initialize.');
+        return;
     }
+    const newRebuyFormArea = rebuyFormArea.cloneNode(true);
+    rebuyFormArea.parentNode.replaceChild(newRebuyFormArea, rebuyFormArea);
 
-    // Make showRebuyForm globally accessible if it's called from HTML, or ensure it's called by a listener set up here.
-    // If attachWelcomeAreaButtonListeners sets up the #rebuy-action-button, then this is fine.
+    // Get all interactive elements from the new, cloned node.
+    const rebuyAmountInput = newRebuyFormArea.querySelector('#rebuy-amount');
+    const confirmRebuyButton = newRebuyFormArea.querySelector('#confirm-rebuy-button');
+    const cancelRebuyButton = newRebuyFormArea.querySelector('#cancel-rebuy-button');
+
+    // This function is called from the "welcome" panel to show the rebuy form.
     window.showRebuyForm = function() { 
         showUIPanel('rebuy', { playerName: BuyInPage.state.currentPlayerName });
     };
 
     if (rebuyAmountInput) {
+        // The listener now calls the globally accessible update function.
         rebuyAmountInput.addEventListener('input', updateRebuyChipPreview);
     }
 
     if (confirmRebuyButton) {
+        // The rebuy button is now decoupled and calls the shared transaction function directly.
         confirmRebuyButton.addEventListener('click', async (e) => {
             e.preventDefault();
-            if (!rebuyAmountInput) return;
-            const rebuyAmount = parseFloat(rebuyAmountInput.value);
-
-            if (isNaN(rebuyAmount) || rebuyAmount <= 0) {
-                showToast('Please enter a valid rebuy amount', 'error');
-                return;
-            }
-
-            // The main buy-in form is used to process the actual transaction.
-            // We need to ensure it exists and its input fields can be populated.
-            const currentMainForm = document.getElementById('buy-in-form');
-            if (!currentMainForm) {
-                showToast('Error: Main buy-in form not found for rebuy.', 'error');
-                return;
-            }
-            const playerNameInputInMainForm = currentMainForm.querySelector('#player-name');
-            const buyInAmountInputInMainForm = currentMainForm.querySelector('#buy-in-amount');
-
-            if (!playerNameInputInMainForm || !buyInAmountInputInMainForm) {
-                showToast('Error preparing rebuy. Critical form fields missing.', 'error');
-                return;
-            }
-            if (!BuyInPage.state.currentPlayerName) {
-                showToast('Error: Player name not set for rebuy.', 'error');
-                return;
-            }
-
-            playerNameInputInMainForm.value = BuyInPage.state.currentPlayerName;
-            buyInAmountInputInMainForm.value = rebuyAmount.toString();
-
-            if (rebuyFormArea) rebuyFormArea.style.display = 'none';
-            confirmRebuyButton.disabled = true;
-            confirmRebuyButton.classList.add('loading');
-            
-            // Programmatically submit the main buy-in form (which should be set up by initializeBuyInFormFunctionality)
-            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-            currentMainForm.dispatchEvent(submitEvent);
-            // The main form's submit handler will manage button states and UI transitions.
+            await handleRebuyClick(confirmRebuyButton);
         });
     }
 
     if (cancelRebuyButton) {
         cancelRebuyButton.addEventListener('click', () => {
+            // After cancelling, show the main welcome panel again.
             showUIPanel('welcome', { playerName: BuyInPage.state.currentPlayerName });
         });
+    }
+}
+
+async function handleRebuyClick(button) {
+    const rebuyAmountInput = document.getElementById('rebuy-amount');
+    if (!rebuyAmountInput) return;
+    const rebuyAmount = parseFloat(rebuyAmountInput.value);
+    const playerName = BuyInPage.state.currentPlayerName;
+
+    if (!playerName) {
+        showToast('Error: Player name not set for rebuy.', 'error');
+        return;
+    }
+    
+    // Directly call the new shared function, passing the button for state management.
+    await performBuyIn(playerName, rebuyAmount, button);
+}
+
+// New shared function to handle the transaction logic for both initial buy-ins and rebuys.
+// This avoids code duplication and decouples the rebuy form from the main buy-in form.
+async function performBuyIn(playerName, buyInAmount, submitButton = null) {
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.classList.add('loading');
+    }
+
+    if (!playerName) {
+        showToast('Player name is missing.', 'error');
+        if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
+        return;
+    }
+    if (isNaN(buyInAmount) || buyInAmount <= 0) {
+        showToast('Please enter a valid buy-in amount', 'error');
+        if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
+        return;
+    }
+
+    const currentChipRatio = BuyInPage.state.chipRatio;
+    const chips = Math.floor(buyInAmount / currentChipRatio);
+    if (chips <= 0) {
+        showToast(`Buy-in amount $${buyInAmount.toFixed(2)} is too low for minimum chips (Ratio: $${currentChipRatio.toFixed(2)})`, 'error');
+        if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('loading'); }
+        return;
+    }
+
+    try {
+        const gameSnapshotCheck = await buyInDatabase.ref(`games/${gameId}`).once('value');
+        const gameDataForSubmit = gameSnapshotCheck.val();
+        if (!gameDataForSubmit || !gameDataForSubmit.active) {
+            throw new Error('Game is no longer active');
+        }
+
+        let buyInAction = 'joined';
+        let playerUpdateDetails = {};
+
+        await buyInDatabase.ref(`games/${gameId}/state`).transaction(
+            (currentState) => buyInTransaction(currentState, playerName, chips)
+        ).then((result) => {
+            if (!result.committed) {
+                throw new Error("Buy-in transaction was not committed. Please try again.");
+            }
+            // The result.snapshot contains the new state, from which we can get details.
+            const newLastPlayer = result.snapshot.child("lastPlayer").val();
+            if (newLastPlayer.name.toLowerCase().trim() === playerName.toLowerCase().trim()) {
+                 buyInAction = newLastPlayer.action;
+                 if(buyInAction === 'rebuy') {
+                     playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.addedChips, totalChips: newLastPlayer.current_chips };
+                 } else {
+                     playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.initial_chips };
+                 }
+            } else {
+                // This case is unlikely but a good fallback.
+                console.warn("Transaction player doesn't match current player. Re-finding.");
+                const players = Object.values(result.snapshot.child("players").val() || {});
+                const finalPlayerState = players.find(p => p.name.toLowerCase().trim() === playerName.toLowerCase().trim());
+                if(finalPlayerState) {
+                    playerUpdateDetails = { name: finalPlayerState.name, chips: 'some', totalChips: finalPlayerState.current_chips };
+                    buyInAction = 'rebought';
+                }
+            }
+        });
+
+        // --- Transaction Successful: UI Update ---
+        BuyInPage.state.currentPlayerName = playerUpdateDetails.name; // Set global currentPlayerName
+        localStorage.setItem('kapoker-lastGameId', gameId);
+        localStorage.setItem('kapoker-lastPlayerName', BuyInPage.state.currentPlayerName);
+
+        const gameDisplayName = gameDataForSubmit.name || 'the game';
+
+        // This structure ensures all necessary data is passed to the UI function
+        const welcomeData = {
+            buyInAction: buyInAction, // This will be 'join' or 'rebuy'
+            playerName: playerUpdateDetails.name,
+            gameName: gameDisplayName,
+            addedChips: playerUpdateDetails.chips, // For a join, this is the total. For a rebuy, this is the added amount.
+            totalChips: playerUpdateDetails.totalChips // This is only defined for a rebuy.
+        };
+
+        showUIPanel('welcome', welcomeData);
+
+    } catch (error) {
+        console.error(`[BUY-IN] Error during transaction for ${playerName}:`, error);
+        showToast(error.message || 'An unexpected error occurred.', 'error');
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.classList.remove('loading');
+        }
     }
 }
 
@@ -864,9 +951,9 @@ function showUIPanel(panelName, data = {}) {
                     confirmRebuyButton.classList.remove('loading');
                 }
                 panels['rebuy'].style.display = '';
-                // The rebuy form has its own preview logic, which we can call here
-                const rebuyPreviewUpdater = initializeRebuyFormFunctionality.updateRebuyChipPreview;
-                if(typeof rebuyPreviewUpdater === 'function') rebuyPreviewUpdater();
+                // The broken code is removed, and we now call the refactored, working function
+                // to ensure the chip preview is correctly updated when the panel is shown.
+                updateRebuyChipPreview();
             }
             break;
 
