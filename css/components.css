@@ -95,6 +95,116 @@ tbody tr:last-child td:last-child {
     font-size: 0.95rem;
 }
 
+/* Contract Address Section */
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.contract-address-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 16px;
+    border-radius: var(--border-radius-lg);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(var(--main-color-rgb), 0.3);
+    max-width: 500px;
+    width: 100%;
+}
+
+.contract-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.contract-address-display {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(var(--main-color-rgb), 0.4);
+    border-radius: var(--border-radius-sm);
+    padding: 6px 12px;
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    user-select: all;
+    cursor: text;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.contract-address-display:hover {
+    background: rgba(0, 0, 0, 0.6);
+    border-color: var(--main-color);
+}
+
+.contract-address-display.loading {
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+}
+
+.copy-contract-btn {
+    background: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+    border: none;
+    border-radius: var(--border-radius-sm);
+    padding: 6px 10px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+}
+
+.copy-contract-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(var(--main-color-rgb), 0.4);
+}
+
+.copy-contract-btn:active {
+    transform: translateY(0);
+}
+
+/* Mobile responsiveness for contract address */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .header-center {
+        order: 3;
+        padding: 0 16px;
+    }
+    
+    .contract-address-section {
+        padding: 6px 12px;
+        gap: 8px;
+    }
+    
+    .contract-label {
+        font-size: 0.8rem;
+    }
+    
+    .contract-address-display {
+        font-size: 0.8rem;
+        padding: 5px 8px;
+    }
+}
+
 /* General input styling, should come before more specific types */
 input { /* General input for others if not specifically typed */
     width: 100%;
