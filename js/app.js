@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof PokerApp.UI.setupJoinUrlCopy === 'function') PokerApp.UI.setupJoinUrlCopy();
         if (typeof PokerApp.UI.setupGlowEffect === 'function') PokerApp.UI.setupGlowEffect();
         if (typeof PokerApp.UI.applyInitialStyleFixes === 'function') PokerApp.UI.applyInitialStyleFixes();
-        if (typeof PokerApp.UI.setupContractAddress === 'function') PokerApp.UI.setupContractAddress();
     }
     
     // Initialize player state validation system
@@ -77,82 +76,6 @@ PokerApp.UI = {
             return container;
         }
         return document.querySelector('.toast-container');
-    },
-
-    setupContractAddress() {
-        console.log('[CONTRACT] Setting up contract address display');
-        const contractDisplay = document.getElementById('contract-address-display');
-        const copyButton = document.getElementById('copy-contract');
-        
-        if (!contractDisplay || !copyButton) {
-            console.warn('[CONTRACT] Contract address elements not found');
-            return;
-        }
-
-        // Set the contract address (this would be set by the developer)
-        this.setContractAddress();
-
-        // Copy functionality
-        copyButton.addEventListener('click', () => {
-            this.copyContractAddress();
-        });
-
-        // Also allow copying by clicking the address itself
-        contractDisplay.addEventListener('click', () => {
-            this.copyContractAddress();
-        });
-    },
-
-    setContractAddress() {
-        // TODO: Replace this with your actual deployed contract address
-        const CONTRACT_ADDRESS = "0x742d35Cc6634C0532925a3b8D72F6Ed2C1e8e4d8"; // REPLACE WITH REAL ADDRESS
-        
-        const contractDisplay = document.getElementById('contract-address-display');
-        if (contractDisplay) {
-            // Simulate deployment delay for demo, then show actual address
-            setTimeout(() => {
-                contractDisplay.textContent = CONTRACT_ADDRESS;
-                contractDisplay.classList.remove('loading');
-                console.log('[CONTRACT] Contract address set:', CONTRACT_ADDRESS);
-            }, 2000);
-        }
-    },
-
-    copyContractAddress() {
-        const contractDisplay = document.getElementById('contract-address-display');
-        if (!contractDisplay || contractDisplay.classList.contains('loading')) {
-            this.showToast('Contract address not yet available', 'error');
-            return;
-        }
-
-        const address = contractDisplay.textContent.trim();
-        
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(address).then(() => {
-                this.showToast('Contract address copied to clipboard!', 'success');
-                console.log('[CONTRACT] Address copied:', address);
-            }).catch(error => {
-                console.error('[CONTRACT] Copy failed:', error);
-                this.fallbackCopy(address);
-            });
-        } else {
-            this.fallbackCopy(address);
-        }
-    },
-
-    fallbackCopy(text) {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            this.showToast('Contract address copied to clipboard!', 'success');
-        } catch (error) {
-            this.showToast('Failed to copy address', 'error');
-        }
-        document.body.removeChild(textArea);
     },
     
     updateGameStatus(message, isActive = false) {
