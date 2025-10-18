@@ -488,6 +488,11 @@ function updatePlayerList() {
     console.log(`[UI] Player list updated with ${PokerApp.state.players.length} players`);
 }
 
+// Add player function - handles both new players and rebuys
+// STARTING STACK LOGIC:
+// - For new players: initial_chips and current_chips both set to chips amount
+// - For rebuys: chips added to BOTH initial_chips (starting stack) and current_chips
+// - This ensures payout calculations work: profit/loss = current_chips - initial_chips
 function addPlayer(name, chips) {
     if (!name) {
         PokerApp.UI.showToast('Player name cannot be empty.', 'error');
@@ -511,7 +516,8 @@ function addPlayer(name, chips) {
         const originalCurrent = existingPlayer.current_chips;
         const originalInitial = existingPlayer.initial_chips;
         
-        // Add chips to existing player (rebuy scenario)
+        // REBUY: Add chips to BOTH starting stack (initial_chips) and current chips
+        // This increases what they've paid in, which is used for payout calculations
         existingPlayer.current_chips += parseInt(chips);
         existingPlayer.initial_chips += parseInt(chips);
         existingPlayer.lastBuyIn = Date.now();
@@ -2067,23 +2073,48 @@ function setupGameStateListener(gameId) {
                             current_chips: parseInt(updatedPlayer.current_chips) || 0
                         };
                         
-                        // Check if this is a host update that should take priority
-                        const isHostUpdate = validatedUpdate.hostUpdated && validatedUpdate.lastHostUpdate;
+                        // HOST PRIORITY: Check if local player has recent host update
+                        const localHasRecentHostUpdate = existingPlayer.hostUpdated && 
+                                                        existingPlayer.lastHostUpdate && 
+                                                        (Date.now() - existingPlayer.lastHostUpdate < 10000); // 10 second protection window
+                        
+                        // Check if incoming update is a host update
+                        const isIncomingHostUpdate = validatedUpdate.hostUpdated && validatedUpdate.lastHostUpdate;
                         const isNewerThanLocal = !existingPlayer.lastHostUpdate || 
                                               (validatedUpdate.lastHostUpdate > existingPlayer.lastHostUpdate);
                         
-                        if (isHostUpdate) {
-                            // IGNORE HOST UPDATES - they're handled locally only
-                            console.log(`[FIREBASE_SYNC] Ignoring host update for ${existingPlayer.name} - handled locally`);
+                        // HOST AUTHORITY: Always prioritize local host updates over any Firebase changes
+                        if (localHasRecentHostUpdate) {
+                            console.log(`[FIREBASE_SYNC] BLOCKING update for ${existingPlayer.name} - local host update takes priority (${Date.now() - existingPlayer.lastHostUpdate}ms ago)`);
+                            return;
+                        }
+                        
+                        if (isIncomingHostUpdate) {
+                            // Only apply incoming host updates if they're newer than our local state
+                            if (isNewerThanLocal) {
+                                console.log(`[FIREBASE_SYNC] Applying newer host update for ${existingPlayer.name}`);
+                                existingPlayer.current_chips = validatedUpdate.current_chips;
+                                existingPlayer.lastHostUpdate = validatedUpdate.lastHostUpdate;
+                                existingPlayer.hostUpdated = true;
+                                updatePlayerList();
+                                saveState();
+                            } else {
+                                console.log(`[FIREBASE_SYNC] Ignoring older host update for ${existingPlayer.name}`);
+                            }
                             return;
                             
-                        } else if (!isHostUpdate && !validatedUpdate.manualAdd && validatedUpdate.initial_chips > existingPlayer.initial_chips) {
-                            // QR code rebuy only: Add chips to current total
+                        } else if (!isIncomingHostUpdate && !validatedUpdate.manualAdd && validatedUpdate.initial_chips > existingPlayer.initial_chips) {
+                            // QR CODE REBUY: Add chips to BOTH initial (starting stack) and current totals
                             const chipDiff = validatedUpdate.initial_chips - existingPlayer.initial_chips;
-                            console.log(`[FIREBASE_SYNC] Applying QR code rebuy for ${existingPlayer.name}: +${chipDiff} chips`);
+                            console.log(`[FIREBASE_SYNC] Applying QR code rebuy for ${existingPlayer.name}: +${chipDiff} chips (starting stack: ${existingPlayer.initial_chips} -> ${validatedUpdate.initial_chips})`);
                             
+                            // Update starting stack (initial_chips) - this is what payouts calculate from
                             existingPlayer.initial_chips = validatedUpdate.initial_chips;
+                            // Add the difference to current chips
                             existingPlayer.current_chips += chipDiff;
+                            
+                            // Save state to persist the starting stack update
+                            saveState();
                             
                             // Update UI and trigger animation
                             updatePlayerList();
@@ -2794,11 +2825,14 @@ function calculatePayouts() {
 
     console.log('[PAYOUT] Processing players:', players.length);
 
-    // Calculate chip differences and initial cash values
+    // PAYOUT CALCULATION: Based on starting stack (initial_chips)
+    // - initial_chips = total amount player bought in for (starting stack + rebuys)
+    // - current_chips = current chip count (modified by host or game play)
+    // - chipDifference = profit/loss = current_chips - initial_chips
     const playerDiffs = players.map(player => {
-        const initialChips = parseInt(player.initial_chips, 10) || 0;
-        const currentChips = parseInt(player.current_chips, 10) || 0;
-        const chipDifference = currentChips - initialChips;
+        const initialChips = parseInt(player.initial_chips, 10) || 0; // Starting stack (what they paid)
+        const currentChips = parseInt(player.current_chips, 10) || 0; // Current chips (after play)
+        const chipDifference = currentChips - initialChips; // Profit/loss in chips
         
         return {
             id: player.id,
@@ -3502,6 +3536,10 @@ function editPlayerChips(playerId) {
 window.editPlayerChips = editPlayerChips;
 
 // Function to update player chips directly from input field (HOST AUTHORITY)
+// HOST PRIORITY: This function has the HIGHEST priority for chip count changes
+// - Updates current_chips only (NOT initial_chips/starting stack)
+// - Payouts calculate profit/loss as: current_chips - initial_chips
+// - Host updates override any Firebase sync for 10 seconds
 function updatePlayerChips(playerId, newValue) {
     const player = PokerApp.state.players.find(p => p.id === playerId);
     const parsedNewValue = parseInt(newValue, 10);
@@ -3517,9 +3555,10 @@ function updatePlayerChips(playerId, newValue) {
         return;
     }
 
-    console.log(`[HOST_UPDATE] Host updating ${player.name} chips to ${parsedNewValue} (was ${player.current_chips})`);
+    console.log(`[HOST_UPDATE] Host updating ${player.name} chips to ${parsedNewValue} (was ${player.current_chips}, starting stack: ${player.initial_chips})`);
 
-    // ISOLATED LOCAL UPDATE - only affect this specific player
+    // HOST AUTHORITY: Update current chips only - starting stack (initial_chips) remains unchanged
+    // This ensures payout calculations work correctly: profit/loss = current_chips - initial_chips
     player.current_chips = parsedNewValue;
     player.lastHostUpdate = Date.now();
     player.hostUpdated = true;
