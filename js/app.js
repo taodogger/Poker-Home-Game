@@ -610,18 +610,24 @@ function addPlayer(name, chips) {
 
     console.log(`[MANUAL_ADD] Creating new player with ID ${newPlayerId}:`, newPlayer);
 
-    // Add to state
+    // CRITICAL CHANGE: Push to local state AND force UI refresh immediately
+    // We do NOT wait for Firebase to echo back. We trust the host's input.
     PokerApp.state.players.push(newPlayer);
     
-    // Update UI first
-    updatePlayerList();
-    updateEmptyState();
-    
-    // Then trigger animation after a short delay to ensure DOM is updated
-    setTimeout(() => {
-        animateNewPlayer(newPlayer.id); // Default is isUpdate = false
-        PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
-    }, 50);
+    // Force a complete UI rebuild
+    requestAnimationFrame(() => {
+        updatePlayerList();
+        updateEmptyState();
+        
+        // Trigger animation
+        setTimeout(() => {
+            const row = document.querySelector(`tr[data-player-id="${newPlayerId}"]`);
+            if (row) {
+                PokerApp.UI.triggerAnimation(row, 'popIn');
+            }
+            PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
+        }, 50);
+    });
     
     // Save state and update Firebase with consistent transaction pattern
     saveState();
