@@ -323,12 +323,6 @@ function updatePlayerList() {
         return;
     }
 
-    // Update empty state message
-    const noPlayersMessage = document.getElementById('no-players-message');
-    if (noPlayersMessage) {
-        noPlayersMessage.style.display = PokerApp.state.players.length > 0 ? 'none' : 'block';
-    }
-
     // Save active input states
     const activeInputs = {};
     document.querySelectorAll('.chip-input').forEach(input => {
@@ -341,10 +335,21 @@ function updatePlayerList() {
     // Clear current table rows
     playerTableBody.innerHTML = '';
 
-    // Check if we have players
-    if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
+    // Check if we have players (and valid array)
+    if (!PokerApp.state.players || !Array.isArray(PokerApp.state.players) || PokerApp.state.players.length === 0) {
+        // Update empty state message (show it)
+        const noPlayersMessage = document.getElementById('no-players-message');
+        if (noPlayersMessage) {
+            noPlayersMessage.style.display = 'block';
+        }
         console.log('[UI] No players to display in updatePlayerList');
         return;
+    } else {
+        // Update empty state message (hide it)
+        const noPlayersMessage = document.getElementById('no-players-message');
+        if (noPlayersMessage) {
+            noPlayersMessage.style.display = 'none';
+        }
     }
 
     console.log('[UI] Updating player list with players:', PokerApp.state.players);
@@ -353,91 +358,83 @@ function updatePlayerList() {
     let totalInitialChips = 0;
     let totalCurrentChips = 0;
     
-    // Add player rows to the table
-    PokerApp.state.players.forEach((player, index) => {
-        if (!player || !player.name) {
-            console.warn(`[UI] Skipping invalid player at index ${index}:`, player);
-            return;
-        }
-        
-        // Validate and fix player data
-        if (typeof player.initial_chips !== 'number' || isNaN(player.initial_chips)) {
-            console.warn(`[UI] Fixing invalid initial_chips for ${player.name}:`, player.initial_chips);
-            player.initial_chips = 0;
-        }
-        if (typeof player.current_chips !== 'number' || isNaN(player.current_chips)) {
-            console.warn(`[UI] Fixing invalid current_chips for ${player.name}:`, player.current_chips);
-            player.current_chips = player.initial_chips || 0;
-        }
-        if (!player.id || typeof player.id !== 'number') {
-            console.warn(`[UI] Fixing invalid player ID for ${player.name}:`, player.id);
-            player.id = Date.now() + index; // Emergency ID assignment
-        }
-        
-        // Add to totals
-        totalInitialChips += parseInt(player.initial_chips) || 0;
-        totalCurrentChips += parseInt(player.current_chips) || 0;
-        
-        const row = document.createElement('tr');
-        row.className = player.id === PokerApp.state.dealerId ? 'dealer' : '';
-        row.setAttribute('data-player-id', player.id);
-        
-        // Animate if new player
-        if (player.isNew) {
-            PokerApp.UI.triggerAnimation(row, 'popIn'); 
-            delete player.isNew; // Remove flag after animation is triggered
-        }
-        
-        // Create individual cells instead of using innerHTML to maintain input state
-        const nameCell = document.createElement('td');
-        nameCell.className = 'player-name';
-        nameCell.textContent = player.name;
-        row.appendChild(nameCell);
-        
-        const initialChipsCell = document.createElement('td');
-        initialChipsCell.className = 'initial-chips';
-        initialChipsCell.textContent = player.initial_chips;
-        row.appendChild(initialChipsCell);
-        
-        const currentChipsCell = document.createElement('td');
-        
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.className = 'chip-input';
-        input.value = player.current_chips;
-        input.setAttribute('data-player-id', player.id);
-        input.setAttribute('min', '0');
-        
-        // Don't use inline event handlers - we'll add proper event listeners later
-        input.id = `chip-input-${player.id}`;
-        
-        // If this input was active, we'll focus it after appending
-        if (activeInputs[player.id]) {
-            // We'll focus it after the table is fully rendered
-            setTimeout(() => input.focus(), 0);
-        }
-        
-        currentChipsCell.appendChild(input);
-        row.appendChild(currentChipsCell);
-        
-        const actionsCell = document.createElement('td');
-        actionsCell.className = 'player-actions';
-        
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'remove-player-btn';
-        removeBtn.setAttribute('data-player-id', player.id);
-        removeBtn.title = 'Remove Player'; // Add tooltip
-        
-        const removeIcon = document.createElement('span');
-        removeIcon.className = 'button-icon';
-        removeIcon.textContent = '×'; // Keep simple remove icon
-        
-        removeBtn.appendChild(removeIcon);
-        actionsCell.appendChild(removeBtn);
+    // Safely iterate
+    const validPlayers = PokerApp.state.players.filter(p => p && p.name);
+    
+    validPlayers.forEach((player, index) => {
+        try {
+            // Validate and fix player data safely
+            const safePlayer = { ...player }; // Shallow copy to avoid mutation side effects during render logic
+            if (typeof safePlayer.initial_chips !== 'number' || isNaN(safePlayer.initial_chips)) safePlayer.initial_chips = 0;
+            if (typeof safePlayer.current_chips !== 'number' || isNaN(safePlayer.current_chips)) safePlayer.current_chips = safePlayer.initial_chips || 0;
+            if (!safePlayer.id) safePlayer.id = Date.now() + index;
 
-        row.appendChild(actionsCell);
-        
-        playerTableBody.appendChild(row);
+            // Add to totals
+            totalInitialChips += parseInt(safePlayer.initial_chips) || 0;
+            totalCurrentChips += parseInt(safePlayer.current_chips) || 0;
+            
+            const row = document.createElement('tr');
+            row.className = safePlayer.id === PokerApp.state.dealerId ? 'dealer' : '';
+            row.setAttribute('data-player-id', safePlayer.id);
+            
+            // Animate if new player
+            if (player.isNew) { // Check original object for flag
+                PokerApp.UI.triggerAnimation(row, 'popIn'); 
+                delete player.isNew; // Remove flag from state object
+            }
+            
+            // Player Name
+            const nameCell = document.createElement('td');
+            nameCell.className = 'player-name';
+            nameCell.textContent = safePlayer.name;
+            row.appendChild(nameCell);
+            
+            // Initial Chips
+            const initialChipsCell = document.createElement('td');
+            initialChipsCell.className = 'initial-chips';
+            initialChipsCell.textContent = safePlayer.initial_chips;
+            row.appendChild(initialChipsCell);
+            
+            // Current Chips Input
+            const currentChipsCell = document.createElement('td');
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'chip-input';
+            input.value = safePlayer.current_chips;
+            input.setAttribute('data-player-id', safePlayer.id);
+            input.setAttribute('min', '0');
+            input.id = `chip-input-${safePlayer.id}`;
+            
+            // Restore focus
+            if (activeInputs[safePlayer.id]) {
+                setTimeout(() => input.focus(), 0);
+            }
+            
+            currentChipsCell.appendChild(input);
+            row.appendChild(currentChipsCell);
+            
+            // Actions
+            const actionsCell = document.createElement('td');
+            actionsCell.className = 'player-actions';
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-player-btn';
+            removeBtn.setAttribute('data-player-id', safePlayer.id);
+            removeBtn.title = 'Remove Player';
+            removeBtn.type = 'button'; // Prevent form submit
+            
+            const removeIcon = document.createElement('span');
+            removeIcon.className = 'button-icon';
+            removeIcon.textContent = '×';
+            
+            removeBtn.appendChild(removeIcon);
+            actionsCell.appendChild(removeBtn);
+            row.appendChild(actionsCell);
+            
+            playerTableBody.appendChild(row);
+        } catch (rowError) {
+            console.error(`[UI] Error rendering row for player index ${index}:`, rowError);
+        }
     });
     
     // Add totals row
@@ -466,7 +463,8 @@ function updatePlayerList() {
 
     updateEmptyState();
     
-    // Add event listeners after DOM is built
+    // Add event listeners using delegation or re-attaching
+    // Re-attaching to new elements
     playerTableBody.querySelectorAll('.chip-input').forEach(input => {
         input.addEventListener('change', function() {
             const playerId = parseInt(this.getAttribute('data-player-id'));
@@ -477,7 +475,9 @@ function updatePlayerList() {
     });
     
     playerTableBody.querySelectorAll('.remove-player-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault(); // Stop any form submit
+            e.stopPropagation();
             const playerId = parseInt(this.getAttribute('data-player-id'));
             if (playerId) {
                 removePlayer(playerId);
@@ -486,7 +486,7 @@ function updatePlayerList() {
     });
     
     // Log success
-    console.log(`[UI] Player list updated with ${PokerApp.state.players.length} players`);
+    console.log(`[UI] Player list updated with ${validPlayers.length} players`);
 }
 
 // Add player function - handles both new players and rebuys
