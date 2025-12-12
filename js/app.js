@@ -343,6 +343,7 @@ function updatePlayerList() {
 
     // Check if we have players
     if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
+        console.log('[UI] No players to display in updatePlayerList');
         return;
     }
 
@@ -614,8 +615,8 @@ function addPlayer(name, chips) {
     // We do NOT wait for Firebase to echo back. We trust the host's input.
     PokerApp.state.players.push(newPlayer);
     
-    // Force a complete UI rebuild
-    requestAnimationFrame(() => {
+    // Force a complete UI rebuild - Using setTimeout to break out of current stack frame
+    setTimeout(() => {
         updatePlayerList();
         updateEmptyState();
         
@@ -627,7 +628,7 @@ function addPlayer(name, chips) {
             }
             PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
         }, 50);
-    });
+    }, 0);
     
     // Save state and update Firebase with consistent transaction pattern
     saveState();
