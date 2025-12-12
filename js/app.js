@@ -2036,31 +2036,21 @@ function setupGameStateListener(gameId) {
                         );
                         
                         if (existingPlayerIndex === -1) {
-                            // Check if this is a QR code join (recent timestamp AND not manual)
-                            const isQRCodeJoin = validatedPlayer.joinedAt && 
-                                               (Date.now() - validatedPlayer.joinedAt < 5000) && // Within 5 seconds
-                                               !validatedPlayer.manualAdd; // Not manually added by host
+                            // Only add if it's genuinely new to local state
+                            PokerApp.state.players.push(validatedPlayer);
+                            console.log('[FIREBASE] Added new player to local state from child_added:', validatedPlayer.name);
                             
-                            if (isQRCodeJoin) {
-                                // Add new player from QR code to state
-                                PokerApp.state.players.push(validatedPlayer);
-                                
-                                console.log('[FIREBASE] Added new QR code player to local state:', validatedPlayer.name);
-                                
-                                // Update UI and trigger animation
+                            // Use requestAnimationFrame for smooth animation
+                            requestAnimationFrame(() => {
                                 updatePlayerList();
                                 updateEmptyState();
-                                
-                                // Use requestAnimationFrame for smooth animation
-                                requestAnimationFrame(() => {
-                                    setTimeout(() => {
-                                        animateNewPlayer(validatedPlayer.id);
+                                setTimeout(() => {
+                                    animateNewPlayer(validatedPlayer.id);
+                                    if (!validatedPlayer.manualAdd) {
                                         PokerApp.UI.showToast(`${validatedPlayer.name} joined with ${validatedPlayer.initial_chips} chips`, 'success');
-                                    }, 100);
-                                });
-                            } else {
-                                console.log('[FIREBASE] Ignoring non-QR player add (likely manual host add):', validatedPlayer.name);
-                            }
+                                    }
+                                }, 100);
+                            });
                         } else {
                             console.log('[FIREBASE] Player already exists locally, skipping add:', validatedPlayer.name);
                         }
