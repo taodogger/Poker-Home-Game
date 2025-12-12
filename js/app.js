@@ -644,6 +644,7 @@ function addPlayer(name, chips) {
             
             // Ensure consistent ID assignment
             const maxId = Math.max(0, ...currentState.players.map(p => p.id || 0));
+            // Use existing nextPlayerId if available and safe, otherwise maxId + 1
             const nextId = Math.max(currentState.nextPlayerId || 1, maxId + 1);
 
             const playerToAdd = {
@@ -831,6 +832,14 @@ function setupEventListeners() {
             chipsInput.value = '';
             nameInput.focus(); // Focus name input for next player
         });
+        
+        // Ensure inputs are not disabled (fix for stuck state)
+        const nameInput = document.getElementById('player-name');
+        const chipsInput = document.getElementById('initial-chips');
+        if (nameInput) nameInput.disabled = false;
+        if (chipsInput) chipsInput.disabled = false;
+        const submitBtn = newForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = false;
     }
 
     // Helper function to reset the Add Player form UI
@@ -2088,7 +2097,38 @@ function setupGameStateListener(gameId) {
                         // typically updates 'current_chips' locally, but rebuys add new chips to the ecosystem.
                         const isRebuy = !validatedUpdate.manualAdd && validatedUpdate.initial_chips > existingPlayer.initial_chips;
 
-                        if (localHasRecentHostUpdate && !isRebuy) {
+                        // CRITICAL FIX: If it's a rebuy, we MUST accept it regardless of host priority.
+                        // Rebuys are valid state transitions that happen externally (via QR code).
+                        if (isRebuy) {
+                             // QR CODE REBUY: Add chips to BOTH initial (starting stack) and current totals
+                             const chipDiff = validatedUpdate.initial_chips - existingPlayer.initial_chips;
+                             console.log(`[FIREBASE_SYNC] Applying QR code rebuy for ${existingPlayer.name}: +${chipDiff} chips (starting stack: ${existingPlayer.initial_chips} -> ${validatedUpdate.initial_chips})`);
+                             
+                             // Update starting stack (initial_chips) - this is what payouts calculate from
+                             existingPlayer.initial_chips = validatedUpdate.initial_chips;
+                             // Add the difference to current chips
+                             existingPlayer.current_chips += chipDiff;
+                             
+                             // Save state to persist the starting stack update
+                             saveState();
+                             
+                             // Update UI and trigger animation
+                             updatePlayerList();
+                             
+                             requestAnimationFrame(() => {
+                                 setTimeout(() => {
+                                     if (typeof animateChipAddition === 'function') {
+                                         animateChipAddition(existingPlayer.id);
+                                     } else {
+                                         animateNewPlayer(existingPlayer.id, true);
+                                     }
+                                     PokerApp.UI.showToast(`${existingPlayer.name} added ${chipDiff} chips!`, 'success');
+                                 }, 100);
+                             });
+                             return; // Exit after handling rebuy
+                        }
+
+                        if (localHasRecentHostUpdate) {
                             console.log(`[FIREBASE_SYNC] BLOCKING update for ${existingPlayer.name} - local host update takes priority (${Date.now() - existingPlayer.lastHostUpdate}ms ago)`);
                             return;
                         }
@@ -2106,35 +2146,9 @@ function setupGameStateListener(gameId) {
                                 console.log(`[FIREBASE_SYNC] Ignoring older host update for ${existingPlayer.name}`);
                             }
                             return;
-                            
-                        } else if (!isIncomingHostUpdate && !validatedUpdate.manualAdd && validatedUpdate.initial_chips > existingPlayer.initial_chips) {
-                            // QR CODE REBUY: Add chips to BOTH initial (starting stack) and current totals
-                            const chipDiff = validatedUpdate.initial_chips - existingPlayer.initial_chips;
-                            console.log(`[FIREBASE_SYNC] Applying QR code rebuy for ${existingPlayer.name}: +${chipDiff} chips (starting stack: ${existingPlayer.initial_chips} -> ${validatedUpdate.initial_chips})`);
-                            
-                            // Update starting stack (initial_chips) - this is what payouts calculate from
-                            existingPlayer.initial_chips = validatedUpdate.initial_chips;
-                            // Add the difference to current chips
-                            existingPlayer.current_chips += chipDiff;
-                            
-                            // Save state to persist the starting stack update
-                            saveState();
-                            
-                            // Update UI and trigger animation
-                            updatePlayerList();
-                            
-                            requestAnimationFrame(() => {
-                                setTimeout(() => {
-                                    if (typeof animateChipAddition === 'function') {
-                                        animateChipAddition(existingPlayer.id);
-                                    } else {
-                                        animateNewPlayer(existingPlayer.id, true);
-                                    }
-                                    PokerApp.UI.showToast(`${existingPlayer.name} added ${chipDiff} chips!`, 'success');
-                                }, 100);
-                            });
                         } else {
-                            if (validatedUpdate.manualAdd) {
+                            // Logic for other updates... if any.
+                             if (validatedUpdate.manualAdd) {
                                 console.log(`[FIREBASE_SYNC] Ignoring manual update for ${existingPlayer.name} - handled locally by host`);
                             } else {
                                 console.log(`[FIREBASE_SYNC] Ignoring update for ${existingPlayer.name} - not newer or not applicable`);
