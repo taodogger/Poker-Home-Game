@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { database } from '../lib/firebase';
-import { ref, set, onValue, update, remove, get } from 'firebase/database'; // Import get
+import { ref, set, onValue, update, remove, get, runTransaction } from 'firebase/database'; // Import get
 import { Player, PayoutResult } from '../types';
 import { calculatePayouts } from '../utils/payouts';
 import { generateShortGameId, calculateTotals } from '../utils/helpers'; // Import helpers
@@ -115,13 +115,15 @@ export default function HostPage() {
         isHost: true // Manually added players are marked
       };
 
-      // We need to fetch the current state to append correctly or just set the specific index
-      // But using transaction-like logic via a direct update for simplicity in this MVP
-      // Ideally, use a transaction like in JoinPage, but here we likely have the latest list.
-      const updatedPlayers = [...players, newPlayer];
-      
-      await update(ref(database, `games/${gameId}/state`), {
-        players: updatedPlayers
+      await runTransaction(ref(database, `games/${gameId}/state`), (currentState) => {
+        if (!currentState) currentState = { players: [], nextPlayerId: 1 };
+        if (!currentState.players) currentState.players = [];
+        const pList = Array.isArray(currentState.players) ? currentState.players : Object.values(currentState.players);
+        
+        currentState.players = [...pList, newPlayer];
+        // Ensure nextPlayerId increments
+        currentState.nextPlayerId = (currentState.nextPlayerId || nextId) + 1;
+        return currentState;
       });
 
       setNewPlayerName('');
@@ -159,12 +161,31 @@ export default function HostPage() {
      const amount = parseInt(newAmount);
      if (isNaN(amount)) return;
 
-     const updatedPlayers = players.map(p => 
-       p.id === playerId ? { ...p, currentChips: amount } : p
-     );
+     // Optimistic local update to prevent cursor jump
+     setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, currentChips: amount } : p));
 
-     await update(ref(database, `games/${gameId}/state`), {
-       players: updatedPlayers
+     // Specific path update to avoid overwriting whole array
+     const playerIndex = players.findIndex(p => p.id === playerId);
+     if (playerIndex === -1) return;
+
+     // Warning: This relies on array index which is stable if no one is removed/added above
+     // Ideally we use a map, but structure is array.
+     // Safer: transaction on the specific player or the list.
+     
+     // Let's use update on specific path if we trust the index
+     // But wait, if someone joins, index shifts? No, append only.
+     // But if we delete? We don't have delete yet.
+     
+     // Best practice: Transaction on the list to find the ID and update
+     await runTransaction(ref(database, `games/${gameId}/state`), (state) => {
+        if (!state || !state.players) return state;
+        const list = Array.isArray(state.players) ? state.players : Object.values(state.players);
+        const idx = list.findIndex((p: any) => p.id === playerId);
+        if (idx !== -1) {
+            list[idx].currentChips = amount;
+            state.players = list;
+        }
+        return state;
      });
   };
 
@@ -179,21 +200,30 @@ export default function HostPage() {
 
   const resetGame = async () => {
     if (!gameId) return;
-    if (confirm("Are you sure you want to reset all chip counts? Game ID will be preserved.")) {
-       const resetPlayers = players.map(p => ({
-         ...p,
-         currentChips: p.initialChips, 
-       }));
-
-       // Force Firebase update
+    if (confirm("Are you sure you want to reset all chip counts? This will reset everyone's current chips to their starting amount.")) {
+       const stateRef = ref(database, `games/${gameId}/state`);
        try {
-           await update(ref(database, `games/${gameId}/state`), {
-               players: resetPlayers
-           });
-           setPayouts(null);
-       } catch(e) {
-           console.error("Reset failed", e);
-           alert("Failed to reset game on server.");
+         await runTransaction(stateRef, (currentState) => {
+            if (!currentState) return currentState;
+            if (currentState.players) {
+                const p = currentState.players;
+                const list = Array.isArray(p) ? p : Object.values(p);
+                currentState.players = list.map((player: any) => ({
+                    ...player,
+                    currentChips: player.initialChips
+                }));
+            }
+            return currentState;
+         });
+         
+         // Clear payouts flag
+         await update(ref(database, `games/${gameId}`), { payoutsFinalized: false });
+         
+         setPayouts(null);
+         alert("Game reset!");
+       } catch (e) {
+         console.error(e);
+         alert("Reset failed");
        }
     }
   };
