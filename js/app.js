@@ -377,10 +377,12 @@ function updatePlayerList() {
             row.className = safePlayer.id === PokerApp.state.dealerId ? 'dealer' : '';
             row.setAttribute('data-player-id', safePlayer.id);
             
-            // Animate if new player
-            if (player.isNew) { // Check original object for flag
+            // Animate if new player - check BOTH safePlayer and the original reference
+            // This is critical because the 'isNew' flag might be on the original object in state
+            if (player.isNew || safePlayer.isNew) { 
                 PokerApp.UI.triggerAnimation(row, 'popIn'); 
                 delete player.isNew; // Remove flag from state object
+                delete safePlayer.isNew;
             }
             
             // Player Name
