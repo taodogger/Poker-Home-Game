@@ -588,7 +588,13 @@ function addPlayer(name, chips) {
     // Create a new player with consistent data structure
     // Use older timestamp so Firebase listeners know this is a manual host addition
     const timestamp = Date.now() - 10000; // 10 seconds ago to distinguish from QR code joins
-    const newPlayerId = PokerApp.state.nextPlayerId++;
+    
+    // Ensure consistent ID assignment
+    const maxId = Math.max(0, ...PokerApp.state.players.map(p => p.id || 0));
+    // Use existing nextPlayerId if available and safe, otherwise maxId + 1
+    const nextId = Math.max(PokerApp.state.nextPlayerId || 1, maxId + 1);
+    const newPlayerId = nextId;
+    PokerApp.state.nextPlayerId = nextId + 1;
     
     const newPlayer = {
         id: newPlayerId,
