@@ -2084,7 +2084,11 @@ function setupGameStateListener(gameId) {
                                               (validatedUpdate.lastHostUpdate > existingPlayer.lastHostUpdate);
                         
                         // HOST AUTHORITY: Always prioritize local host updates over any Firebase changes
-                        if (localHasRecentHostUpdate) {
+                        // EXCEPTION: If the update is a REBUY (initial_chips increased), we must accept it because the host
+                        // typically updates 'current_chips' locally, but rebuys add new chips to the ecosystem.
+                        const isRebuy = !validatedUpdate.manualAdd && validatedUpdate.initial_chips > existingPlayer.initial_chips;
+
+                        if (localHasRecentHostUpdate && !isRebuy) {
                             console.log(`[FIREBASE_SYNC] BLOCKING update for ${existingPlayer.name} - local host update takes priority (${Date.now() - existingPlayer.lastHostUpdate}ms ago)`);
                             return;
                         }
@@ -2806,8 +2810,10 @@ function resetGameState() {
 }
 
 // Add calculatePayouts function
+// Add calculatePayouts function (Refactored for Robustness & Normalization)
 function calculatePayouts() {
-    console.log('[PAYOUT] Calculating payouts');
+    console.log('[PAYOUT] Calculating payouts (Robust Mode)');
+    
     if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
         PokerApp.UI.showToast('No players to calculate payouts for', 'error');
         return;
@@ -2820,126 +2826,148 @@ function calculatePayouts() {
 
     SoundSystem.playPayoutSound();
 
-    const players = PokerApp.state.players;
-    let html = ''; // Initialize html variable here
+    const players = PokerApp.state.players.filter(p => p.active !== false);
+    const nominalRatio = PokerApp.state.chipRatio || 1.0;
 
     console.log('[PAYOUT] Processing players:', players.length);
 
-    // PAYOUT CALCULATION: Based on starting stack (initial_chips)
-    // - initial_chips = total amount player bought in for (starting stack + rebuys)
-    // - current_chips = current chip count (modified by host or game play)
-    // - chipDifference = profit/loss = current_chips - initial_chips
-    const playerDiffs = players.map(player => {
-        const initialChips = parseInt(player.initial_chips, 10) || 0; // Starting stack (what they paid)
-        const currentChips = parseInt(player.current_chips, 10) || 0; // Current chips (after play)
-        const chipDifference = currentChips - initialChips; // Profit/loss in chips
+    // 1. Calculate Totals & Detect Discrepancies
+    let totalInitialChips = 0;
+    let totalCurrentChips = 0;
+
+    const playerData = players.map(player => {
+        const initial = parseInt(player.initial_chips, 10) || 0;
+        const current = parseInt(player.current_chips, 10) || 0;
+        totalInitialChips += initial;
+        totalCurrentChips += current;
         
         return {
             id: player.id,
             name: player.name,
-            initialChips,
-            currentChips,
-            chipDifference,
-            cashValue: 0 // Will be updated from transactions
+            initial,
+            current,
+            nominalBuyIn: initial * nominalRatio
         };
     });
 
-    // Split into winners and losers based on chip differences
-    const winners = playerDiffs.filter(p => p.chipDifference > 0)
-        .sort((a, b) => b.chipDifference - a.chipDifference);
-        
-    const losers = playerDiffs.filter(p => p.chipDifference < 0)
-        .sort((a, b) => a.chipDifference - b.chipDifference);
+    const chipDiscrepancy = totalCurrentChips - totalInitialChips;
+    let effectiveRatio = nominalRatio;
+    let discrepancyMsg = '';
+    let hasDiscrepancy = false;
+    let discrepancyType = ''; // 'short' or 'surplus'
 
-    // Create transactions
-    const transactions = [];
-    
-    // Match losers with winners
-    while (losers.length > 0 && winners.length > 0) {
-        const loser = losers.shift();
-        const winner = winners[0];
+    // Normalization Logic:
+    // If chips are missing or extra, we adjust the effective value of each chip 
+    // so that the Total Cash Value Out equals Total Cash Value In.
+    // This ensures zero-sum settlements.
+    if (totalCurrentChips > 0 && Math.abs(chipDiscrepancy) > 0) {
+        hasDiscrepancy = true;
+        const totalPotValue = totalInitialChips * nominalRatio;
+        effectiveRatio = totalPotValue / totalCurrentChips;
         
-        const lossAmount = Math.abs(loser.chipDifference);
+        discrepancyType = chipDiscrepancy < 0 ? 'short' : 'surplus';
+        const discrepancyValue = Math.abs(chipDiscrepancy) * nominalRatio;
         
-        if (lossAmount >= winner.chipDifference) {
-            const paymentChips = winner.chipDifference;
-            const paymentCash = (paymentChips * PokerApp.state.chipRatio).toFixed(2);
-            
-            transactions.push({
-                from: loser.name,
-                to: winner.name,
-                chips: paymentChips,
-                cash: parseFloat(paymentCash) // Store cash as number
-            });
-            
-            const remainder = lossAmount - winner.chipDifference;
-            if (remainder > 0) {
-                losers.push({
-                    ...loser,
-                    chipDifference: -remainder
-                });
-                losers.sort((a, b) => a.chipDifference - b.chipDifference);
-            }
-            
-            winners.shift();
-        } else {
-            const paymentChips = lossAmount;
-            const paymentCash = (paymentChips * PokerApp.state.chipRatio).toFixed(2);
-            
-            transactions.push({
-                from: loser.name,
-                to: winner.name,
-                chips: paymentChips,
-                cash: parseFloat(paymentCash) // Store cash as number
-            });
-            
-            winner.chipDifference -= lossAmount;
-        }
+        console.warn(`[PAYOUT] Discrepancy detected: ${chipDiscrepancy} chips.`);
+        console.warn(`[PAYOUT] Adjusted Ratio: ${nominalRatio} -> ${effectiveRatio}`);
+        
+        discrepancyMsg = chipDiscrepancy < 0 
+            ? `Table is short ${Math.abs(chipDiscrepancy)} chips ($${discrepancyValue.toFixed(2)}).`
+            : `Table has extra ${chipDiscrepancy} chips ($${discrepancyValue.toFixed(2)}).`;
+        
+        discrepancyMsg += ` Values adjusted to balance.`;
+    } else if (totalCurrentChips === 0 && totalInitialChips > 0) {
+        // Edge case: All chips lost?
+        effectiveRatio = 0;
+        discrepancyMsg = "All chips are missing! 100% Loss.";
+        hasDiscrepancy = true;
     }
 
-    // Update cash values based on transactions
-    transactions.forEach(transaction => {
-        const amount = transaction.cash; // Already a number
-        const fromPlayer = playerDiffs.find(p => p.name === transaction.from);
-        const toPlayer = playerDiffs.find(p => p.name === transaction.to);
+    // 2. Calculate Net Position (Profit/Loss in CASH)
+    const settlements = playerData.map(p => {
+        const cashOutValue = p.current * effectiveRatio;
+        const netCash = cashOutValue - p.nominalBuyIn;
         
-        if (fromPlayer) fromPlayer.cashValue -= amount;
-        if (toPlayer) toPlayer.cashValue += amount;
+        return {
+            ...p,
+            cashOutValue,
+            netCash, // Precise float
+            displayNet: netCash // For display logic
+        };
+    });
+
+    // 3. Sort into Debtors (Losers) and Creditors (Winners)
+    const winners = settlements.filter(p => p.netCash > 0.005).sort((a, b) => b.netCash - a.netCash); // Largest winners first
+    const losers = settlements.filter(p => p.netCash < -0.005).sort((a, b) => a.netCash - b.netCash); // Largest losers (most negative) first
+
+    // 4. Greedy Matching Algorithm
+    const transactions = [];
+    let winnerIdx = 0;
+    let loserIdx = 0;
+
+    // Work with mutable balances to track remaining debts/credits
+    const winnerBalances = winners.map(w => w.netCash);
+    const loserBalances = losers.map(l => Math.abs(l.netCash));
+
+    while (winnerIdx < winners.length && loserIdx < losers.length) {
+        const amountOwed = loserBalances[loserIdx];
+        const amountToReceive = winnerBalances[winnerIdx];
+        
+        // Settle the smaller of the two amounts
+        const settlementAmount = Math.min(amountOwed, amountToReceive);
+        
+        if (settlementAmount > 0.005) { // Ignore micro-cents
+            transactions.push({
+                from: losers[loserIdx].name,
+                to: winners[winnerIdx].name,
+                cash: parseFloat(settlementAmount.toFixed(2)),
+                chips: Math.round(settlementAmount / effectiveRatio) // Approx chips
+            });
+        }
+
+        // Adjust balances
+        loserBalances[loserIdx] -= settlementAmount;
+        winnerBalances[winnerIdx] -= settlementAmount;
+
+        // Advance pointers if settled (within epsilon)
+        if (loserBalances[loserIdx] < 0.005) loserIdx++;
+        if (winnerBalances[winnerIdx] < 0.005) winnerIdx++;
+    }
+
+    // 5. Update Cash Values for Stats & Display
+    // Update the original 'settlements' objects with final cashValue (Net Profit) for stats
+    settlements.forEach(p => {
+        p.cashValue = p.netCash; 
     });
     
-    // Create player result cards
-    const sortedPlayers = [...playerDiffs].sort((a, b) => b.chipDifference - a.chipDifference);
+    // Create player result cards (Sorted by Win/Loss)
+    const sortedPlayers = [...settlements].sort((a, b) => b.netCash - a.netCash);
     
-    // Calculate fun stats first
-    const biggestWinner = playerDiffs.reduce((prev, curr) => 
-        (curr.cashValue > prev.cashValue) ? curr : prev
-    );
+    // Calculate Fun Stats
+    const biggestWinner = settlements.reduce((prev, curr) => (curr.netCash > prev.netCash) ? curr : prev, settlements[0]);
+    const biggestLoser = settlements.reduce((prev, curr) => (curr.netCash < prev.netCash) ? curr : prev, settlements[0]);
     
-    const biggestLoser = playerDiffs.reduce((prev, curr) => 
-        (curr.cashValue < prev.cashValue) ? curr : prev
-    );
+    const totalMoneyMoved = transactions.reduce((sum, t) => sum + t.cash, 0).toFixed(2);
+    const totalChipsMoved = transactions.reduce((sum, t) => sum + t.chips, 0); // Approx
     
-    const totalMoneyMoved = transactions.reduce((sum, t) => 
-        sum + parseFloat(t.cash), 0
-    ).toFixed(2);
-    
-    const totalChipsMoved = transactions.reduce((sum, t) => 
-        sum + parseInt(t.chips), 0
-    );
-    
-    const averageWin = playerDiffs
-        .filter(p => p.cashValue > 0)
-        .reduce((sum, p) => sum + p.cashValue, 0) / 
-        playerDiffs.filter(p => p.cashValue > 0).length;
+    const winnersList = settlements.filter(p => p.netCash > 0);
+    const averageWin = winnersList.length > 0 
+        ? winnersList.reduce((sum, p) => sum + p.netCash, 0) / winnersList.length 
+        : 0;
 
     // Build the HTML string
-    html = `
+    let html = `
         <div class="payout-wrapper">
             <div class="payout-summary-header">
                 <h3>Game Results</h3>
                 <div class="payout-timestamp">${new Date().toLocaleTimeString()}</div>
             </div>
             
+            ${hasDiscrepancy ? `
+            <div class="discrepancy-banner ${discrepancyType}">
+                <strong>⚠️ Adjustment:</strong> ${discrepancyMsg}
+            </div>` : ''}
+
             <div class="results-container">
                 <!-- Fun Stats -->
                 <div class="stats-grid">
@@ -2947,21 +2975,21 @@ function calculatePayouts() {
                         <div class="stat-icon">👑</div>
                         <div class="stat-title">Biggest Winner</div>
                         <div class="stat-value">${biggestWinner.name}</div>
-                        <div class="stat-detail">+$${Math.abs(biggestWinner.cashValue).toFixed(2)}</div>
+                        <div class="stat-detail">+$${Math.abs(biggestWinner.netCash).toFixed(2)}</div>
                     </div>
                     
                     <div class="stat-card">
                         <div class="stat-icon">😅</div>
                         <div class="stat-title">Biggest L</div>
                         <div class="stat-value">${biggestLoser.name}</div>
-                        <div class="stat-detail">-$${Math.abs(biggestLoser.cashValue).toFixed(2)}</div>
+                        <div class="stat-detail">-$${Math.abs(biggestLoser.netCash).toFixed(2)}</div>
                     </div>
                     
                     <div class="stat-card">
                         <div class="stat-icon">💸</div>
                         <div class="stat-title">Money Moved</div>
                         <div class="stat-value">$${totalMoneyMoved}</div>
-                        <div class="stat-detail">${totalChipsMoved} chips</div>
+                        <div class="stat-detail">~${totalChipsMoved} chips</div>
                     </div>
                     
                     <div class="stat-card">
@@ -3001,284 +3029,93 @@ function calculatePayouts() {
                         <div class="payment-arrow">→</div>
                         <div class="payment-details">
                             <span class="payment-recipient">${payment.to}</span>
-                            <span class="payment-amount">$${payment.cash}</span>
+                            <span class="payment-amount">$${payment.cash.toFixed(2)}</span>
                         </div>
                     </div>`;
             });
             
             html += `
-                </div>
+                    </div>
                 </div>`;
         });
     }
-    
+
     html += `
                 </div>
-            </div>
-        </div>`;
-    
-    // Display results with animation
-    const payoutResults = document.getElementById('payout-results');
-    if (!payoutResults) {
-        console.error('[PAYOUT] Payout results element not found');
-        return;
-    }
-
-    // --- Save payout info to Firebase ---
-    if (PokerApp.state.sessionId && window.database) {
-        const payoutInfo = {
-            transactions: transactions,
-            calculatedAt: firebase.database.ServerValue.TIMESTAMP,
-            status: 'calculated' // Initial status
-        };
-        window.database.ref(`games/${PokerApp.state.sessionId}/payoutInfo`).set(payoutInfo)
-            .then(() => {
-                console.log('[FIREBASE] Payout info saved successfully.');
-                PokerApp.UI.showToast('Payouts calculated and saved for finalization.', 'info');
-            })
-            .catch(error => {
-                console.error('[FIREBASE] Error saving payout info:', error);
-                PokerApp.UI.showToast('Error saving payout details.', 'error');
-            });
-    } else {
-        console.warn('[PAYOUT] Cannot save payout info to Firebase: No session ID or database.');
-    }
-    // --- End Firebase save ---
-
-    payoutResults.classList.remove('payout-content-showing');
-    payoutResults.classList.add('payout-content-hiding');
-
-    // Allow fade-out to happen, then update content and fade-in
-    setTimeout(() => {
-        payoutResults.innerHTML = html;
+                
+                <!-- Detailed Player Breakdown -->
+                <div class="player-breakdown">
+                    <h3>Detail Breakdown</h3>
+                    <div class="breakdown-list">`;
+                    
+    sortedPlayers.forEach(player => {
+        const isWinner = player.netCash > 0;
+        const netClass = isWinner ? 'positive' : (player.netCash < 0 ? 'negative' : 'neutral');
+        const sign = isWinner ? '+' : ''; // Negative has sign already
+        const netAmount = player.netCash.toFixed(2);
         
-        // Add styles for the new display
-        if (!document.querySelector('#payout-styles')) {
-            const style = document.createElement('style');
-            style.id = 'payout-styles';
-            style.textContent = `
-            .payout-wrapper {
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 12px;
-                overflow: hidden;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                width: 100%;
-            }
+        html += `
+            <div class="breakdown-item">
+                <div class="player-info">
+                    <span class="player-name">${player.name}</span>
+                    <span class="chip-count">${player.current} chips</span>
+                </div>
+                <div class="financial-info">
+                    <span class="net-amount ${netClass}">${sign}$${netAmount}</span>
+                    <span class="buy-in-info">in: $${player.nominalBuyIn.toFixed(2)}</span>
+                </div>
+            </div>`;
+    });
+    
+    html += `
+                    </div>
+                </div>
+            </div>
             
-            .payout-summary-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 16px;
-                background: rgba(0, 0, 0, 0.3);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            }
-            
-            .payout-summary-header h3 {
-                margin: 0;
-                color: white;
-                font-size: 1.1rem;
-                font-weight: 600;
-            }
-            
-            .payout-timestamp {
-                font-size: 0.8rem;
-                color: rgba(255, 255, 255, 0.7);
-            }
-            
-            .results-container {
-                padding: 16px;
-                display: flex;
-                flex-direction: column;
-                gap: 20px;
-            }
-            
-            .stats-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 20px;
-                animation: fadeIn 0.5s ease-out;
-            }
-            
-            .stat-card {
-                background: rgba(0, 0, 0, 0.3);
-                border-radius: 10px;
-                padding: 20px;
-                text-align: center;
-                transition: transform 0.2s ease;
-            }
-            
-            .stat-card:hover {
-                transform: translateY(-5px);
-            }
-            
-            .stat-icon {
-                font-size: 2rem;
-                margin-bottom: 10px;
-            }
-            
-            .stat-title {
-                color: rgba(255, 255, 255, 0.7);
-                font-size: 0.9rem;
-                margin-bottom: 5px;
-            }
-            
-            .stat-value {
-                color: white;
-                font-size: 1.4rem;
-                font-weight: 600;
-                margin-bottom: 5px;
-            }
-            
-            .stat-detail {
-                color: rgba(255, 255, 255, 0.6);
-                font-size: 0.8rem;
-            }
-            
-            /* Payment Instructions Section */
-            .payment-instructions {
-                background: rgba(0, 0, 0, 0.3);
-                border-radius: 10px;
-                padding: 16px;
-                margin-top: 20px;
-            }
-            
-            .payment-instructions h3 {
-                margin-top: 0;
-                margin-bottom: 12px;
-                color: white;
-                font-size: 1.1rem;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                padding-bottom: 8px;
-            }
-            
-            .no-payments-message {
-                text-align: center;
-                padding: 12px;
-                color: rgba(255, 255, 255, 0.9);
-                font-weight: 500;
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 6px;
-            }
-            
-            .payment-group {
-                margin-bottom: 16px;
-                animation: fadeIn 0.3s ease forwards;
-            }
-            
-            .payer {
-                font-weight: 600;
-                color: #ff4757;
-                margin-bottom: 8px;
-            }
-            
-            .payment-list {
-                padding-left: 12px;
-            }
-            
-            .payment-item {
-                display: flex;
-                align-items: center;
-                margin-bottom: 8px;
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 8px;
-                padding: 10px;
-                transition: transform 0.2s ease;
-            }
-            
-            .payment-item:hover {
-                transform: scale(1.02);
-            }
-            
-            .payment-arrow {
-                color: rgba(255, 255, 255, 0.5);
-                margin-right: 10px;
-                font-size: 1.2rem;
-            }
-            
-            .payment-details {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                flex: 1;
-            }
-            
-            .payment-recipient {
-                color: #2ed573;
-                font-weight: 600;
-            }
-            
-            .payment-amount {
-                font-weight: 700;
-                font-size: 1.1rem;
-                color: white;
-                background: rgba(0, 0, 0, 0.3);
-                padding: 4px 12px;
-                border-radius: 50px;
-            }
-            
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            
-            /* Mobile optimizations */
-            @media (max-width: 768px) {
-                .stats-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-                
-                .stat-card {
-                    padding: 15px;
-                }
-                
-                .stat-icon {
-                    font-size: 1.5rem;
-                }
-                
-                .stat-value {
-                    font-size: 1.2rem;
-                }
-                
-                .payment-details {
-                    flex-direction: row;
-                    align-items: center;
-                }
-                
-                .payment-recipient, .payment-amount {
-                    padding: 4px 8px;
-                }
-            }
-            
-            @media (max-width: 480px) {
-                .stats-grid {
-                    grid-template-columns: 1fr;
-                }
-            }
-        `;
-            document.head.appendChild(style);
+            <div class="action-buttons-container">
+                <button id="finalize-payouts-btn-internal" class="poker-button primary-button" onclick="document.getElementById('finalize-payouts-btn').click()">Show Payouts to Players</button>
+                <button id="reopen-game-btn-internal" class="poker-button secondary-button" onclick="document.getElementById('reopen-game-btn').click()">Re-open Game</button>
+            </div>
+        </div>
+    `;
+
+    // Render Logic
+    const payoutResults = document.getElementById('payout-results');
+    if (payoutResults) {
+        payoutResults.innerHTML = html;
+        payoutResults.style.display = 'block';
+        
+        // Hide external buttons to prevent duplication/clutter
+        const extFinalize = document.getElementById('finalize-payouts-btn');
+        const extReopen = document.getElementById('reopen-game-btn');
+        if (extFinalize) extFinalize.style.display = 'none';
+        if (extReopen) extReopen.style.display = 'none';
+        
+        payoutResults.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Store payout info in state
+        PokerApp.state.currentPayoutInfo = {
+            status: 'calculated', // 'calculated' vs 'finalized'
+            transactions: transactions,
+            players: settlements,
+            timestamp: Date.now()
+        };
+        
+        // Update global buttons status (even if hidden, their logic matters)
+        updatePayoutActionButtons('calculated', PokerApp.state.rebuysAllowed !== false);
+        
+        // --- Save payout info to Firebase ---
+        if (PokerApp.state.sessionId && window.database) {
+             const payoutInfo = {
+                transactions: transactions,
+                calculatedAt: firebase.database.ServerValue.TIMESTAMP,
+                status: 'calculated'
+            };
+            window.database.ref(`games/${PokerApp.state.sessionId}/payoutInfo`).set(payoutInfo);
         }
-
-        payoutResults.classList.remove('payout-content-hiding');
-        // Force reflow before adding the class to trigger animation
-        void payoutResults.offsetWidth;
-        payoutResults.classList.add('payout-content-showing');
-
-        // Scroll to the results
-        // Delay scroll slightly to allow fade-in to start
-        setTimeout(() => {
-            // Ensure the element is still in the DOM and visible before scrolling
-            if (document.body.contains(payoutResults) && payoutResults.offsetParent !== null) {
-                 payoutResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }, 50); // Adjust delay as needed, should be less than animation time
-
-        console.log('[PAYOUT] Results displayed locally');
-        // PokerApp.UI.showToast('Game results calculated', 'success'); // Moved toast to Firebase save confirmation
-    }, 300); // This timeout should match the 'payout-content-hiding' animation duration
+    }
 }
 
-// Add removePlayer function
 function removePlayer(playerId) {
     if (!PokerApp.state.players) return;
 
