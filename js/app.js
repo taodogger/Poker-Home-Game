@@ -2917,8 +2917,10 @@ function calculatePayouts() {
     });
 
     // 3. Sort into Debtors (Losers) and Creditors (Winners)
-    const winners = settlements.filter(p => p.netCash > 0.005).sort((a, b) => b.netCash - a.netCash); // Largest winners first
-    const losers = settlements.filter(p => p.netCash < -0.005).sort((a, b) => a.netCash - b.netCash); // Largest losers (most negative) first
+    // BUG FIX: Use 1 cent ($0.01) threshold consistently for filtering and settlement
+    const EPSILON = 0.01;
+    const winners = settlements.filter(p => p.netCash > EPSILON).sort((a, b) => b.netCash - a.netCash); // Largest winners first
+    const losers = settlements.filter(p => p.netCash < -EPSILON).sort((a, b) => a.netCash - b.netCash); // Largest losers (most negative) first
 
     // 4. Greedy Matching Algorithm
     const transactions = [];
@@ -2932,11 +2934,11 @@ function calculatePayouts() {
     while (winnerIdx < winners.length && loserIdx < losers.length) {
         const amountOwed = loserBalances[loserIdx];
         const amountToReceive = winnerBalances[winnerIdx];
-        
+
         // Settle the smaller of the two amounts
         const settlementAmount = Math.min(amountOwed, amountToReceive);
-        
-        if (settlementAmount > 0.005) { // Ignore micro-cents
+
+        if (settlementAmount > EPSILON) { // Ignore sub-cent amounts
             transactions.push({
                 from: losers[loserIdx].name,
                 to: winners[winnerIdx].name,
@@ -2950,8 +2952,8 @@ function calculatePayouts() {
         winnerBalances[winnerIdx] -= settlementAmount;
 
         // Advance pointers if settled (within epsilon)
-        if (loserBalances[loserIdx] < 0.005) loserIdx++;
-        if (winnerBalances[winnerIdx] < 0.005) winnerIdx++;
+        if (loserBalances[loserIdx] < EPSILON) loserIdx++;
+        if (winnerBalances[winnerIdx] < EPSILON) winnerIdx++;
     }
 
     // 5. Update Cash Values for Stats & Display
