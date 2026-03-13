@@ -644,7 +644,8 @@ function addPlayer(name, chips) {
         active: true,
         lastBuyIn: timestamp,
         manualAdd: true, // Flag to indicate this was added manually by host
-        isNew: true // Flag for animation in updatePlayerList
+        isNew: true, // Flag for animation in updatePlayerList
+        _justAddedLocally: Date.now() // CRITICAL: Protect from sync removal while Firebase transaction pending
     };
 
     console.log(`[MANUAL_ADD] Creating new player with ID ${newPlayerId}:`, newPlayer);
@@ -1158,161 +1159,8 @@ function setupEventListeners() {
     }
 }
 
-// Initialize function
-function initialize() {
-    console.log('Initializing poker app...');
-    if (window.appInitialized) {
-        console.log('[INIT] App already initialized, skipping');
-        return;
-    }
-    window.appInitialized = true;
-
-    console.log('[INIT] Attempting to load saved state first...');
-    const savedStateResult = loadSavedState(); // Try loading state
-    console.log('[INIT] loadSavedState result:', savedStateResult);
-
-    if (savedStateResult) {
-        // State was successfully loaded by loadSavedState()
-        console.log('[INIT] Saved state loaded successfully. Setting up based on loaded state.');
-        // The loadSavedState function already called setTheme, updateUIFromState,
-        // and potentially setupGameStateListener if sessionId was present.
-        // We just need to ensure event listeners and mobile compatibility are set up.
-        try {
-             console.log('[INIT] Setting up event listeners (after load)...');
-             setupEventListeners();
-             console.log('[INIT] Setting up mobile compatibility (after load)...');
-             setupMobileCompatibility();
-             console.log('[INIT] Theme-specific features setup (after load)...');
-             initializeThemeSpecificFeatures(PokerApp.state.theme || 'Royal');
-             console.log('[INIT] Initialization from saved state complete.');
-        } catch (error) {
-            console.error('[INIT_ERROR] Error during setup after loading saved state:', error);
-            // If setup fails even after loading state, maybe fallback to clean init?
-            // For now, just log.
-        }
-
-    } else {
-        // No valid saved state found, proceed with default initialization
-        console.log('[INIT] No saved state found or load failed. Proceeding with default initialization.');
-
-        // Apply default theme explicitly before initializeApp
-        setTheme('Royal');
-
-        // Now, initialize Firebase and the core app logic
-        ensureFirebaseInitialized()
-            .then(() => {
-                initializeApp(true); // Firebase available
-                // Set up Firebase-specific listeners (like .info/connected)
-                 if (window.database) { // Check if database is available
-                     window.database.ref('.info/connected').on('value', (snap) => {
-                         if (!snap.val()) {
-                             console.log('[FIREBASE] Connection lost, waiting for reconnect...');
-                             PokerApp.UI.showToast('Connection lost. Reconnecting...', 'error');
-                         } else {
-                              // Optional: Add a log or toast when reconnected
-                              console.log('[FIREBASE] Reconnected.');
-                         }
-                     });
-                     // Setup test connection function
-                     window.testFirebaseConnection = function() { 
-                         // Use a valid test path instead of .info/ which is reserved
-                         const testRef = window.database.ref('_connection_test');
-                         testRef.set({
-                             timestamp: firebase.database.ServerValue.TIMESTAMP,
-                             manual: true,
-                             userAgent: navigator.userAgent
-                         })
-                         .then(() => {
-                             console.log('[FIREBASE] Manual test write successful');
-                             PokerApp.UI.showToast('Database connection verified', 'success');
-                         })
-                         .catch(error => {
-                             console.error('[FIREBASE] Manual test write failed:', error);
-                             PokerApp.UI.showToast('Database connection failed', 'error');
-                         });
-                      }; // <-- Fixed: Added semicolon
-                     window.testConnection = window.testFirebaseConnection;
-                 } else {
-                     console.warn('[FIREBASE] Database reference not available for setting up connection listener or test function.');
-                 }
-            })
-            .catch(error => {
-                initializeApp(false); // Firebase unavailable
-                PokerApp.UI.showToast('Offline mode - some features unavailable', 'error');
-            });
-
-         // Initialize theme-specific features for default theme
-         initializeThemeSpecificFeatures('Royal');
-         console.log('[INIT] Default initialization complete.');
-    } // <-- End of main if/else (savedStateResult)
-
-    // --- MOVED THEME SETUP HERE --- 
-    // Setup theme swatches (runs regardless of loaded state)
-    console.log('[INIT] Setting up theme swatches...');
-    const themeSwatchesContainer = document.getElementById('theme-swatches');
-    if (themeSwatchesContainer) {
-         // Clear any existing swatches first
-         themeSwatchesContainer.innerHTML = ''; 
-         Object.entries(availableThemes).forEach(([themeName, themeData]) => {
-             const swatch = document.createElement('div');
-             swatch.className = 'theme-swatch';
-             swatch.dataset.themeName = themeName;
-             swatch.style.setProperty('--swatch-main-color', themeData.mainColor);
-             swatch.style.setProperty('--swatch-secondary-color', themeData.secondaryColor);
-             swatch.title = themeData.name;
-             if (themeName === 'RainbowLight') {
-                  swatch.style.border = '2px solid #e2e8f0';
-             }
-             swatch.addEventListener('click', () => {
-                  PokerApp.UI.triggerAnimation(swatch, 'animate-subtle-pop'); // Add animation to the clicked swatch
-                  if (typeof setTheme === 'function') {
-                       setTheme(themeName);
-                       document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
-                       swatch.classList.add('active');
-                  }
-             });
-             // Set active state based on CURRENT theme (loaded or default)
-             if ((PokerApp.state.theme || 'Royal') === themeName) { 
-                  swatch.classList.add('active');
-             }
-             themeSwatchesContainer.appendChild(swatch);
-         });
-         console.log('[INIT] Theme swatches setup complete.');
-    } else {
-        console.warn('[INIT] Theme swatches container not found.');
-    }
-    // Setup random theme button (runs regardless of loaded state)
-    console.log('[INIT] Setting up random theme button...');
-     const randomThemeBtn = document.getElementById('random-theme');
-     if (randomThemeBtn) {
-         // Remove potential old listener before adding new one
-         const newRandomBtn = randomThemeBtn.cloneNode(true);
-         randomThemeBtn.parentNode.replaceChild(newRandomBtn, randomThemeBtn);
-         newRandomBtn.addEventListener('click', () => {
-             PokerApp.UI.triggerAnimation(newRandomBtn, 'animate-subtle-pop'); // Add animation to random theme button
-             const themeNames = Object.keys(availableThemes);
-             let randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
-             // Ensure a different theme is chosen if current one is selected randomly
-             while (randomThemeName === PokerApp.state.currentTheme) {
-                 randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
-             }
-             setTheme(randomThemeName);
-             document.querySelectorAll('.theme-swatch').forEach(swatch => {
-                  swatch.classList.toggle('active', swatch.dataset.themeName === randomThemeName);
-             });
-             newRandomBtn.style.transform = 'rotate(360deg)';
-             setTimeout(() => { newRandomBtn.style.transform = ''; }, 300);
-         });
-         console.log('[INIT] Random theme button setup complete.');
-     } else {
-        console.warn('[INIT] Random theme button not found.');
-     }
-     // --- END OF MOVED THEME SETUP --- 
-
-     // This should only run once, regardless of loaded state or not
-     console.log('[INIT] Finalizing initialization (logo, etc)...');
-     initializeLogoAnimation();
-}
+// NOTE: The duplicate initialize() function that was here has been removed.
+// Only the refactored version at the end of the file (line ~3854) is used.
 
 // Helper function to make sure Firebase is initialized
 function ensureFirebaseInitialized() {
@@ -2095,163 +1943,179 @@ function setupGameStateListener(gameId) {
                 PokerApp.state.sessionId = gameId;
                 PokerApp.state.lobbyActive = true;
                 
-                // Set up players listener with robust error handling
-                database.ref(`games/${gameId}/state/players`).on('child_added', snapshot => {
+                // CRITICAL FIX: Single 'value' listener for players (replaces child_added + child_changed)
+                // This fixes the "player juggling" bug by ensuring consistent, atomic updates.
+                // child_added fires for ALL existing children in non-deterministic order, causing race conditions.
+                // child_changed doesn't handle removed players.
+                // The 'value' listener gives us the complete array in one atomic update.
+                database.ref(`games/${gameId}/state/players`).on('value', snapshot => {
                     try {
-                        const playerData = snapshot.val();
-                        if (!playerData || !playerData.name) {
-                            console.warn('[FIREBASE] Invalid player data received:', playerData);
-                            return;
-                        }
-                        
-                        console.log('[FIREBASE] New player data received:', playerData);
-                        
-                        // Validate player data structure
-                        // BUG FIX: Use radix 10 for all parseInt calls
-                        const validatedPlayer = {
-                            id: playerData.id || Date.now(),
-                            name: playerData.name,
-                            initial_chips: parseInt(playerData.initial_chips, 10) || 0,
-                            current_chips: parseInt(playerData.current_chips, 10) || parseInt(playerData.initial_chips, 10) || 0,
-                            joinedAt: playerData.joinedAt || Date.now(),
-                            active: playerData.active !== false
-                        };
-                        
-                        // Check if this is a new player (more robust checking)
-                        const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
-                            p.id === validatedPlayer.id || 
-                            (p.name && p.name.toLowerCase().trim() === validatedPlayer.name.toLowerCase().trim())
-                        );
-                        
-                        if (existingPlayerIndex === -1) {
-                            // Only add if it's genuinely new to local state
-                            PokerApp.state.players.push(validatedPlayer);
-                            console.log('[FIREBASE] Added new player to local state from child_added:', validatedPlayer.name);
-                            
-                            // Use requestAnimationFrame for smooth animation
-                            requestAnimationFrame(() => {
+                        if (!snapshot.exists()) {
+                            console.log('[FIREBASE_SYNC] No players in Firebase');
+                            // Only clear if we had players and this isn't during initialization
+                            if (PokerApp.state.players.length > 0 && PokerApp.state._firebaseReady) {
+                                console.log('[FIREBASE_SYNC] Clearing local players (Firebase is empty)');
+                                PokerApp.state.players = [];
+                                saveState();
                                 updatePlayerList();
                                 updateEmptyState();
-                                setTimeout(() => {
-                                    animateNewPlayer(validatedPlayer.id);
-                                    if (!validatedPlayer.manualAdd) {
-                                        PokerApp.UI.showToast(`${validatedPlayer.name} joined with ${validatedPlayer.initial_chips} chips`, 'success');
+                            }
+                            return;
+                        }
+
+                        const firebasePlayers = snapshot.val();
+                        
+                        // Convert to array (Firebase might return object if keys are non-numeric)
+                        let fbPlayersArray;
+                        if (Array.isArray(firebasePlayers)) {
+                            fbPlayersArray = firebasePlayers.filter(p => p != null);
+                        } else if (typeof firebasePlayers === 'object') {
+                            fbPlayersArray = Object.values(firebasePlayers).filter(p => p != null && p.name);
+                        } else {
+                            console.warn('[FIREBASE_SYNC] Invalid players data structure');
+                            return;
+                        }
+
+                        console.log('[FIREBASE_SYNC] Received players from Firebase:', fbPlayersArray.length, 'players');
+
+                        // Track which Firebase player IDs we've seen
+                        const fbPlayerIds = new Set(fbPlayersArray.map(p => p.id).filter(id => id != null));
+
+                        // Process each Firebase player
+                        let needsUIUpdate = false;
+                        let newPlayersAdded = [];
+
+                        fbPlayersArray.forEach(fbPlayer => {
+                            if (!fbPlayer || !fbPlayer.name) return;
+
+                            // Validate data
+                            const validatedPlayer = {
+                                id: fbPlayer.id || Date.now() + Math.random(),
+                                name: fbPlayer.name.trim(),
+                                initial_chips: parseInt(fbPlayer.initial_chips, 10) || 0,
+                                current_chips: parseInt(fbPlayer.current_chips, 10) || parseInt(fbPlayer.initial_chips, 10) || 0,
+                                joinedAt: fbPlayer.joinedAt || Date.now(),
+                                active: fbPlayer.active !== false,
+                                manualAdd: fbPlayer.manualAdd || false,
+                                lastBuyIn: fbPlayer.lastBuyIn || fbPlayer.joinedAt || Date.now()
+                            };
+
+                            // Find existing player by ID
+                            const existingIndex = PokerApp.state.players.findIndex(p => p.id === validatedPlayer.id);
+                            
+                            if (existingIndex === -1) {
+                                // NEW PLAYER - not in local state
+                                // Check by name to prevent duplicates from different IDs
+                                const nameIndex = PokerApp.state.players.findIndex(p => 
+                                    p.name && p.name.toLowerCase().trim() === validatedPlayer.name.toLowerCase()
+                                );
+                                
+                                if (nameIndex === -1) {
+                                    // Genuinely new player
+                                    PokerApp.state.players.push(validatedPlayer);
+                                    newPlayersAdded.push(validatedPlayer);
+                                    needsUIUpdate = true;
+                                    console.log('[FIREBASE_SYNC] Added new player:', validatedPlayer.name);
+                                } else {
+                                    // Same name, different ID - update the ID to match Firebase
+                                    console.log('[FIREBASE_SYNC] Fixing player ID mismatch for:', validatedPlayer.name);
+                                    PokerApp.state.players[nameIndex].id = validatedPlayer.id;
+                                    needsUIUpdate = true;
+                                }
+                            } else {
+                                // EXISTING PLAYER - check if update needed
+                                const localPlayer = PokerApp.state.players[existingIndex];
+                                
+                                // HOST PRIORITY: Check if local has recent host update
+                                const localHasRecentHostUpdate = localPlayer.hostUpdated && 
+                                                                localPlayer.lastHostUpdate && 
+                                                                (Date.now() - localPlayer.lastHostUpdate < 10000);
+                                
+                                // Check if this is a rebuy (initial_chips increased)
+                                const isRebuy = !validatedPlayer.manualAdd && 
+                                               validatedPlayer.initial_chips > localPlayer.initial_chips;
+                                
+                                if (isRebuy) {
+                                    // REBUY - always accept from Firebase
+                                    const chipDiff = validatedPlayer.initial_chips - localPlayer.initial_chips;
+                                    console.log(`[FIREBASE_SYNC] Applying rebuy for ${localPlayer.name}: +${chipDiff} chips`);
+                                    localPlayer.initial_chips = validatedPlayer.initial_chips;
+                                    localPlayer.current_chips = validatedPlayer.current_chips;
+                                    localPlayer.lastBuyIn = validatedPlayer.lastBuyIn;
+                                    needsUIUpdate = true;
+                                    
+                                    setTimeout(() => {
+                                        animateNewPlayer(localPlayer.id, true);
+                                        PokerApp.UI.showToast(`${localPlayer.name} added ${chipDiff} chips!`, 'success');
+                                    }, 100);
+                                } else if (localHasRecentHostUpdate) {
+                                    // HOST PRIORITY - skip update, local is newer
+                                    console.log(`[FIREBASE_SYNC] Skipping update for ${localPlayer.name} - local host update is recent`);
+                                } else if (validatedPlayer.current_chips !== localPlayer.current_chips ||
+                                          validatedPlayer.initial_chips !== localPlayer.initial_chips) {
+                                    // Update needed - no conflict
+                                    console.log(`[FIREBASE_SYNC] Syncing player ${localPlayer.name}: chips ${localPlayer.current_chips} -> ${validatedPlayer.current_chips}`);
+                                    localPlayer.current_chips = validatedPlayer.current_chips;
+                                    localPlayer.initial_chips = validatedPlayer.initial_chips;
+                                    needsUIUpdate = true;
+                                }
+                            }
+                        });
+
+                        // Handle REMOVED players (in Firebase but not in local)
+                        // Actually, we need to check the other way: players in local but not in Firebase
+                        const playersToRemove = [];
+                        PokerApp.state.players.forEach((localPlayer, index) => {
+                            if (!fbPlayerIds.has(localPlayer.id)) {
+                                // Player was removed from Firebase
+                                // But be careful: the host might have just added this player locally
+                                // and the Firebase transaction hasn't completed yet
+                                const justAddedLocally = localPlayer._justAddedLocally && 
+                                                        (Date.now() - localPlayer._justAddedLocally < 5000);
+                                
+                                if (!justAddedLocally) {
+                                    console.log('[FIREBASE_SYNC] Player removed from Firebase:', localPlayer.name);
+                                    playersToRemove.push(index);
+                                    needsUIUpdate = true;
+                                } else {
+                                    console.log('[FIREBASE_SYNC] Keeping locally-added player:', localPlayer.name);
+                                }
+                            }
+                        });
+
+                        // Remove players that are gone from Firebase (in reverse order to maintain indices)
+                        playersToRemove.reverse().forEach(index => {
+                            PokerApp.state.players.splice(index, 1);
+                        });
+
+                        // Update UI if anything changed
+                        if (needsUIUpdate) {
+                            saveState();
+                            updatePlayerList();
+                            updateEmptyState();
+                        }
+
+                        // Show toast for new players (deferred to avoid multiple toasts)
+                        if (newPlayersAdded.length > 0) {
+                            requestAnimationFrame(() => {
+                                newPlayersAdded.forEach(p => {
+                                    if (!p.manualAdd) {
+                                        animateNewPlayer(p.id);
+                                        PokerApp.UI.showToast(`${p.name} joined with ${p.initial_chips} chips`, 'success');
                                     }
-                                }, 100);
+                                });
                             });
-                        } else {
-                            console.log('[FIREBASE] Player already exists locally, skipping add:', validatedPlayer.name);
                         }
+
+                        // Mark that we've received our first sync from Firebase
+                        PokerApp.state._firebaseReady = true;
+
                     } catch (error) {
-                        console.error('[FIREBASE] Error processing new player:', error);
-                        PokerApp.UI.showToast('Error adding new player', 'error');
+                        console.error('[FIREBASE_SYNC] Error processing players value update:', error);
+                        PokerApp.UI.showToast('Error syncing player data', 'error');
                     }
                 }, error => {
-                    console.error('[FIREBASE] Error in child_added listener:', error);
-                    PokerApp.UI.showToast('Connection error - player updates may be delayed', 'error');
-                });
-                
-                // Listen for player updates (rebuys and host updates) with error handling
-                database.ref(`games/${gameId}/state/players`).on('child_changed', snapshot => {
-                    try {
-                        const updatedPlayer = snapshot.val();
-                        if (!updatedPlayer || !updatedPlayer.name) {
-                            console.warn('[FIREBASE_SYNC] Invalid updated player data:', updatedPlayer);
-                            return;
-                        }
-                        
-                        const existingPlayer = PokerApp.state.players.find(p => p.id === updatedPlayer.id);
-                        if (!existingPlayer) {
-                            console.warn(`[FIREBASE_SYNC] Player not found locally: ${updatedPlayer.name} (ID: ${updatedPlayer.id})`);
-                            return;
-                        }
-                        
-                        // BUG FIX: Use radix 10 for parseInt
-                        const validatedUpdate = {
-                            ...updatedPlayer,
-                            initial_chips: parseInt(updatedPlayer.initial_chips, 10) || 0,
-                            current_chips: parseInt(updatedPlayer.current_chips, 10) || 0
-                        };
-                        
-                        // HOST PRIORITY: Check if local player has recent host update
-                        const localHasRecentHostUpdate = existingPlayer.hostUpdated && 
-                                                        existingPlayer.lastHostUpdate && 
-                                                        (Date.now() - existingPlayer.lastHostUpdate < 10000); // 10 second protection window
-                        
-                        // Check if incoming update is a host update
-                        const isIncomingHostUpdate = validatedUpdate.hostUpdated && validatedUpdate.lastHostUpdate;
-                        const isNewerThanLocal = !existingPlayer.lastHostUpdate || 
-                                              (validatedUpdate.lastHostUpdate > existingPlayer.lastHostUpdate);
-                        
-                        // HOST AUTHORITY: Always prioritize local host updates over any Firebase changes
-                        // EXCEPTION: If the update is a REBUY (initial_chips increased), we must accept it because the host
-                        // typically updates 'current_chips' locally, but rebuys add new chips to the ecosystem.
-                        const isRebuy = !validatedUpdate.manualAdd && validatedUpdate.initial_chips > existingPlayer.initial_chips;
-
-                        // CRITICAL FIX: If it's a rebuy, we MUST accept it regardless of host priority.
-                        // Rebuys are valid state transitions that happen externally (via QR code).
-                        if (isRebuy) {
-                             // BUG FIX: Use Firebase's current_chips directly instead of adding chipDiff to
-                             // local state, which might be stale (e.g., host already updated chips to reflect losses).
-                             const chipDiff = validatedUpdate.initial_chips - existingPlayer.initial_chips;
-                             console.log(`[FIREBASE_SYNC] Applying QR code rebuy for ${existingPlayer.name}: +${chipDiff} chips (starting stack: ${existingPlayer.initial_chips} -> ${validatedUpdate.initial_chips})`);
-
-                             // Update starting stack (initial_chips) - this is what payouts calculate from
-                             existingPlayer.initial_chips = validatedUpdate.initial_chips;
-                             // Use Firebase's current_chips as source of truth (handles stale local state)
-                             existingPlayer.current_chips = validatedUpdate.current_chips;
-                             
-                             // Save state to persist the starting stack update
-                             saveState();
-                             
-                             // Update UI and trigger animation
-                             updatePlayerList();
-                             
-                             requestAnimationFrame(() => {
-                                 setTimeout(() => {
-                                     if (typeof animateChipAddition === 'function') {
-                                         animateChipAddition(existingPlayer.id);
-                                     } else {
-                                         animateNewPlayer(existingPlayer.id, true);
-                                     }
-                                     PokerApp.UI.showToast(`${existingPlayer.name} added ${chipDiff} chips!`, 'success');
-                                 }, 100);
-                             });
-                             return; // Exit after handling rebuy
-                        }
-
-                        if (localHasRecentHostUpdate) {
-                            console.log(`[FIREBASE_SYNC] BLOCKING update for ${existingPlayer.name} - local host update takes priority (${Date.now() - existingPlayer.lastHostUpdate}ms ago)`);
-                            return;
-                        }
-                        
-                        if (isIncomingHostUpdate) {
-                            // Only apply incoming host updates if they're newer than our local state
-                            if (isNewerThanLocal) {
-                                console.log(`[FIREBASE_SYNC] Applying newer host update for ${existingPlayer.name}`);
-                                existingPlayer.current_chips = validatedUpdate.current_chips;
-                                existingPlayer.lastHostUpdate = validatedUpdate.lastHostUpdate;
-                                existingPlayer.hostUpdated = true;
-                                updatePlayerList();
-                                saveState();
-                            } else {
-                                console.log(`[FIREBASE_SYNC] Ignoring older host update for ${existingPlayer.name}`);
-                            }
-                            return;
-                        } else {
-                            // Logic for other updates... if any.
-                             if (validatedUpdate.manualAdd) {
-                                console.log(`[FIREBASE_SYNC] Ignoring manual update for ${existingPlayer.name} - handled locally by host`);
-                            } else {
-                                console.log(`[FIREBASE_SYNC] Ignoring update for ${existingPlayer.name} - not newer or not applicable`);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('[FIREBASE_SYNC] Error processing player update:', error);
-                        PokerApp.UI.showToast('Error syncing player update', 'error');
-                    }
-                }, error => {
-                    console.error('[FIREBASE] Error in child_changed listener:', error);
+                    console.error('[FIREBASE] Error in players value listener:', error);
                     PokerApp.UI.showToast('Connection error - player updates may be delayed', 'error');
                 });
                 
@@ -2891,30 +2755,9 @@ function resetGame() {
     }, 2500);
 }
 
-function resetGameState() {
-    // Reset all game state variables
-    currentHand = [];
-    handHistory = [];
-    potTotal = 0;
-    currentBet = 0;
-    currentRound = 0;
-    gameStarted = false;
-    
-    // Clear the UI
-    document.getElementById('currentHand').innerHTML = '';
-    document.getElementById('handHistory').innerHTML = '';
-    document.getElementById('potTotal').textContent = '0';
-    document.getElementById('currentBet').textContent = '0';
-    
-    // Re-enable all inputs and buttons
-    const inputs = document.querySelectorAll('input, select, button');
-    inputs.forEach(input => {
-        input.disabled = false;
-    });
-    
-    // Show a toast notification
-    showToast('Game reset successfully!', 'success');
-}
+// NOTE: The old dead-code resetGameState() that referenced non-existent variables
+// (currentHand, handHistory, potTotal, currentBet, gameStarted) has been removed.
+// The real resetGameState() is at line ~3354.
 
 // Add calculatePayouts function
 // Add calculatePayouts function (Refactored for Robustness & Normalization)
