@@ -452,10 +452,11 @@ function updatePlayerList() {
     totalsRow.appendChild(totalsInitialCell);
     
     const totalsCurrentCell = document.createElement('td');
-    // Calculate total money directly using current ratio
+    // BUG FIX: Use integer cents to avoid floating point precision errors
+    // e.g., 100 chips * $0.10/chip should be exactly $10.00, not $9.99999...
     const currentChipRatio = PokerApp.state.chipRatio || 1.0;
-    const totalMoneyValue = totalCurrentChips * currentChipRatio;
-    totalsCurrentCell.innerHTML = `<strong>${totalCurrentChips}</strong> <span class="total-money-amount">($${totalMoneyValue.toFixed(2)})</span>`;
+    const totalMoneyCents = Math.round(totalCurrentChips * currentChipRatio * 100) / 100;
+    totalsCurrentCell.innerHTML = `<strong>${totalCurrentChips}</strong> <span class="total-money-amount">($${totalMoneyCents.toFixed(2)})</span>`;
     totalsRow.appendChild(totalsCurrentCell);
     
     const totalsBlankCell = document.createElement('td');
@@ -497,33 +498,64 @@ function updatePlayerList() {
 // - For rebuys: chips added to BOTH initial_chips (starting stack) and current_chips
 // - This ensures payout calculations work: profit/loss = current_chips - initial_chips
 function addPlayer(name, chips) {
-    if (!name) {
+    // BUG FIX: Comprehensive input validation
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
         PokerApp.UI.showToast('Player name cannot be empty.', 'error');
         return false;
     }
-    if (typeof chips !== 'number' || isNaN(chips) || chips < 0) {
-        PokerApp.UI.showToast('Chip amount must be a non-negative number (0 is allowed).', 'error');
+    
+    // Trim name for consistency
+    const trimmedName = name.trim();
+    
+    // Validate name length
+    if (trimmedName.length > 50) {
+        PokerApp.UI.showToast('Player name is too long (max 50 characters).', 'error');
+        return false;
+    }
+    
+    // BUG FIX: Chips must be a non-negative INTEGER (no decimals for chip counts)
+    if (typeof chips !== 'number' || isNaN(chips) || !isFinite(chips)) {
+        PokerApp.UI.showToast('Chip amount must be a valid number.', 'error');
+        return false;
+    }
+    
+    // Convert to integer - reject non-integer values
+    const chipInt = Math.floor(chips);
+    if (chipInt !== chips) {
+        PokerApp.UI.showToast('Chip count must be a whole number (no decimals).', 'error');
+        return false;
+    }
+    
+    if (chipInt < 0) {
+        PokerApp.UI.showToast('Chip count cannot be negative.', 'error');
+        return false;
+    }
+    
+    // Reasonable upper limit to prevent abuse (1 million chips max)
+    if (chipInt > 1000000) {
+        PokerApp.UI.showToast('Chip count is unreasonably high (max 1,000,000).', 'error');
         return false;
     }
 
-    console.log(`[MANUAL_ADD] Adding player ${name} with ${chips} chips`);
+    console.log(`[MANUAL_ADD] Adding player ${trimmedName} with ${chipInt} chips`);
 
     // Check if player already exists (case-insensitive with trimming)
-    const normalizedName = name.toLowerCase().trim();
+    const normalizedName = trimmedName.toLowerCase();
     const existingPlayer = PokerApp.state.players.find(p => p.name.toLowerCase().trim() === normalizedName);
     
     if (existingPlayer) {
-        console.log(`[MANUAL_ADD] Player ${name} already exists, adding ${chips} chips as rebuy`);
+        console.log(`[MANUAL_ADD] Player ${trimmedName} already exists, adding ${chipInt} chips as rebuy`);
         
         // Store original values for rollback if needed
         const originalCurrent = existingPlayer.current_chips;
         const originalInitial = existingPlayer.initial_chips;
+        const rebuyTimestamp = Date.now();
         
         // REBUY: Add chips to BOTH starting stack (initial_chips) and current chips
-        // This increases what they've paid in, which is used for payout calculations
-        existingPlayer.current_chips += parseInt(chips);
-        existingPlayer.initial_chips += parseInt(chips);
-        existingPlayer.lastBuyIn = Date.now();
+        // BUG FIX: Use chipInt (validated integer) and Math.max to prevent negative values
+        existingPlayer.current_chips = Math.max(0, existingPlayer.current_chips + chipInt);
+        existingPlayer.initial_chips = Math.max(0, existingPlayer.initial_chips + chipInt);
+        existingPlayer.lastBuyIn = rebuyTimestamp;
         
         // Update UI first
         updatePlayerList();
@@ -532,7 +564,7 @@ function addPlayer(name, chips) {
         // Then trigger animation after a short delay to ensure DOM is updated
         setTimeout(() => {
             animateNewPlayer(existingPlayer.id, true); // Call with isUpdate = true
-            PokerApp.UI.showToast(`Added ${chips} chips to ${name} (now has ${existingPlayer.current_chips})`, 'success');
+            PokerApp.UI.showToast(`Added ${chipInt} chips to ${trimmedName} (now has ${existingPlayer.current_chips})`, 'success');
         }, 50);
         
         // Save state and update Firebase with consistent transaction structure
@@ -556,17 +588,17 @@ function addPlayer(name, chips) {
                 );
                 
                 if (playerIndex !== -1) {
-                    // Update existing player with consistent structure
-                    currentState.players[playerIndex].current_chips += parseInt(chips);
-                    currentState.players[playerIndex].initial_chips += parseInt(chips);
-                    currentState.players[playerIndex].lastBuyIn = Date.now();
+                    // BUG FIX: Use chipInt (validated integer) and Math.max to prevent negative values
+                    currentState.players[playerIndex].current_chips = Math.max(0, currentState.players[playerIndex].current_chips + chipInt);
+                    currentState.players[playerIndex].initial_chips = Math.max(0, currentState.players[playerIndex].initial_chips + chipInt);
+                    currentState.players[playerIndex].lastBuyIn = rebuyTimestamp;
                 }
                 
-                currentState.lastUpdate = timestamp; // Use same older timestamp
+                currentState.lastUpdate = rebuyTimestamp;
                 currentState.lastPlayer = {
                     name: existingPlayer.name,
                     action: 'rebuy',
-                    addedChips: parseInt(chips),
+                    addedChips: chipInt,
                     current_chips: existingPlayer.current_chips,
                     initial_chips: existingPlayer.initial_chips,
                     manualAdd: true // Mark as manual rebuy
@@ -599,11 +631,12 @@ function addPlayer(name, chips) {
     const newPlayerId = nextId;
     PokerApp.state.nextPlayerId = nextId + 1;
     
+    // BUG FIX: Use trimmedName and chipInt (validated values)
     const newPlayer = {
         id: newPlayerId,
-        name: name,
-        initial_chips: chips,
-        current_chips: chips,
+        name: trimmedName,
+        initial_chips: chipInt,
+        current_chips: chipInt,
         joinedAt: timestamp,
         active: true,
         lastBuyIn: timestamp,
@@ -628,7 +661,7 @@ function addPlayer(name, chips) {
             if (row) {
                 PokerApp.UI.triggerAnimation(row, 'popIn');
             }
-            PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
+            PokerApp.UI.showToast(`Added ${trimmedName} with ${chipInt} chips`, 'success');
         }, 50);
     }, 0);
     
@@ -653,7 +686,7 @@ function addPlayer(name, chips) {
             );
             
             if (playerExists) {
-                console.log(`[MANUAL_ADD] Player ${name} already exists in Firebase, skipping add`);
+                console.log(`[MANUAL_ADD] Player ${trimmedName} already exists in Firebase, skipping add`);
                 return currentState;
             }
             
@@ -662,11 +695,12 @@ function addPlayer(name, chips) {
             // Use existing nextPlayerId if available and safe, otherwise maxId + 1
             const nextId = Math.max(currentState.nextPlayerId || 1, maxId + 1);
 
+            // BUG FIX: Use trimmedName and chipInt for Firebase consistency
             const playerToAdd = {
                 id: nextId,
-                name: name,
-                initial_chips: chips,
-                current_chips: chips,
+                name: trimmedName,
+                initial_chips: chipInt,
+                current_chips: chipInt,
                 joinedAt: timestamp, // Older timestamp to distinguish from QR joins
                 active: true,
                 lastBuyIn: timestamp,
@@ -677,10 +711,10 @@ function addPlayer(name, chips) {
             currentState.nextPlayerId = nextId + 1;
             currentState.lastUpdate = timestamp;
             currentState.lastPlayer = {
-                name: name,
+                name: trimmedName,
                 action: 'join',
-                initial_chips: chips,
-                current_chips: chips
+                initial_chips: chipInt,
+                current_chips: chipInt
             };
             
             console.log(`[MANUAL_ADD] Added player to Firebase with ID ${nextId}`);
@@ -831,12 +865,31 @@ function setupEventListeners() {
             e.preventDefault();
             const nameInput = document.getElementById('player-name');
             const chipsInput = document.getElementById('initial-chips');
-            const chips = parseInt(chipsInput.value);
+            // BUG FIX: Use radix 10 and validate integer
+            const chips = parseInt(chipsInput.value, 10);
 
             // --- ADD NEW PLAYER LOGIC ---
             const name = nameInput.value.trim();
-            if (!name || isNaN(chips) || chips < 0) { // Changed from chips <= 0
-                PokerApp.UI.showToast('Please enter a valid name and a non-negative chip amount (0 is allowed)', 'error');
+            
+            // BUG FIX: Add integer validation for chips
+            if (!name) {
+                PokerApp.UI.showToast('Please enter a player name', 'error');
+                return;
+            }
+            if (isNaN(chips) || !Number.isFinite(chips)) {
+                PokerApp.UI.showToast('Please enter a valid chip amount', 'error');
+                return;
+            }
+            if (!Number.isInteger(chips) || chips !== Math.floor(parseFloat(chipsInput.value))) {
+                PokerApp.UI.showToast('Chip count must be a whole number (no decimals)', 'error');
+                return;
+            }
+            if (chips < 0) {
+                PokerApp.UI.showToast('Chip count cannot be negative', 'error');
+                return;
+            }
+            if (chips > 1000000) {
+                PokerApp.UI.showToast('Chip count is too high (max 1,000,000)', 'error');
                 return;
             }
 
@@ -887,16 +940,45 @@ function setupEventListeners() {
         newForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const money = parseFloat(document.getElementById('money-amount').value);
-            const chips = parseInt(document.getElementById('chip-amount').value);
+            // BUG FIX: Comprehensive validation for money/chip ratio
+            const rawMoney = document.getElementById('money-amount').value;
+            const rawChips = document.getElementById('chip-amount').value;
             
-            if (isNaN(money) || money <= 0 || isNaN(chips) || chips <= 0) {
-                PokerApp.UI.showToast('Please enter valid money and chip amounts', 'error');
+            const money = parseFloat(rawMoney);
+            const chips = parseInt(rawChips, 10);
+            
+            // Validate money
+            if (isNaN(money) || !isFinite(money)) {
+                PokerApp.UI.showToast('Please enter a valid money amount', 'error');
+                return;
+            }
+            if (money <= 0) {
+                PokerApp.UI.showToast('Money amount must be greater than $0', 'error');
+                return;
+            }
+            if (money > 1000000) {
+                PokerApp.UI.showToast('Money amount is too large (max $1,000,000)', 'error');
                 return;
             }
             
-            // Calculate and update ratio
-            PokerApp.state.chipRatio = money / chips;
+            // Validate chips - must be positive integer
+            if (isNaN(chips) || !Number.isInteger(chips)) {
+                PokerApp.UI.showToast('Chip count must be a whole number', 'error');
+                return;
+            }
+            if (chips <= 0) {
+                PokerApp.UI.showToast('Chip count must be greater than 0', 'error');
+                return;
+            }
+            if (chips > 1000000) {
+                PokerApp.UI.showToast('Chip count is too large (max 1,000,000)', 'error');
+                return;
+            }
+            
+            // Calculate and update ratio (as float for display, but round to reasonable precision)
+            // BUG FIX: Round ratio to 4 decimal places to avoid floating point noise
+            const calculatedRatio = money / chips;
+            PokerApp.state.chipRatio = Math.round(calculatedRatio * 10000) / 10000;
             
             // Update display
             const ratioDisplay = document.getElementById('ratio-display');
@@ -2833,7 +2915,7 @@ function resetGameState() {
 // Add calculatePayouts function
 // Add calculatePayouts function (Refactored for Robustness & Normalization)
 function calculatePayouts() {
-    console.log('[PAYOUT] Calculating payouts (Robust Mode)');
+    console.log('[PAYOUT] Calculating payouts (Robust Mode - Integer Cents)');
     
     if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
         PokerApp.UI.showToast('No players to calculate payouts for', 'error');
@@ -2848,11 +2930,21 @@ function calculatePayouts() {
     SoundSystem.playPayoutSound();
 
     const players = PokerApp.state.players.filter(p => p.active !== false);
+    
+    // BUG FIX: Check for sufficient active players after filtering
+    if (players.length < 2) {
+        PokerApp.UI.showToast('Need at least 2 active players to calculate payouts', 'error');
+        return;
+    }
+    
+    // BUG FIX: Convert ratio to cents (integer) to avoid floating point errors
+    // e.g., $0.50/chip = 50 cents/chip
     const nominalRatio = PokerApp.state.chipRatio || 1.0;
+    const nominalRatioCents = Math.round(nominalRatio * 100);
 
-    console.log('[PAYOUT] Processing players:', players.length);
+    console.log('[PAYOUT] Processing players:', players.length, 'Ratio:', nominalRatio, '= ', nominalRatioCents, 'cents/chip');
 
-    // 1. Calculate Totals & Detect Discrepancies
+    // 1. Calculate Totals & Detect Discrepancies (all in integer cents)
     let totalInitialChips = 0;
     let totalCurrentChips = 0;
 
@@ -2862,17 +2954,21 @@ function calculatePayouts() {
         totalInitialChips += initial;
         totalCurrentChips += current;
         
+        // BUG FIX: Use integer cents for all monetary calculations
+        // nominalBuyIn = initialChips * ratioCents / 100 (stored as cents)
+        const nominalBuyInCents = initial * nominalRatioCents;
+        
         return {
             id: player.id,
             name: player.name,
             initial,
             current,
-            nominalBuyIn: initial * nominalRatio
+            nominalBuyInCents // Integer cents
         };
     });
 
     const chipDiscrepancy = totalCurrentChips - totalInitialChips;
-    let effectiveRatio = nominalRatio;
+    let effectiveRatioCents = nominalRatioCents;
     let discrepancyMsg = '';
     let hasDiscrepancy = false;
     let discrepancyType = ''; // 'short' or 'surplus'
@@ -2881,80 +2977,99 @@ function calculatePayouts() {
     // If chips are missing or extra, we adjust the effective value of each chip 
     // so that the Total Cash Value Out equals Total Cash Value In.
     // This ensures zero-sum settlements.
+    // BUG FIX: Handle division by zero - when totalCurrentChips is 0, everyone loses everything
     if (totalCurrentChips > 0 && Math.abs(chipDiscrepancy) > 0) {
         hasDiscrepancy = true;
-        const totalPotValue = totalInitialChips * nominalRatio;
-        effectiveRatio = totalPotValue / totalCurrentChips;
+        const totalPotCents = totalInitialChips * nominalRatioCents;
+        // BUG FIX: Use integer division with rounding to avoid floating point
+        // effectiveRatioCents = totalPotCents / totalCurrentChips, rounded to nearest cent
+        effectiveRatioCents = Math.round(totalPotCents / totalCurrentChips);
+        
+        // SAFETY: Ensure effective ratio is at least 1 cent per chip to avoid division by zero later
+        if (effectiveRatioCents < 1) effectiveRatioCents = 1;
         
         discrepancyType = chipDiscrepancy < 0 ? 'short' : 'surplus';
-        const discrepancyValue = Math.abs(chipDiscrepancy) * nominalRatio;
+        const discrepancyValueCents = Math.abs(chipDiscrepancy) * nominalRatioCents;
         
         console.warn(`[PAYOUT] Discrepancy detected: ${chipDiscrepancy} chips.`);
-        console.warn(`[PAYOUT] Adjusted Ratio: ${nominalRatio} -> ${effectiveRatio}`);
+        console.warn(`[PAYOUT] Adjusted Ratio: ${nominalRatioCents} -> ${effectiveRatioCents} cents/chip`);
         
         discrepancyMsg = chipDiscrepancy < 0 
-            ? `Table is short ${Math.abs(chipDiscrepancy)} chips ($${discrepancyValue.toFixed(2)}).`
-            : `Table has extra ${chipDiscrepancy} chips ($${discrepancyValue.toFixed(2)}).`;
+            ? `Table is short ${Math.abs(chipDiscrepancy)} chips ($${(discrepancyValueCents / 100).toFixed(2)}).`
+            : `Table has extra ${chipDiscrepancy} chips ($${(discrepancyValueCents / 100).toFixed(2)}).`;
         
         discrepancyMsg += ` Values adjusted to balance.`;
     } else if (totalCurrentChips === 0 && totalInitialChips > 0) {
-        // Edge case: All chips lost?
-        effectiveRatio = 0;
+        // BUG FIX: Edge case - all chips missing. Everyone loses their buy-in.
+        // Set ratio to 0 so cashOutValue = 0 for everyone
+        effectiveRatioCents = 0;
         discrepancyMsg = "All chips are missing! 100% Loss.";
         hasDiscrepancy = true;
+    } else if (totalCurrentChips === 0 && totalInitialChips === 0) {
+        // Edge case: No chips at all - no payouts needed
+        PokerApp.UI.showToast('No chips to calculate payouts for', 'error');
+        return;
     }
 
-    // 2. Calculate Net Position (Profit/Loss in CASH)
+    // 2. Calculate Net Position (Profit/Loss in CENTS - integer arithmetic)
     const settlements = playerData.map(p => {
-        const cashOutValue = p.current * effectiveRatio;
-        const netCash = cashOutValue - p.nominalBuyIn;
+        // BUG FIX: Handle division by zero - if effectiveRatioCents is 0, cashOut is 0
+        const cashOutCents = effectiveRatioCents > 0 ? p.current * effectiveRatioCents : 0;
+        const netCents = cashOutCents - p.nominalBuyInCents;
         
         return {
             ...p,
-            cashOutValue,
-            netCash, // Precise float
-            displayNet: netCash // For display logic
+            cashOutCents,
+            netCents, // Integer cents - no floating point errors
+            nominalBuyIn: p.nominalBuyInCents / 100, // For display only
+            cashOutValue: cashOutCents / 100, // For display only
+            netCash: netCents / 100, // For display/compatibility
+            displayNet: netCents / 100
         };
     });
 
     // 3. Sort into Debtors (Losers) and Creditors (Winners)
     // BUG FIX: Use 1 cent ($0.01) threshold consistently for filtering and settlement
-    const EPSILON = 0.01;
-    const winners = settlements.filter(p => p.netCash > EPSILON).sort((a, b) => b.netCash - a.netCash); // Largest winners first
-    const losers = settlements.filter(p => p.netCash < -EPSILON).sort((a, b) => a.netCash - b.netCash); // Largest losers (most negative) first
+    const EPSILON_CENTS = 1; // 1 cent minimum threshold
+    const winners = settlements.filter(p => p.netCents > EPSILON_CENTS).sort((a, b) => b.netCents - a.netCents); // Largest winners first
+    const losers = settlements.filter(p => p.netCents < -EPSILON_CENTS).sort((a, b) => a.netCents - b.netCents); // Largest losers (most negative) first
 
-    // 4. Greedy Matching Algorithm
+    // 4. Greedy Matching Algorithm (using integer cents)
     const transactions = [];
     let winnerIdx = 0;
     let loserIdx = 0;
 
-    // Work with mutable balances to track remaining debts/credits
-    const winnerBalances = winners.map(w => w.netCash);
-    const loserBalances = losers.map(l => Math.abs(l.netCash));
+    // Work with mutable balances to track remaining debts/credits (in cents)
+    const winnerBalances = winners.map(w => w.netCents);
+    const loserBalances = losers.map(l => Math.abs(l.netCents));
 
     while (winnerIdx < winners.length && loserIdx < losers.length) {
         const amountOwed = loserBalances[loserIdx];
         const amountToReceive = winnerBalances[winnerIdx];
 
-        // Settle the smaller of the two amounts
-        const settlementAmount = Math.min(amountOwed, amountToReceive);
+        // Settle the smaller of the two amounts (in cents)
+        const settlementCents = Math.min(amountOwed, amountToReceive);
 
-        if (settlementAmount > EPSILON) { // Ignore sub-cent amounts
+        if (settlementCents > EPSILON_CENTS) { // Ignore sub-cent amounts
+            // BUG FIX: Calculate chips safely - avoid division by zero
+            const chipsForSettlement = effectiveRatioCents > 0 ? Math.round(settlementCents / effectiveRatioCents) : 0;
+            
             transactions.push({
                 from: losers[loserIdx].name,
                 to: winners[winnerIdx].name,
-                cash: parseFloat(settlementAmount.toFixed(2)),
-                chips: Math.round(settlementAmount / effectiveRatio) // Approx chips
+                cash: settlementCents / 100, // Convert to dollars for display
+                cashCents: settlementCents, // Keep cents for precision
+                chips: chipsForSettlement
             });
         }
 
-        // Adjust balances
-        loserBalances[loserIdx] -= settlementAmount;
-        winnerBalances[winnerIdx] -= settlementAmount;
+        // Adjust balances (integer arithmetic)
+        loserBalances[loserIdx] -= settlementCents;
+        winnerBalances[winnerIdx] -= settlementCents;
 
         // Advance pointers if settled (within epsilon)
-        if (loserBalances[loserIdx] < EPSILON) loserIdx++;
-        if (winnerBalances[winnerIdx] < EPSILON) winnerIdx++;
+        if (loserBalances[loserIdx] <= EPSILON_CENTS) loserIdx++;
+        if (winnerBalances[winnerIdx] <= EPSILON_CENTS) winnerIdx++;
     }
 
     // 5. Update Cash Values for Stats & Display
@@ -2966,17 +3081,19 @@ function calculatePayouts() {
     // Create player result cards (Sorted by Win/Loss)
     const sortedPlayers = [...settlements].sort((a, b) => b.netCash - a.netCash);
     
-    // Calculate Fun Stats
-    const biggestWinner = settlements.reduce((prev, curr) => (curr.netCash > prev.netCash) ? curr : prev, settlements[0]);
-    const biggestLoser = settlements.reduce((prev, curr) => (curr.netCash < prev.netCash) ? curr : prev, settlements[0]);
+    // Calculate Fun Stats (using cents for precision)
+    const biggestWinner = settlements.reduce((prev, curr) => (curr.netCents > prev.netCents) ? curr : prev, settlements[0]);
+    const biggestLoser = settlements.reduce((prev, curr) => (curr.netCents < prev.netCents) ? curr : prev, settlements[0]);
     
-    const totalMoneyMoved = transactions.reduce((sum, t) => sum + t.cash, 0).toFixed(2);
-    const totalChipsMoved = transactions.reduce((sum, t) => sum + t.chips, 0); // Approx
+    // BUG FIX: Sum in cents then convert to avoid floating point accumulation
+    const totalMoneyMovedCents = transactions.reduce((sum, t) => sum + (t.cashCents || Math.round(t.cash * 100)), 0);
+    const totalMoneyMoved = (totalMoneyMovedCents / 100).toFixed(2);
+    const totalChipsMoved = transactions.reduce((sum, t) => sum + t.chips, 0);
     
-    const winnersList = settlements.filter(p => p.netCash > 0);
-    const averageWin = winnersList.length > 0 
-        ? winnersList.reduce((sum, p) => sum + p.netCash, 0) / winnersList.length 
-        : 0;
+    const winnersList = settlements.filter(p => p.netCents > 0);
+    // BUG FIX: Calculate average win in cents then convert
+    const totalWinCents = winnersList.reduce((sum, p) => sum + p.netCents, 0);
+    const averageWin = winnersList.length > 0 ? (totalWinCents / winnersList.length) / 100 : 0;
 
     // Build the HTML string
     let html = `
@@ -3371,9 +3488,27 @@ function editPlayerChips(playerId) {
     const newAmount = prompt(`Update ${player.name}'s current chips:`, player.current_chips);
     if (newAmount === null) return; // User canceled
     
-    const parsedAmount = parseInt(newAmount);
-    if (isNaN(parsedAmount)) {
+    // BUG FIX: Comprehensive input validation
+    const parsedAmount = parseInt(newAmount, 10);
+    
+    if (isNaN(parsedAmount) || !Number.isFinite(parsedAmount)) {
         PokerApp.UI.showToast('Please enter a valid number', 'error');
+        return;
+    }
+    
+    // Must be an integer (no decimals for chips)
+    if (!Number.isInteger(parsedAmount) || parsedAmount !== Math.floor(parseFloat(newAmount))) {
+        PokerApp.UI.showToast('Chip count must be a whole number', 'error');
+        return;
+    }
+    
+    if (parsedAmount < 0) {
+        PokerApp.UI.showToast('Chip count cannot be negative', 'error');
+        return;
+    }
+    
+    if (parsedAmount > 1000000) {
+        PokerApp.UI.showToast('Chip count is too high (max 1,000,000)', 'error');
         return;
     }
     
@@ -3402,6 +3537,8 @@ window.editPlayerChips = editPlayerChips;
 // - Host updates override any Firebase sync for 10 seconds
 function updatePlayerChips(playerId, newValue) {
     const player = PokerApp.state.players.find(p => p.id === playerId);
+    
+    // BUG FIX: Comprehensive input validation
     const parsedNewValue = parseInt(newValue, 10);
 
     if (!player) {
@@ -3409,9 +3546,29 @@ function updatePlayerChips(playerId, newValue) {
         return;
     }
 
-    if (isNaN(parsedNewValue) || parsedNewValue < 0) {
+    // Validate chip count is a non-negative integer
+    if (isNaN(parsedNewValue) || !Number.isFinite(parsedNewValue)) {
         PokerApp.UI.showToast('Invalid chip update. Please enter a valid number.', 'error');
         updatePlayerList(); // Revert the input field to last known good state
+        return;
+    }
+    
+    if (!Number.isInteger(parsedNewValue) || parsedNewValue !== Math.floor(parseFloat(newValue))) {
+        PokerApp.UI.showToast('Chip count must be a whole number.', 'error');
+        updatePlayerList();
+        return;
+    }
+    
+    if (parsedNewValue < 0) {
+        PokerApp.UI.showToast('Chip count cannot be negative.', 'error');
+        updatePlayerList();
+        return;
+    }
+    
+    // Reasonable upper limit
+    if (parsedNewValue > 1000000) {
+        PokerApp.UI.showToast('Chip count is too high (max 1,000,000).', 'error');
+        updatePlayerList();
         return;
     }
 
@@ -3509,9 +3666,10 @@ function updateTotalsRow() {
     if (cells.length >= 3) {
         cells[1].innerHTML = `<strong>${totalInitialChips}</strong>`;
         
+        // BUG FIX: Use integer cents to avoid floating point precision errors
         const currentChipRatio = PokerApp.state.chipRatio || 1.0;
-        const totalMoneyValue = totalCurrentChips * currentChipRatio;
-        cells[2].innerHTML = `<strong>${totalCurrentChips}</strong> <span class="total-money-amount">($${totalMoneyValue.toFixed(2)})</span>`;
+        const totalMoneyCents = Math.round(totalCurrentChips * currentChipRatio * 100) / 100;
+        cells[2].innerHTML = `<strong>${totalCurrentChips}</strong> <span class="total-money-amount">($${totalMoneyCents.toFixed(2)})</span>`;
     }
 }
 
