@@ -2424,7 +2424,8 @@ async function createGameSession(gameName, password = null, includeLocalPlayers 
         console.log('[FIREBASE] Generated gameId:', gameId);
         
         // Set up game object with initial state
-        const ratio = PokerApp.state.ratio || 1.0;
+        // BUG FIX: was PokerApp.state.ratio (undefined), should be PokerApp.state.chipRatio
+        const ratio = PokerApp.state.chipRatio || 1.0;
         const gameObj = {
             id: gameId,
             name: gameName,
