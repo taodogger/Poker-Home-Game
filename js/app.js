@@ -2105,14 +2105,15 @@ function setupGameStateListener(gameId) {
                         // CRITICAL FIX: If it's a rebuy, we MUST accept it regardless of host priority.
                         // Rebuys are valid state transitions that happen externally (via QR code).
                         if (isRebuy) {
-                             // QR CODE REBUY: Add chips to BOTH initial (starting stack) and current totals
+                             // BUG FIX: Use Firebase's current_chips directly instead of adding chipDiff to
+                             // local state, which might be stale (e.g., host already updated chips to reflect losses).
                              const chipDiff = validatedUpdate.initial_chips - existingPlayer.initial_chips;
                              console.log(`[FIREBASE_SYNC] Applying QR code rebuy for ${existingPlayer.name}: +${chipDiff} chips (starting stack: ${existingPlayer.initial_chips} -> ${validatedUpdate.initial_chips})`);
-                             
+
                              // Update starting stack (initial_chips) - this is what payouts calculate from
                              existingPlayer.initial_chips = validatedUpdate.initial_chips;
-                             // Add the difference to current chips
-                             existingPlayer.current_chips += chipDiff;
+                             // Use Firebase's current_chips as source of truth (handles stale local state)
+                             existingPlayer.current_chips = validatedUpdate.current_chips;
                              
                              // Save state to persist the starting stack update
                              saveState();
