@@ -3702,16 +3702,26 @@ function validateAndCleanPlayerState() {
             return;
         }
         
-        // Fix invalid chip values
-        if (typeof player.initial_chips !== 'number' || isNaN(player.initial_chips) || player.initial_chips < 0) {
+        // BUG FIX: Fix invalid chip values with comprehensive validation
+        if (typeof player.initial_chips !== 'number' || !isFinite(player.initial_chips) || player.initial_chips < 0) {
             console.warn(`[VALIDATION] Fixing invalid initial_chips for ${player.name}:`, player.initial_chips);
             player.initial_chips = 0;
+        } else {
+            // Ensure integer (chips should be whole numbers)
+            player.initial_chips = Math.floor(player.initial_chips);
         }
         
-        if (typeof player.current_chips !== 'number' || isNaN(player.current_chips) || player.current_chips < 0) {
+        if (typeof player.current_chips !== 'number' || !isFinite(player.current_chips) || player.current_chips < 0) {
             console.warn(`[VALIDATION] Fixing invalid current_chips for ${player.name}:`, player.current_chips);
-            player.current_chips = Math.max(0, player.initial_chips);
+            player.current_chips = Math.max(0, Math.floor(player.initial_chips));
+        } else {
+            // Ensure integer (chips should be whole numbers)
+            player.current_chips = Math.floor(player.current_chips);
         }
+        
+        // Cap at reasonable limit
+        if (player.initial_chips > 1000000) player.initial_chips = 1000000;
+        if (player.current_chips > 1000000) player.current_chips = 1000000;
         
         // Fix missing or invalid ID
         if (!player.id || typeof player.id !== 'number') {
@@ -4085,12 +4095,26 @@ const availableThemes = {
 
 // New function to handle chip update logic and animation
 function handleChipUpdate(playerId, newChips, rowElement) {
+    // BUG FIX: Validate chip input before updating
+    const parsedChips = parseInt(newChips, 10);
+    if (isNaN(parsedChips) || parsedChips < 0 || !Number.isFinite(parsedChips)) {
+        console.warn('[CHIPS] Invalid chip value rejected:', newChips);
+        return;
+    }
+    if (parsedChips > 1000000) {
+        console.warn('[CHIPS] Chip value too high, rejected:', newChips);
+        return;
+    }
+    
     const targetPlayer = PokerApp.state.players.find(p => p.id === playerId);
     if (targetPlayer) {
-        targetPlayer.current_chips = newChips;
-        console.log(`[CHIPS] Player ${targetPlayer.name} (ID: ${targetPlayer.id}) chips updated to: ${newChips}`);
+        targetPlayer.current_chips = parsedChips;
+        console.log(`[CHIPS] Player ${targetPlayer.name} (ID: ${targetPlayer.id}) chips updated to: ${parsedChips}`);
         saveState();
-        updateActiveSessionPlayers(); // Update Firebase if connected
+        // BUG FIX: Use existing updatePlayersInFirebase instead of undefined updateActiveSessionPlayers
+        if (PokerApp.state.sessionId && window.database) {
+            updatePlayersInFirebase();
+        }
 
         if (rowElement) {
             PokerApp.UI.triggerAnimation(rowElement, 'quickHighlight');
