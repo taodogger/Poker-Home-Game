@@ -326,7 +326,8 @@ function updatePlayerList() {
     // Save active input states
     const activeInputs = {};
     document.querySelectorAll('.chip-input').forEach(input => {
-        const playerId = parseInt(input.getAttribute('data-player-id'));
+        // BUG FIX: Use radix 10 for parseInt
+        const playerId = parseInt(input.getAttribute('data-player-id'), 10);
         if (playerId && document.activeElement === input) {
             activeInputs[playerId] = true;
         }
@@ -369,9 +370,9 @@ function updatePlayerList() {
             if (typeof safePlayer.current_chips !== 'number' || isNaN(safePlayer.current_chips)) safePlayer.current_chips = safePlayer.initial_chips || 0;
             if (!safePlayer.id) safePlayer.id = Date.now() + index;
 
-            // Add to totals
-            totalInitialChips += parseInt(safePlayer.initial_chips) || 0;
-            totalCurrentChips += parseInt(safePlayer.current_chips) || 0;
+            // BUG FIX: Use radix 10 for parseInt (defensive coding)
+            totalInitialChips += parseInt(safePlayer.initial_chips, 10) || 0;
+            totalCurrentChips += parseInt(safePlayer.current_chips, 10) || 0;
             
             const row = document.createElement('tr');
             row.className = safePlayer.id === PokerApp.state.dealerId ? 'dealer' : '';
@@ -470,7 +471,8 @@ function updatePlayerList() {
     // Re-attaching to new elements
     playerTableBody.querySelectorAll('.chip-input').forEach(input => {
         input.addEventListener('change', function() {
-            const playerId = parseInt(this.getAttribute('data-player-id'));
+            // BUG FIX: Use radix 10 for parseInt
+            const playerId = parseInt(this.getAttribute('data-player-id'), 10);
             if (playerId) {
                 updatePlayerChips(playerId, this.value);
             }
@@ -481,7 +483,8 @@ function updatePlayerList() {
         btn.addEventListener('click', function(e) {
             e.preventDefault(); // Stop any form submit
             e.stopPropagation();
-            const playerId = parseInt(this.getAttribute('data-player-id'));
+            // BUG FIX: Use radix 10 for parseInt
+            const playerId = parseInt(this.getAttribute('data-player-id'), 10);
             if (playerId) {
                 removePlayer(playerId);
             }
@@ -2104,11 +2107,12 @@ function setupGameStateListener(gameId) {
                         console.log('[FIREBASE] New player data received:', playerData);
                         
                         // Validate player data structure
+                        // BUG FIX: Use radix 10 for all parseInt calls
                         const validatedPlayer = {
                             id: playerData.id || Date.now(),
                             name: playerData.name,
-                            initial_chips: parseInt(playerData.initial_chips) || 0,
-                            current_chips: parseInt(playerData.current_chips) || parseInt(playerData.initial_chips) || 0,
+                            initial_chips: parseInt(playerData.initial_chips, 10) || 0,
+                            current_chips: parseInt(playerData.current_chips, 10) || parseInt(playerData.initial_chips, 10) || 0,
                             joinedAt: playerData.joinedAt || Date.now(),
                             active: playerData.active !== false
                         };
@@ -2162,11 +2166,11 @@ function setupGameStateListener(gameId) {
                             return;
                         }
                         
-                        // Validate updated player data
+                        // BUG FIX: Use radix 10 for parseInt
                         const validatedUpdate = {
                             ...updatedPlayer,
-                            initial_chips: parseInt(updatedPlayer.initial_chips) || 0,
-                            current_chips: parseInt(updatedPlayer.current_chips) || 0
+                            initial_chips: parseInt(updatedPlayer.initial_chips, 10) || 0,
+                            current_chips: parseInt(updatedPlayer.current_chips, 10) || 0
                         };
                         
                         // HOST PRIORITY: Check if local player has recent host update
@@ -3626,7 +3630,8 @@ function updateSinglePlayerRow(playerId) {
     
     // Update only the current chips input for this specific player
     const chipInput = row.querySelector('.chip-input');
-    if (chipInput && parseInt(chipInput.value) !== player.current_chips) {
+    // BUG FIX: Use radix 10 for parseInt
+    if (chipInput && parseInt(chipInput.value, 10) !== player.current_chips) {
         chipInput.value = player.current_chips;
         
         // Add visual feedback without affecting other players
