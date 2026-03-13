@@ -3489,10 +3489,15 @@ function updateTotalsRow() {
     let totalInitialChips = 0;
     let totalCurrentChips = 0;
     
+    // BUG FIX: Previously skipped players with non-number chip values entirely,
+    // causing totals to be wrong. Now matches updatePlayerList behavior by
+    // coercing invalid values to 0 instead of skipping.
     PokerApp.state.players.forEach(player => {
-        if (player && typeof player.initial_chips === 'number' && typeof player.current_chips === 'number') {
-            totalInitialChips += player.initial_chips;
-            totalCurrentChips += player.current_chips;
+        if (player && player.name) {
+            const init = (typeof player.initial_chips === 'number' && !isNaN(player.initial_chips)) ? player.initial_chips : 0;
+            const curr = (typeof player.current_chips === 'number' && !isNaN(player.current_chips)) ? player.current_chips : init;
+            totalInitialChips += init;
+            totalCurrentChips += curr;
         }
     });
     
