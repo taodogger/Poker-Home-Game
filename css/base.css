@@ -1,5 +1,46 @@
-/* Font Declarations */
-@import url('https://api.fontshare.com/v2/css?f[]=switzer@600,700,400,800,900,100,200,300,500&display=swap');
+/* Font Declarations — SF Pro Rounded, self-hosted */
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('../fonts/SF-Pro-Rounded-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('../fonts/SF-Pro-Rounded-Medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('../fonts/SF-Pro-Rounded-Semibold.otf') format('opentype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('../fonts/SF-Pro-Rounded-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('../fonts/SF-Pro-Rounded-Heavy.otf') format('opentype');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('../fonts/SF-Pro-Rounded-Black.otf') format('opentype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
 
 :root {
     /* Modern Theme Colors */
@@ -35,8 +76,8 @@
     --hover-transform: translateY(-4px);
     
     /* Typography */
-    --font-primary: 'Switzer', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
-    --font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    --font-primary: 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    --font-family: 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
     
     /* Spacing & Sizing */
     --section-spacing: 32px;
