@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { database } from '../lib/firebase';
-import { ref, set, onValue, update, remove, get, runTransaction } from 'firebase/database'; // Import get
+import { ref, set, onValue, update, get } from 'firebase/database'; // Import get
 import { Player, PayoutResult } from '../types';
 import { calculatePayouts } from '../utils/payouts';
-import { generateShortGameId, calculateTotals } from '../utils/helpers'; // Import helpers
+import { generateShortGameId, calculateTotals, normalizePlayers, mutateGameState } from '../utils/helpers'; // Import helpers
 import QRCode from 'react-qr-code';
-import { Copy, Info, Users, DollarSign, Calculator, RefreshCw, LogOut, Settings } from 'lucide-react';
+import { Copy, Info, Users, DollarSign, Calculator, RefreshCw, LogOut } from 'lucide-react';
 
 export default function HostPage() {
   // Game State
@@ -16,6 +16,7 @@ export default function HostPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameRatio, setGameRatio] = useState<number>(1.0);
   const [payouts, setPayouts] = useState<PayoutResult | null>(null);
+  const [chipDrafts, setChipDrafts] = useState<Record<string, string>>({});
   
   // UI State
   const [loading, setLoading] = useState(false);
@@ -47,12 +48,7 @@ export default function HostPage() {
         setGameName(data.name || 'Poker Game');
         setGameRatio(data.ratio || 1.0);
         
-        if (data.state && data.state.players) {
-          const pList = Array.isArray(data.state.players) ? data.state.players : Object.values(data.state.players);
-          setPlayers(pList as Player[]);
-        } else {
-          setPlayers([]);
-        }
+        setPlayers(normalizePlayers(data.state?.players));
       } else {
         // Game might have been deleted
         setGameId(null);
@@ -105,25 +101,19 @@ export default function HostPage() {
       const chips = parseInt(newPlayerChips);
       if (isNaN(chips) || chips < 0) return;
 
-      const nextId = players.length > 0 ? Math.max(...players.map(p => parseInt(p.id))) + 1 : 1;
-      const newPlayer: Player = {
-        id: nextId.toString(),
-        name: newPlayerName,
-        initialChips: chips,
-        currentChips: chips,
-        active: true,
-        isHost: true // Manually added players are marked
-      };
-
-      await runTransaction(ref(database, `games/${gameId}/state`), (currentState) => {
-        if (!currentState) currentState = { players: [], nextPlayerId: 1 };
-        if (!currentState.players) currentState.players = [];
-        const pList = Array.isArray(currentState.players) ? currentState.players : Object.values(currentState.players);
-        
-        currentState.players = [...pList, newPlayer];
-        // Ensure nextPlayerId increments
-        currentState.nextPlayerId = (currentState.nextPlayerId || nextId) + 1;
-        return currentState;
+      await mutateGameState(gameId, (draft) => {
+        const newPlayer: Player = {
+          id: `p${draft.nextPlayerId}`,
+          name: newPlayerName,
+          initialChips: chips,
+          currentChips: chips,
+          active: true,
+          isHost: true // Manually added players are marked
+        };
+        return {
+          players: [...draft.players, newPlayer],
+          nextPlayerId: draft.nextPlayerId + 1,
+        };
       });
 
       setNewPlayerName('');
@@ -156,37 +146,46 @@ export default function HostPage() {
     setRatioChips('');
   };
 
-  const handleUpdateChips = async (playerId: string, newAmount: string) => {
-     if (!gameId) return;
-     const amount = parseInt(newAmount);
-     if (isNaN(amount)) return;
+  const commitChips = async (playerId: string) => {
+    if (!gameId) return;
 
-     // Optimistic local update to prevent cursor jump
-     setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, currentChips: amount } : p));
+    const raw = chipDrafts[playerId];
+    // Nothing typed for this player — nothing to commit.
+    if (raw === undefined) return;
 
-     // Specific path update to avoid overwriting whole array
-     const playerIndex = players.findIndex(p => p.id === playerId);
-     if (playerIndex === -1) return;
+    const clearDraft = () =>
+      setChipDrafts(prev => {
+        const next = { ...prev };
+        delete next[playerId];
+        return next;
+      });
 
-     // Warning: This relies on array index which is stable if no one is removed/added above
-     // Ideally we use a map, but structure is array.
-     // Safer: transaction on the specific player or the list.
-     
-     // Let's use update on specific path if we trust the index
-     // But wait, if someone joins, index shifts? No, append only.
-     // But if we delete? We don't have delete yet.
-     
-     // Best practice: Transaction on the list to find the ID and update
-     await runTransaction(ref(database, `games/${gameId}/state`), (state) => {
-        if (!state || !state.players) return state;
-        const list = Array.isArray(state.players) ? state.players : Object.values(state.players);
-        const idx = list.findIndex((p: any) => p.id === playerId);
-        if (idx !== -1) {
-            list[idx].currentChips = amount;
-            state.players = list;
-        }
-        return state;
-     });
+    const trimmed = raw.trim();
+    // Invalid / empty / non-integer / negative: discard, snap back to server value.
+    if (!/^\d+$/.test(trimmed)) {
+      clearDraft();
+      return;
+    }
+
+    const amount = parseInt(trimmed, 10);
+    const current = players.find(p => p.id === playerId);
+    if (!current || current.currentChips === amount) {
+      clearDraft();
+      return;
+    }
+
+    try {
+      await mutateGameState(gameId, (draft) => ({
+        players: draft.players.map(p =>
+          p.id === playerId ? { ...p, currentChips: amount } : p
+        ),
+        nextPlayerId: draft.nextPlayerId,
+      }));
+    } catch (error) {
+      console.error("Failed to update chips:", error);
+    } finally {
+      clearDraft();
+    }
   };
 
   const calculate = () => {
@@ -200,30 +199,20 @@ export default function HostPage() {
 
   const resetGame = async () => {
     if (!gameId) return;
-    if (confirm("Are you sure you want to reset all chip counts? This will reset everyone's current chips to their starting amount.")) {
-       const stateRef = ref(database, `games/${gameId}/state`);
+    if (confirm("Are you sure you want to reset all chip counts? Game ID will be preserved.")) {
        try {
-         await runTransaction(stateRef, (currentState) => {
-            if (!currentState) return currentState;
-            if (currentState.players) {
-                const p = currentState.players;
-                const list = Array.isArray(p) ? p : Object.values(p);
-                currentState.players = list.map((player: any) => ({
-                    ...player,
-                    currentChips: player.initialChips
-                }));
-            }
-            return currentState;
-         });
-         
-         // Clear payouts flag
-         await update(ref(database, `games/${gameId}`), { payoutsFinalized: false });
-         
-         setPayouts(null);
-         alert("Game reset!");
-       } catch (e) {
-         console.error(e);
-         alert("Reset failed");
+           await mutateGameState(gameId, (draft) => ({
+               players: draft.players.map(p => ({
+                   ...p,
+                   currentChips: p.initialChips,
+               })),
+               nextPlayerId: draft.nextPlayerId,
+           }));
+           await update(ref(database, `games/${gameId}`), { payoutsFinalized: false });
+           setPayouts(null);
+       } catch(e) {
+           console.error("Reset failed", e);
+           alert("Failed to reset game on server.");
        }
     }
   };
@@ -405,11 +394,18 @@ export default function HostPage() {
                           {player.initialChips}
                         </td>
                         <td className="p-4 text-right">
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             className="bg-transparent text-right font-mono font-bold text-white w-20 focus:bg-slate-800 focus:ring-1 focus:ring-blue-500 rounded px-1 outline-none transition-all"
-                            value={player.currentChips}
-                            onChange={(e) => handleUpdateChips(player.id, e.target.value)}
+                            value={chipDrafts[player.id] ?? String(player.currentChips)}
+                            onChange={(e) => setChipDrafts(prev => ({ ...prev, [player.id]: e.target.value }))}
+                            onBlur={() => commitChips(player.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
                           />
                         </td>
                       </tr>

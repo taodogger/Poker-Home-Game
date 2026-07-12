@@ -41,18 +41,6 @@ if (typeof firebase !== 'undefined') {
                 // Add connection timestamp for debugging
                 console.log('[FIREBASE] Connection established at:', new Date().toISOString());
                 
-                // Test write to verify connection is working - use a valid path instead of .info
-                window.database.ref('_connection_test').set({
-                    timestamp: firebase.database.ServerValue.TIMESTAMP,
-                    client: navigator.userAgent
-                })
-                .then(() => {
-                    console.log('[FIREBASE] Test write successful');
-                })
-                .catch(err => {
-                    console.error('[FIREBASE] Test write failed:', err);
-                });
-                
                 // Dispatch connection event
                 window.dispatchEvent(new Event('firebase-connected'));
             } else {

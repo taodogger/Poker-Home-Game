@@ -323,33 +323,32 @@ function updatePlayerList() {
         return;
     }
 
-    // Save active input states
-    const activeInputs = {};
-    document.querySelectorAll('.chip-input').forEach(input => {
-        const playerId = parseInt(input.getAttribute('data-player-id'));
-        if (playerId && document.activeElement === input) {
-            activeInputs[playerId] = true;
-        }
-    });
+    // Update empty state message
+    const noPlayersMessage = document.getElementById('no-players-message');
+    if (noPlayersMessage) {
+        noPlayersMessage.style.display = PokerApp.state.players.length > 0 ? 'none' : 'block';
+    }
+
+    // Preserve any in-progress chip edit so a mid-typing re-render (e.g. a
+    // phone rebuy landing in Firebase) can't clobber the focused input's
+    // uncommitted value or steal focus. We restore both after the rebuild.
+    let focusedEdit = null;
+    const activeEl = document.activeElement;
+    if (activeEl && activeEl.classList && activeEl.classList.contains('chip-input')) {
+        focusedEdit = {
+            playerId: activeEl.getAttribute('data-player-id'),
+            value: activeEl.value,
+            selectionStart: activeEl.selectionStart,
+            selectionEnd: activeEl.selectionEnd
+        };
+    }
 
     // Clear current table rows
     playerTableBody.innerHTML = '';
 
-    // Check if we have players (and valid array)
-    if (!PokerApp.state.players || !Array.isArray(PokerApp.state.players) || PokerApp.state.players.length === 0) {
-        // Update empty state message (show it)
-        const noPlayersMessage = document.getElementById('no-players-message');
-        if (noPlayersMessage) {
-            noPlayersMessage.style.display = 'block';
-        }
-        console.log('[UI] No players to display in updatePlayerList');
+    // Check if we have players
+    if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
         return;
-    } else {
-        // Update empty state message (hide it)
-        const noPlayersMessage = document.getElementById('no-players-message');
-        if (noPlayersMessage) {
-            noPlayersMessage.style.display = 'none';
-        }
     }
 
     console.log('[UI] Updating player list with players:', PokerApp.state.players);
@@ -358,85 +357,95 @@ function updatePlayerList() {
     let totalInitialChips = 0;
     let totalCurrentChips = 0;
     
-    // Safely iterate
-    const validPlayers = PokerApp.state.players.filter(p => p && p.name);
-    
-    validPlayers.forEach((player, index) => {
-        try {
-            // Validate and fix player data safely
-            const safePlayer = { ...player }; // Shallow copy to avoid mutation side effects during render logic
-            if (typeof safePlayer.initial_chips !== 'number' || isNaN(safePlayer.initial_chips)) safePlayer.initial_chips = 0;
-            if (typeof safePlayer.current_chips !== 'number' || isNaN(safePlayer.current_chips)) safePlayer.current_chips = safePlayer.initial_chips || 0;
-            if (!safePlayer.id) safePlayer.id = Date.now() + index;
-
-            // Add to totals
-            totalInitialChips += parseInt(safePlayer.initial_chips) || 0;
-            totalCurrentChips += parseInt(safePlayer.current_chips) || 0;
-            
-            const row = document.createElement('tr');
-            row.className = safePlayer.id === PokerApp.state.dealerId ? 'dealer' : '';
-            row.setAttribute('data-player-id', safePlayer.id);
-            
-            // Animate if new player - check BOTH safePlayer and the original reference
-            // This is critical because the 'isNew' flag might be on the original object in state
-            if (player.isNew || safePlayer.isNew) { 
-                PokerApp.UI.triggerAnimation(row, 'popIn'); 
-                delete player.isNew; // Remove flag from state object
-                delete safePlayer.isNew;
-            }
-            
-            // Player Name
-            const nameCell = document.createElement('td');
-            nameCell.className = 'player-name';
-            nameCell.textContent = safePlayer.name;
-            row.appendChild(nameCell);
-            
-            // Initial Chips
-            const initialChipsCell = document.createElement('td');
-            initialChipsCell.className = 'initial-chips';
-            initialChipsCell.textContent = safePlayer.initial_chips;
-            row.appendChild(initialChipsCell);
-            
-            // Current Chips Input
-            const currentChipsCell = document.createElement('td');
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.className = 'chip-input';
-            input.value = safePlayer.current_chips;
-            input.setAttribute('data-player-id', safePlayer.id);
-            input.setAttribute('min', '0');
-            input.id = `chip-input-${safePlayer.id}`;
-            
-            // Restore focus
-            if (activeInputs[safePlayer.id]) {
-                setTimeout(() => input.focus(), 0);
-            }
-            
-            currentChipsCell.appendChild(input);
-            row.appendChild(currentChipsCell);
-            
-            // Actions
-            const actionsCell = document.createElement('td');
-            actionsCell.className = 'player-actions';
-            
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'remove-player-btn';
-            removeBtn.setAttribute('data-player-id', safePlayer.id);
-            removeBtn.title = 'Remove Player';
-            removeBtn.type = 'button'; // Prevent form submit
-            
-            const removeIcon = document.createElement('span');
-            removeIcon.className = 'button-icon';
-            removeIcon.textContent = '×';
-            
-            removeBtn.appendChild(removeIcon);
-            actionsCell.appendChild(removeBtn);
-            row.appendChild(actionsCell);
-            
-            playerTableBody.appendChild(row);
-        } catch (rowError) {
-            console.error(`[UI] Error rendering row for player index ${index}:`, rowError);
+    // Add player rows to the table
+    PokerApp.state.players.forEach((player, index) => {
+        if (!player || !player.name) {
+            console.warn(`[UI] Skipping invalid player at index ${index}:`, player);
+            return;
         }
+        
+        // Validate and fix player data
+        if (typeof player.initial_chips !== 'number' || isNaN(player.initial_chips)) {
+            console.warn(`[UI] Fixing invalid initial_chips for ${player.name}:`, player.initial_chips);
+            player.initial_chips = 0;
+        }
+        if (typeof player.current_chips !== 'number' || isNaN(player.current_chips)) {
+            console.warn(`[UI] Fixing invalid current_chips for ${player.name}:`, player.current_chips);
+            player.current_chips = player.initial_chips || 0;
+        }
+        if (!player.id || typeof player.id !== 'number') {
+            console.warn(`[UI] Fixing invalid player ID for ${player.name}:`, player.id);
+            player.id = Date.now() + index; // Emergency ID assignment
+        }
+        
+        // Add to totals
+        totalInitialChips += parseInt(player.initial_chips) || 0;
+        totalCurrentChips += parseInt(player.current_chips) || 0;
+        
+        const row = document.createElement('tr');
+        row.className = player.id === PokerApp.state.dealerId ? 'dealer' : '';
+        row.setAttribute('data-player-id', player.id);
+        
+        // Animate if new player
+        if (player.isNew) {
+            PokerApp.UI.triggerAnimation(row, 'popIn'); 
+            delete player.isNew; // Remove flag after animation is triggered
+        }
+        
+        // Create individual cells instead of using innerHTML to maintain input state
+        const nameCell = document.createElement('td');
+        nameCell.className = 'player-name';
+        nameCell.textContent = player.name;
+        row.appendChild(nameCell);
+        
+        const initialChipsCell = document.createElement('td');
+        initialChipsCell.className = 'initial-chips';
+        initialChipsCell.textContent = player.initial_chips;
+        row.appendChild(initialChipsCell);
+        
+        const currentChipsCell = document.createElement('td');
+        
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'chip-input';
+        input.setAttribute('data-player-id', player.id);
+        input.setAttribute('min', '0');
+
+        // Don't use inline event handlers - we'll add proper event listeners later
+        input.id = `chip-input-${player.id}`;
+
+        // If this input is mid-edit, keep the typed (uncommitted) value and
+        // restore focus + caret; otherwise show the authoritative server value.
+        const isEditing = focusedEdit && focusedEdit.playerId === String(player.id);
+        input.value = isEditing ? focusedEdit.value : player.current_chips;
+        if (isEditing) {
+            setTimeout(() => {
+                input.focus();
+                try { input.setSelectionRange(focusedEdit.selectionStart, focusedEdit.selectionEnd); } catch (e) {}
+            }, 0);
+        }
+
+        currentChipsCell.appendChild(input);
+        row.appendChild(currentChipsCell);
+        
+        const actionsCell = document.createElement('td');
+        actionsCell.className = 'player-actions';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-player-btn';
+        removeBtn.setAttribute('data-player-id', player.id);
+        removeBtn.title = 'Remove Player'; // Add tooltip
+        
+        const removeIcon = document.createElement('span');
+        removeIcon.className = 'button-icon';
+        removeIcon.textContent = '×'; // Keep simple remove icon
+        
+        removeBtn.appendChild(removeIcon);
+        actionsCell.appendChild(removeBtn);
+
+        row.appendChild(actionsCell);
+        
+        playerTableBody.appendChild(row);
     });
     
     // Add totals row
@@ -465,21 +474,27 @@ function updatePlayerList() {
 
     updateEmptyState();
     
-    // Add event listeners using delegation or re-attaching
-    // Re-attaching to new elements
+    // Add event listeners after DOM is built.
+    // Draft-commit chip inputs: typing only mutates the DOM input. We commit to
+    // Firebase on blur and on Enter, so a listener echo can't flip the field
+    // while the host is still typing.
     playerTableBody.querySelectorAll('.chip-input').forEach(input => {
-        input.addEventListener('change', function() {
-            const playerId = parseInt(this.getAttribute('data-player-id'));
+        input.addEventListener('blur', function() {
+            const playerId = parseInt(this.getAttribute('data-player-id'), 10);
             if (playerId) {
                 updatePlayerChips(playerId, this.value);
+            }
+        });
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.blur(); // commit happens in the blur handler
             }
         });
     });
     
     playerTableBody.querySelectorAll('.remove-player-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault(); // Stop any form submit
-            e.stopPropagation();
+        btn.addEventListener('click', function() {
             const playerId = parseInt(this.getAttribute('data-player-id'));
             if (playerId) {
                 removePlayer(playerId);
@@ -488,7 +503,7 @@ function updatePlayerList() {
     });
     
     // Log success
-    console.log(`[UI] Player list updated with ${validPlayers.length} players`);
+    console.log(`[UI] Player list updated with ${PokerApp.state.players.length} players`);
 }
 
 // Add player function - handles both new players and rebuys
@@ -508,199 +523,102 @@ function addPlayer(name, chips) {
 
     console.log(`[MANUAL_ADD] Adding player ${name} with ${chips} chips`);
 
+    const addChips = parseInt(chips, 10);
     // Check if player already exists (case-insensitive with trimming)
     const normalizedName = name.toLowerCase().trim();
-    const existingPlayer = PokerApp.state.players.find(p => p.name.toLowerCase().trim() === normalizedName);
-    
-    if (existingPlayer) {
-        console.log(`[MANUAL_ADD] Player ${name} already exists, adding ${chips} chips as rebuy`);
-        
-        // Store original values for rollback if needed
-        const originalCurrent = existingPlayer.current_chips;
-        const originalInitial = existingPlayer.initial_chips;
-        
-        // REBUY: Add chips to BOTH starting stack (initial_chips) and current chips
-        // This increases what they've paid in, which is used for payout calculations
-        existingPlayer.current_chips += parseInt(chips);
-        existingPlayer.initial_chips += parseInt(chips);
-        existingPlayer.lastBuyIn = Date.now();
-        
-        // Update UI first
+
+    // No active session yet (host is building the roster before creating a
+    // lobby): keep everything local. createGameSession uploads these players
+    // when the lobby is created. No Firebase means no rebuys to lose.
+    if (!PokerApp.state.sessionId || !window.GameData) {
+        const existingPlayer = PokerApp.state.players.find(p => p.name && p.name.toLowerCase().trim() === normalizedName);
+        if (existingPlayer) {
+            existingPlayer.current_chips = (parseInt(existingPlayer.current_chips, 10) || 0) + addChips;
+            existingPlayer.initial_chips = (parseInt(existingPlayer.initial_chips, 10) || 0) + addChips;
+            existingPlayer.lastBuyIn = Date.now();
+            updatePlayerList();
+            updateEmptyState();
+            setTimeout(() => {
+                animateNewPlayer(existingPlayer.id, true);
+                PokerApp.UI.showToast(`Added ${addChips} chips to ${name} (now has ${existingPlayer.current_chips})`, 'success');
+            }, 50);
+            saveState();
+            return true;
+        }
+
+        const newPlayer = {
+            id: PokerApp.state.nextPlayerId++,
+            name: name,
+            initial_chips: addChips,
+            current_chips: addChips,
+            joinedAt: Date.now(),
+            active: true,
+            lastBuyIn: Date.now(),
+            manualAdd: true,
+            isNew: true // Flag for pop-in animation in updatePlayerList
+        };
+        PokerApp.state.players.push(newPlayer);
         updatePlayerList();
         updateEmptyState();
-        
-        // Then trigger animation after a short delay to ensure DOM is updated
         setTimeout(() => {
-            animateNewPlayer(existingPlayer.id, true); // Call with isUpdate = true
-            PokerApp.UI.showToast(`Added ${chips} chips to ${name} (now has ${existingPlayer.current_chips})`, 'success');
+            animateNewPlayer(newPlayer.id);
+            PokerApp.UI.showToast(`Added ${name} with ${addChips} chips`, 'success');
         }, 50);
-        
-        // Save state and update Firebase with consistent transaction structure
         saveState();
-        if (PokerApp.state.sessionId) {
-            const stateRef = window.database.ref(`games/${PokerApp.state.sessionId}/state`);
-            
-            // Use same transaction pattern as buy-in for consistency
-            stateRef.transaction(function(currentState) {
-                if (!currentState) {
-                    currentState = { players: [], nextPlayerId: 1, lastUpdate: Date.now() };
-                }
-                
-                currentState.players = currentState.players || [];
-                if (!Array.isArray(currentState.players)) {
-                    currentState.players = Object.values(currentState.players).filter(p => p != null);
-                }
-                
-                const playerIndex = currentState.players.findIndex(p => 
-                    p && p.name && p.name.toLowerCase().trim() === normalizedName
-                );
-                
-                if (playerIndex !== -1) {
-                    // Update existing player with consistent structure
-                    currentState.players[playerIndex].current_chips += parseInt(chips);
-                    currentState.players[playerIndex].initial_chips += parseInt(chips);
-                    currentState.players[playerIndex].lastBuyIn = Date.now();
-                }
-                
-                currentState.lastUpdate = timestamp; // Use same older timestamp
-                currentState.lastPlayer = {
-                    name: existingPlayer.name,
-                    action: 'rebuy',
-                    addedChips: parseInt(chips),
-                    current_chips: existingPlayer.current_chips,
-                    initial_chips: existingPlayer.initial_chips,
-                    manualAdd: true // Mark as manual rebuy
-                };
-                
-                return currentState;
-            }).catch(error => {
-                console.error("[MANUAL_ADD] Chip addition transaction failed:", error);
-                
-                // Rollback local state on error
-                existingPlayer.current_chips = originalCurrent;
-                existingPlayer.initial_chips = originalInitial;
-                updatePlayerList();
-                
-                PokerApp.UI.showToast('Failed to sync chip addition.', 'error');
-            });
-        }
-        
         return true;
     }
 
-    // Create a new player with consistent data structure
-    // Use older timestamp so Firebase listeners know this is a manual host addition
-    const timestamp = Date.now() - 10000; // 10 seconds ago to distinguish from QR code joins
-    
-    // Ensure consistent ID assignment
-    const maxId = Math.max(0, ...PokerApp.state.players.map(p => p.id || 0));
-    // Use existing nextPlayerId if available and safe, otherwise maxId + 1
-    const nextId = Math.max(PokerApp.state.nextPlayerId || 1, maxId + 1);
-    const newPlayerId = nextId;
-    PokerApp.state.nextPlayerId = nextId + 1;
-    
-    const newPlayer = {
-        id: newPlayerId,
-        name: name,
-        initial_chips: chips,
-        current_chips: chips,
-        joinedAt: timestamp,
-        active: true,
-        lastBuyIn: timestamp,
-        manualAdd: true, // Flag to indicate this was added manually by host
-        isNew: true // Flag for animation in updatePlayerList
-    };
+    // Active session: write through the shared transaction so a concurrent
+    // phone buy-in/rebuy can never be overwritten. The mutator decides new vs
+    // rebuy against the FRESH players array, and new ids come from the draft's
+    // authoritative nextPlayerId. The 'value' listener re-renders + animates.
+    let outcome = null;
+    let resultingChips = 0;
 
-    console.log(`[MANUAL_ADD] Creating new player with ID ${newPlayerId}:`, newPlayer);
+    GameData.mutateGameState(PokerApp.state.sessionId, (draft) => {
+        const idx = draft.players.findIndex(p => p.name && p.name.toLowerCase().trim() === normalizedName);
+        if (idx !== -1) {
+            // REBUY: grow BOTH starting stack (initial_chips) and current chips.
+            const existing = draft.players[idx];
+            const updated = draft.players.slice();
+            resultingChips = (parseInt(existing.current_chips, 10) || 0) + addChips;
+            updated[idx] = Object.assign({}, existing, {
+                current_chips: resultingChips,
+                initial_chips: (parseInt(existing.initial_chips, 10) || 0) + addChips,
+                lastBuyIn: Date.now()
+            });
+            outcome = 'rebuy';
+            return { players: updated, nextPlayerId: draft.nextPlayerId };
+        }
 
-    // CRITICAL CHANGE: Push to local state AND force UI refresh immediately
-    // We do NOT wait for Firebase to echo back. We trust the host's input.
-    PokerApp.state.players.push(newPlayer);
-    
-    // Force a complete UI rebuild - Using setTimeout to break out of current stack frame
-    setTimeout(() => {
-        updatePlayerList();
-        updateEmptyState();
-        
-        // Trigger animation
-        setTimeout(() => {
-            const row = document.querySelector(`tr[data-player-id="${newPlayerId}"]`);
-            if (row) {
-                PokerApp.UI.triggerAnimation(row, 'popIn');
-            }
-            PokerApp.UI.showToast(`Added ${name} with ${chips} chips`, 'success');
-        }, 50);
-    }, 0);
-    
-    // Save state and update Firebase with consistent transaction pattern
-    saveState();
-    if (PokerApp.state.sessionId) {
-        const stateRef = window.database.ref(`games/${PokerApp.state.sessionId}/state`);
-        
-        stateRef.transaction(function(currentState) {
-            if (!currentState) {
-                currentState = { players: [], nextPlayerId: 1, lastUpdate: Date.now() };
-            }
-            
-            currentState.players = currentState.players || [];
-            if (!Array.isArray(currentState.players)) {
-                currentState.players = Object.values(currentState.players).filter(p => p != null);
-            }
+        // NEW manual player uses the draft's authoritative nextPlayerId.
+        const newPlayer = {
+            id: draft.nextPlayerId,
+            name: name,
+            initial_chips: addChips,
+            current_chips: addChips,
+            joinedAt: Date.now(),
+            active: true,
+            lastBuyIn: Date.now(),
+            manualAdd: true
+        };
+        resultingChips = addChips;
+        outcome = 'new';
+        return { players: draft.players.concat([newPlayer]), nextPlayerId: draft.nextPlayerId + 1 };
+    }).then(result => {
+        if (!result || !result.committed) return;
+        // Animation is handled by the players 'value' listener (which diffs the
+        // committed snapshot); here we only surface the toast for manual adds.
+        if (outcome === 'rebuy') {
+            PokerApp.UI.showToast(`Added ${addChips} chips to ${name} (now has ${resultingChips})`, 'success');
+        } else if (outcome === 'new') {
+            PokerApp.UI.showToast(`Added ${name} with ${addChips} chips`, 'success');
+        }
+    }).catch(error => {
+        console.error('[MANUAL_ADD] Add/rebuy transaction failed:', error);
+        PokerApp.UI.showToast('Failed to sync new player with database.', 'error');
+    });
 
-            // Check for duplicate names within transaction
-            const playerExists = currentState.players.some(p => 
-                p && p.name && p.name.toLowerCase().trim() === normalizedName
-            );
-            
-            if (playerExists) {
-                console.log(`[MANUAL_ADD] Player ${name} already exists in Firebase, skipping add`);
-                return currentState;
-            }
-            
-            // Ensure consistent ID assignment
-            const maxId = Math.max(0, ...currentState.players.map(p => p.id || 0));
-            // Use existing nextPlayerId if available and safe, otherwise maxId + 1
-            const nextId = Math.max(currentState.nextPlayerId || 1, maxId + 1);
-
-            const playerToAdd = {
-                id: nextId,
-                name: name,
-                initial_chips: chips,
-                current_chips: chips,
-                joinedAt: timestamp, // Older timestamp to distinguish from QR joins
-                active: true,
-                lastBuyIn: timestamp,
-                manualAdd: true // Flag to indicate manual host addition
-            };
-
-            currentState.players.push(playerToAdd);
-            currentState.nextPlayerId = nextId + 1;
-            currentState.lastUpdate = timestamp;
-            currentState.lastPlayer = {
-                name: name,
-                action: 'join',
-                initial_chips: chips,
-                current_chips: chips
-            };
-            
-            console.log(`[MANUAL_ADD] Added player to Firebase with ID ${nextId}`);
-            return currentState;
-        }).catch(error => {
-            console.error("[MANUAL_ADD] Add player transaction failed:", error);
-            
-            // Rollback local state on error
-            const playerIndex = PokerApp.state.players.findIndex(p => p.id === newPlayerId);
-            if (playerIndex !== -1) {
-                PokerApp.state.players.splice(playerIndex, 1);
-                PokerApp.state.nextPlayerId--;
-                updatePlayerList();
-                updateEmptyState();
-            }
-            
-            PokerApp.UI.showToast('Failed to sync new player with database.', 'error');
-        });
-    }
-    
     return true;
 }
 
@@ -847,14 +765,6 @@ function setupEventListeners() {
             chipsInput.value = '';
             nameInput.focus(); // Focus name input for next player
         });
-        
-        // Ensure inputs are not disabled (fix for stuck state)
-        const nameInput = document.getElementById('player-name');
-        const chipsInput = document.getElementById('initial-chips');
-        if (nameInput) nameInput.disabled = false;
-        if (chipsInput) chipsInput.disabled = false;
-        const submitBtn = newForm.querySelector('button[type="submit"]');
-        if (submitBtn) submitBtn.disabled = false;
     }
 
     // Helper function to reset the Add Player form UI
@@ -2010,164 +1920,55 @@ function setupGameStateListener(gameId) {
                 PokerApp.state.sessionId = gameId;
                 PokerApp.state.lobbyActive = true;
                 
-                // Set up players listener with robust error handling
-                database.ref(`games/${gameId}/state/players`).on('child_added', snapshot => {
+                // Single authoritative listener for the players array. This
+                // replaces the old child_added/child_changed heuristic cluster
+                // (time-window guards, host-priority windows, manual-add skips)
+                // that was a historical source of lost rebuys and stale rows.
+                // Every snapshot is normalized (GameData.normalizePlayers handles
+                // legacy object/array shapes) and the whole list is re-rendered.
+                let playersListenerReady = false;
+                database.ref(`games/${gameId}/state/players`).on('value', snapshot => {
                     try {
-                        const playerData = snapshot.val();
-                        if (!playerData || !playerData.name) {
-                            console.warn('[FIREBASE] Invalid player data received:', playerData);
+                        const incoming = GameData.normalizePlayers(snapshot.val());
+                        const prevById = new Map((PokerApp.state.players || []).map(p => [p.id, p]));
+
+                        PokerApp.state.players = incoming;
+                        updatePlayerList();
+                        updateEmptyState();
+                        saveState();
+
+                        // Don't animate/replay sounds for the initial sync.
+                        if (!playersListenerReady) {
+                            playersListenerReady = true;
                             return;
                         }
-                        
-                        console.log('[FIREBASE] New player data received:', playerData);
-                        
-                        // Validate player data structure
-                        const validatedPlayer = {
-                            id: playerData.id || Date.now(),
-                            name: playerData.name,
-                            initial_chips: parseInt(playerData.initial_chips) || 0,
-                            current_chips: parseInt(playerData.current_chips) || parseInt(playerData.initial_chips) || 0,
-                            joinedAt: playerData.joinedAt || Date.now(),
-                            active: playerData.active !== false
-                        };
-                        
-                        // Check if this is a new player (more robust checking)
-                        const existingPlayerIndex = PokerApp.state.players.findIndex(p => 
-                            p.id === validatedPlayer.id || 
-                            (p.name && p.name.toLowerCase().trim() === validatedPlayer.name.toLowerCase().trim())
-                        );
-                        
-                        if (existingPlayerIndex === -1) {
-                            // Only add if it's genuinely new to local state
-                            PokerApp.state.players.push(validatedPlayer);
-                            console.log('[FIREBASE] Added new player to local state from child_added:', validatedPlayer.name);
-                            
-                            // Use requestAnimationFrame for smooth animation
+
+                        // Newly present ids = joins (QR or manual host add).
+                        const joined = incoming.filter(p => !prevById.has(p.id));
+                        // A grown starting stack (initial_chips) is the rebuy
+                        // signature for both QR and manual rebuys; host chip
+                        // edits change only current_chips, so they don't match.
+                        const rebought = incoming.filter(p => {
+                            const prev = prevById.get(p.id);
+                            return prev && (parseInt(p.initial_chips, 10) || 0) > (parseInt(prev.initial_chips, 10) || 0);
+                        });
+                        if (joined.length || rebought.length) {
                             requestAnimationFrame(() => {
-                                updatePlayerList();
-                                updateEmptyState();
                                 setTimeout(() => {
-                                    animateNewPlayer(validatedPlayer.id);
-                                    if (!validatedPlayer.manualAdd) {
-                                        PokerApp.UI.showToast(`${validatedPlayer.name} joined with ${validatedPlayer.initial_chips} chips`, 'success');
-                                    }
+                                    joined.forEach(p => animateNewPlayer(p.id, false));
+                                    rebought.forEach(p => animateNewPlayer(p.id, true));
                                 }, 100);
                             });
-                        } else {
-                            console.log('[FIREBASE] Player already exists locally, skipping add:', validatedPlayer.name);
                         }
                     } catch (error) {
-                        console.error('[FIREBASE] Error processing new player:', error);
-                        PokerApp.UI.showToast('Error adding new player', 'error');
+                        console.error('[FIREBASE] Error processing players snapshot:', error);
+                        PokerApp.UI.showToast('Error syncing players', 'error');
                     }
                 }, error => {
-                    console.error('[FIREBASE] Error in child_added listener:', error);
+                    console.error('[FIREBASE] Error in players value listener:', error);
                     PokerApp.UI.showToast('Connection error - player updates may be delayed', 'error');
                 });
-                
-                // Listen for player updates (rebuys and host updates) with error handling
-                database.ref(`games/${gameId}/state/players`).on('child_changed', snapshot => {
-                    try {
-                        const updatedPlayer = snapshot.val();
-                        if (!updatedPlayer || !updatedPlayer.name) {
-                            console.warn('[FIREBASE_SYNC] Invalid updated player data:', updatedPlayer);
-                            return;
-                        }
-                        
-                        const existingPlayer = PokerApp.state.players.find(p => p.id === updatedPlayer.id);
-                        if (!existingPlayer) {
-                            console.warn(`[FIREBASE_SYNC] Player not found locally: ${updatedPlayer.name} (ID: ${updatedPlayer.id})`);
-                            return;
-                        }
-                        
-                        // Validate updated player data
-                        const validatedUpdate = {
-                            ...updatedPlayer,
-                            initial_chips: parseInt(updatedPlayer.initial_chips) || 0,
-                            current_chips: parseInt(updatedPlayer.current_chips) || 0
-                        };
-                        
-                        // HOST PRIORITY: Check if local player has recent host update
-                        const localHasRecentHostUpdate = existingPlayer.hostUpdated && 
-                                                        existingPlayer.lastHostUpdate && 
-                                                        (Date.now() - existingPlayer.lastHostUpdate < 10000); // 10 second protection window
-                        
-                        // Check if incoming update is a host update
-                        const isIncomingHostUpdate = validatedUpdate.hostUpdated && validatedUpdate.lastHostUpdate;
-                        const isNewerThanLocal = !existingPlayer.lastHostUpdate || 
-                                              (validatedUpdate.lastHostUpdate > existingPlayer.lastHostUpdate);
-                        
-                        // HOST AUTHORITY: Always prioritize local host updates over any Firebase changes
-                        // EXCEPTION: If the update is a REBUY (initial_chips increased), we must accept it because the host
-                        // typically updates 'current_chips' locally, but rebuys add new chips to the ecosystem.
-                        const isRebuy = !validatedUpdate.manualAdd && validatedUpdate.initial_chips > existingPlayer.initial_chips;
 
-                        // CRITICAL FIX: If it's a rebuy, we MUST accept it regardless of host priority.
-                        // Rebuys are valid state transitions that happen externally (via QR code).
-                        if (isRebuy) {
-                             // QR CODE REBUY: Add chips to BOTH initial (starting stack) and current totals
-                             const chipDiff = validatedUpdate.initial_chips - existingPlayer.initial_chips;
-                             console.log(`[FIREBASE_SYNC] Applying QR code rebuy for ${existingPlayer.name}: +${chipDiff} chips (starting stack: ${existingPlayer.initial_chips} -> ${validatedUpdate.initial_chips})`);
-                             
-                             // Update starting stack (initial_chips) - this is what payouts calculate from
-                             existingPlayer.initial_chips = validatedUpdate.initial_chips;
-                             // Add the difference to current chips
-                             existingPlayer.current_chips += chipDiff;
-                             
-                             // Save state to persist the starting stack update
-                             saveState();
-                             
-                             // Update UI and trigger animation
-                             updatePlayerList();
-                             
-                             requestAnimationFrame(() => {
-                                 setTimeout(() => {
-                                     if (typeof animateChipAddition === 'function') {
-                                         animateChipAddition(existingPlayer.id);
-                                     } else {
-                                         animateNewPlayer(existingPlayer.id, true);
-                                     }
-                                     PokerApp.UI.showToast(`${existingPlayer.name} added ${chipDiff} chips!`, 'success');
-                                 }, 100);
-                             });
-                             return; // Exit after handling rebuy
-                        }
-
-                        if (localHasRecentHostUpdate) {
-                            console.log(`[FIREBASE_SYNC] BLOCKING update for ${existingPlayer.name} - local host update takes priority (${Date.now() - existingPlayer.lastHostUpdate}ms ago)`);
-                            return;
-                        }
-                        
-                        if (isIncomingHostUpdate) {
-                            // Only apply incoming host updates if they're newer than our local state
-                            if (isNewerThanLocal) {
-                                console.log(`[FIREBASE_SYNC] Applying newer host update for ${existingPlayer.name}`);
-                                existingPlayer.current_chips = validatedUpdate.current_chips;
-                                existingPlayer.lastHostUpdate = validatedUpdate.lastHostUpdate;
-                                existingPlayer.hostUpdated = true;
-                                updatePlayerList();
-                                saveState();
-                            } else {
-                                console.log(`[FIREBASE_SYNC] Ignoring older host update for ${existingPlayer.name}`);
-                            }
-                            return;
-                        } else {
-                            // Logic for other updates... if any.
-                             if (validatedUpdate.manualAdd) {
-                                console.log(`[FIREBASE_SYNC] Ignoring manual update for ${existingPlayer.name} - handled locally by host`);
-                            } else {
-                                console.log(`[FIREBASE_SYNC] Ignoring update for ${existingPlayer.name} - not newer or not applicable`);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('[FIREBASE_SYNC] Error processing player update:', error);
-                        PokerApp.UI.showToast('Error syncing player update', 'error');
-                    }
-                }, error => {
-                    console.error('[FIREBASE] Error in child_changed listener:', error);
-                    PokerApp.UI.showToast('Connection error - player updates may be delayed', 'error');
-                });
-                
                 // Listen for lastPlayer updates for notifications
                 database.ref(`games/${gameId}/state/lastPlayer`).on('value', snapshot => {
                     if (!snapshot.exists()) return;
@@ -2829,10 +2630,8 @@ function resetGameState() {
 }
 
 // Add calculatePayouts function
-// Add calculatePayouts function (Refactored for Robustness & Normalization)
 function calculatePayouts() {
-    console.log('[PAYOUT] Calculating payouts (Robust Mode)');
-    
+    console.log('[PAYOUT] Calculating payouts');
     if (!PokerApp.state.players || PokerApp.state.players.length === 0) {
         PokerApp.UI.showToast('No players to calculate payouts for', 'error');
         return;
@@ -2845,148 +2644,132 @@ function calculatePayouts() {
 
     SoundSystem.playPayoutSound();
 
-    const players = PokerApp.state.players.filter(p => p.active !== false);
-    const nominalRatio = PokerApp.state.chipRatio || 1.0;
+    const players = PokerApp.state.players;
+    let html = ''; // Initialize html variable here
 
     console.log('[PAYOUT] Processing players:', players.length);
 
-    // 1. Calculate Totals & Detect Discrepancies
-    let totalInitialChips = 0;
-    let totalCurrentChips = 0;
-
-    const playerData = players.map(player => {
-        const initial = parseInt(player.initial_chips, 10) || 0;
-        const current = parseInt(player.current_chips, 10) || 0;
-        totalInitialChips += initial;
-        totalCurrentChips += current;
+    // PAYOUT CALCULATION: Based on starting stack (initial_chips)
+    // - initial_chips = total amount player bought in for (starting stack + rebuys)
+    // - current_chips = current chip count (modified by host or game play)
+    // - chipDifference = profit/loss = current_chips - initial_chips
+    const playerDiffs = players.map(player => {
+        const initialChips = parseInt(player.initial_chips, 10) || 0; // Starting stack (what they paid)
+        const currentChips = parseInt(player.current_chips, 10) || 0; // Current chips (after play)
+        const chipDifference = currentChips - initialChips; // Profit/loss in chips
         
         return {
             id: player.id,
             name: player.name,
-            initial,
-            current,
-            nominalBuyIn: initial * nominalRatio
+            initialChips,
+            currentChips,
+            chipDifference,
+            cashValue: 0 // Will be updated from transactions
         };
     });
 
-    const chipDiscrepancy = totalCurrentChips - totalInitialChips;
-    let effectiveRatio = nominalRatio;
-    let discrepancyMsg = '';
-    let hasDiscrepancy = false;
-    let discrepancyType = ''; // 'short' or 'surplus'
+    // Settle in integer CENTS so the emitted payments sum EXACTLY to the nets,
+    // with no per-transaction floating-rounding drift. Ported from the Next.js
+    // port's payouts.ts. This file's model does not rescale by an effective
+    // ratio: a player's net is simply chipDifference * chipRatio.
+    const ratio = PokerApp.state.chipRatio || 1.0;
 
-    // Normalization Logic:
-    // If chips are missing or extra, we adjust the effective value of each chip 
-    // so that the Total Cash Value Out equals Total Cash Value In.
-    // This ensures zero-sum settlements.
-    if (totalCurrentChips > 0 && Math.abs(chipDiscrepancy) > 0) {
-        hasDiscrepancy = true;
-        const totalPotValue = totalInitialChips * nominalRatio;
-        effectiveRatio = totalPotValue / totalCurrentChips;
-        
-        discrepancyType = chipDiscrepancy < 0 ? 'short' : 'surplus';
-        const discrepancyValue = Math.abs(chipDiscrepancy) * nominalRatio;
-        
-        console.warn(`[PAYOUT] Discrepancy detected: ${chipDiscrepancy} chips.`);
-        console.warn(`[PAYOUT] Adjusted Ratio: ${nominalRatio} -> ${effectiveRatio}`);
-        
-        discrepancyMsg = chipDiscrepancy < 0 
-            ? `Table is short ${Math.abs(chipDiscrepancy)} chips ($${discrepancyValue.toFixed(2)}).`
-            : `Table has extra ${chipDiscrepancy} chips ($${discrepancyValue.toFixed(2)}).`;
-        
-        discrepancyMsg += ` Values adjusted to balance.`;
-    } else if (totalCurrentChips === 0 && totalInitialChips > 0) {
-        // Edge case: All chips lost?
-        effectiveRatio = 0;
-        discrepancyMsg = "All chips are missing! 100% Loss.";
-        hasDiscrepancy = true;
+    // Net position per player: exact float plus the integer cents settled.
+    const work = playerDiffs.map(p => {
+        const netFloat = p.chipDifference * ratio;
+        return { ref: p, netFloat, netCents: Math.round(netFloat * 100) };
+    });
+
+    // Each net was rounded independently, so the cents may not sum to zero even
+    // when the floats do. Redistribute the residual one cent at a time to the
+    // players whose rounding drifted furthest in the residual's direction
+    // (largest-remainder): everyone stays within a cent of their exact net, so a
+    // real winner can never be flipped negative.
+    //
+    // GUARD: only when chips are conserved (totalInitial === totalCurrent) do the
+    // exact nets sum to zero. If chips were lost/gained the imbalance is REAL, not
+    // rounding, so we must NOT redistribute it — otherwise we would fabricate a
+    // phantom winner/loser out of the missing chips (the analog of the reference's
+    // effectiveRatio === 0 guard).
+    const totalInitial = playerDiffs.reduce((s, p) => s + p.initialChips, 0);
+    const totalCurrent = playerDiffs.reduce((s, p) => s + p.currentChips, 0);
+    if (totalInitial === totalCurrent && work.length > 0) {
+        let residual = work.reduce((sum, w) => sum + w.netCents, 0);
+        if (residual !== 0) {
+            const sign = residual > 0 ? 1 : -1;
+            const byDrift = work
+                .map((w, i) => ({ i, drift: (w.netCents - w.netFloat * 100) * sign }))
+                .sort((a, b) => b.drift - a.drift);
+            for (let k = 0; residual !== 0; k++) {
+                work[byDrift[k % byDrift.length].i].netCents -= sign;
+                residual -= sign;
+            }
+        }
     }
 
-    // 2. Calculate Net Position (Profit/Loss in CASH)
-    const settlements = playerData.map(p => {
-        const cashOutValue = p.current * effectiveRatio;
-        const netCash = cashOutValue - p.nominalBuyIn;
-        
-        return {
-            ...p,
-            cashOutValue,
-            netCash, // Precise float
-            displayNet: netCash // For display logic
-        };
-    });
+    // Greedy winner/loser matching in integer cents (positive magnitudes).
+    const winners = work.filter(w => w.netCents > 0).sort((a, b) => b.netCents - a.netCents);
+    const losers = work.filter(w => w.netCents < 0).sort((a, b) => a.netCents - b.netCents);
 
-    // 3. Sort into Debtors (Losers) and Creditors (Winners)
-    const winners = settlements.filter(p => p.netCash > 0.005).sort((a, b) => b.netCash - a.netCash); // Largest winners first
-    const losers = settlements.filter(p => p.netCash < -0.005).sort((a, b) => a.netCash - b.netCash); // Largest losers (most negative) first
-
-    // 4. Greedy Matching Algorithm
     const transactions = [];
+    const winnerBalances = winners.map(w => w.netCents);
+    const loserBalances = losers.map(l => -l.netCents);
     let winnerIdx = 0;
     let loserIdx = 0;
-
-    // Work with mutable balances to track remaining debts/credits
-    const winnerBalances = winners.map(w => w.netCash);
-    const loserBalances = losers.map(l => Math.abs(l.netCash));
-
     while (winnerIdx < winners.length && loserIdx < losers.length) {
-        const amountOwed = loserBalances[loserIdx];
-        const amountToReceive = winnerBalances[winnerIdx];
-        
-        // Settle the smaller of the two amounts
-        const settlementAmount = Math.min(amountOwed, amountToReceive);
-        
-        if (settlementAmount > 0.005) { // Ignore micro-cents
+        const settlementCents = Math.min(loserBalances[loserIdx], winnerBalances[winnerIdx]);
+        if (settlementCents > 0) {
             transactions.push({
-                from: losers[loserIdx].name,
-                to: winners[winnerIdx].name,
-                cash: parseFloat(settlementAmount.toFixed(2)),
-                chips: Math.round(settlementAmount / effectiveRatio) // Approx chips
+                from: losers[loserIdx].ref.name,
+                to: winners[winnerIdx].ref.name,
+                // Chip-equivalent of this payment (display only; cash is exact).
+                chips: ratio > 0 ? Math.round(settlementCents / 100 / ratio) : 0,
+                cash: settlementCents / 100
             });
         }
-
-        // Adjust balances
-        loserBalances[loserIdx] -= settlementAmount;
-        winnerBalances[winnerIdx] -= settlementAmount;
-
-        // Advance pointers if settled (within epsilon)
-        if (loserBalances[loserIdx] < 0.005) loserIdx++;
-        if (winnerBalances[winnerIdx] < 0.005) winnerIdx++;
+        loserBalances[loserIdx] -= settlementCents;
+        winnerBalances[winnerIdx] -= settlementCents;
+        if (loserBalances[loserIdx] === 0) loserIdx++;
+        if (winnerBalances[winnerIdx] === 0) winnerIdx++;
     }
 
-    // 5. Update Cash Values for Stats & Display
-    // Update the original 'settlements' objects with final cashValue (Net Profit) for stats
-    settlements.forEach(p => {
-        p.cashValue = p.netCash; 
-    });
+    // Realized cash net per player from the settled (residual-corrected) cents,
+    // so the fun stats agree with the transactions to the exact cent.
+    work.forEach(w => { w.ref.cashValue = w.netCents / 100; });
     
-    // Create player result cards (Sorted by Win/Loss)
-    const sortedPlayers = [...settlements].sort((a, b) => b.netCash - a.netCash);
+    // Create player result cards
+    const sortedPlayers = [...playerDiffs].sort((a, b) => b.chipDifference - a.chipDifference);
     
-    // Calculate Fun Stats
-    const biggestWinner = settlements.reduce((prev, curr) => (curr.netCash > prev.netCash) ? curr : prev, settlements[0]);
-    const biggestLoser = settlements.reduce((prev, curr) => (curr.netCash < prev.netCash) ? curr : prev, settlements[0]);
+    // Calculate fun stats first
+    const biggestWinner = playerDiffs.reduce((prev, curr) => 
+        (curr.cashValue > prev.cashValue) ? curr : prev
+    );
     
-    const totalMoneyMoved = transactions.reduce((sum, t) => sum + t.cash, 0).toFixed(2);
-    const totalChipsMoved = transactions.reduce((sum, t) => sum + t.chips, 0); // Approx
+    const biggestLoser = playerDiffs.reduce((prev, curr) => 
+        (curr.cashValue < prev.cashValue) ? curr : prev
+    );
     
-    const winnersList = settlements.filter(p => p.netCash > 0);
-    const averageWin = winnersList.length > 0 
-        ? winnersList.reduce((sum, p) => sum + p.netCash, 0) / winnersList.length 
-        : 0;
+    const totalMoneyMoved = transactions.reduce((sum, t) => 
+        sum + parseFloat(t.cash), 0
+    ).toFixed(2);
+    
+    const totalChipsMoved = transactions.reduce((sum, t) => 
+        sum + parseInt(t.chips), 0
+    );
+    
+    const averageWin = playerDiffs
+        .filter(p => p.cashValue > 0)
+        .reduce((sum, p) => sum + p.cashValue, 0) / 
+        playerDiffs.filter(p => p.cashValue > 0).length;
 
     // Build the HTML string
-    let html = `
+    html = `
         <div class="payout-wrapper">
             <div class="payout-summary-header">
                 <h3>Game Results</h3>
                 <div class="payout-timestamp">${new Date().toLocaleTimeString()}</div>
             </div>
             
-            ${hasDiscrepancy ? `
-            <div class="discrepancy-banner ${discrepancyType}">
-                <strong>⚠️ Adjustment:</strong> ${discrepancyMsg}
-            </div>` : ''}
-
             <div class="results-container">
                 <!-- Fun Stats -->
                 <div class="stats-grid">
@@ -2994,21 +2777,21 @@ function calculatePayouts() {
                         <div class="stat-icon">👑</div>
                         <div class="stat-title">Biggest Winner</div>
                         <div class="stat-value">${biggestWinner.name}</div>
-                        <div class="stat-detail">+$${Math.abs(biggestWinner.netCash).toFixed(2)}</div>
+                        <div class="stat-detail">+$${Math.abs(biggestWinner.cashValue).toFixed(2)}</div>
                     </div>
                     
                     <div class="stat-card">
                         <div class="stat-icon">😅</div>
                         <div class="stat-title">Biggest L</div>
                         <div class="stat-value">${biggestLoser.name}</div>
-                        <div class="stat-detail">-$${Math.abs(biggestLoser.netCash).toFixed(2)}</div>
+                        <div class="stat-detail">-$${Math.abs(biggestLoser.cashValue).toFixed(2)}</div>
                     </div>
                     
                     <div class="stat-card">
                         <div class="stat-icon">💸</div>
                         <div class="stat-title">Money Moved</div>
                         <div class="stat-value">$${totalMoneyMoved}</div>
-                        <div class="stat-detail">~${totalChipsMoved} chips</div>
+                        <div class="stat-detail">${totalChipsMoved} chips</div>
                     </div>
                     
                     <div class="stat-card">
@@ -3048,93 +2831,284 @@ function calculatePayouts() {
                         <div class="payment-arrow">→</div>
                         <div class="payment-details">
                             <span class="payment-recipient">${payment.to}</span>
-                            <span class="payment-amount">$${payment.cash.toFixed(2)}</span>
+                            <span class="payment-amount">$${payment.cash}</span>
                         </div>
                     </div>`;
             });
             
             html += `
-                    </div>
+                </div>
                 </div>`;
         });
     }
-
-    html += `
-                </div>
-                
-                <!-- Detailed Player Breakdown -->
-                <div class="player-breakdown">
-                    <h3>Detail Breakdown</h3>
-                    <div class="breakdown-list">`;
-                    
-    sortedPlayers.forEach(player => {
-        const isWinner = player.netCash > 0;
-        const netClass = isWinner ? 'positive' : (player.netCash < 0 ? 'negative' : 'neutral');
-        const sign = isWinner ? '+' : ''; // Negative has sign already
-        const netAmount = player.netCash.toFixed(2);
-        
-        html += `
-            <div class="breakdown-item">
-                <div class="player-info">
-                    <span class="player-name">${player.name}</span>
-                    <span class="chip-count">${player.current} chips</span>
-                </div>
-                <div class="financial-info">
-                    <span class="net-amount ${netClass}">${sign}$${netAmount}</span>
-                    <span class="buy-in-info">in: $${player.nominalBuyIn.toFixed(2)}</span>
-                </div>
-            </div>`;
-    });
     
     html += `
-                    </div>
                 </div>
             </div>
-            
-            <div class="action-buttons-container">
-                <button id="finalize-payouts-btn-internal" class="poker-button primary-button" onclick="document.getElementById('finalize-payouts-btn').click()">Show Payouts to Players</button>
-                <button id="reopen-game-btn-internal" class="poker-button secondary-button" onclick="document.getElementById('reopen-game-btn').click()">Re-open Game</button>
-            </div>
-        </div>
-    `;
-
-    // Render Logic
+        </div>`;
+    
+    // Display results with animation
     const payoutResults = document.getElementById('payout-results');
-    if (payoutResults) {
-        payoutResults.innerHTML = html;
-        payoutResults.style.display = 'block';
-        
-        // Hide external buttons to prevent duplication/clutter
-        const extFinalize = document.getElementById('finalize-payouts-btn');
-        const extReopen = document.getElementById('reopen-game-btn');
-        if (extFinalize) extFinalize.style.display = 'none';
-        if (extReopen) extReopen.style.display = 'none';
-        
-        payoutResults.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Store payout info in state
-        PokerApp.state.currentPayoutInfo = {
-            status: 'calculated', // 'calculated' vs 'finalized'
-            transactions: transactions,
-            players: settlements,
-            timestamp: Date.now()
-        };
-        
-        // Update global buttons status (even if hidden, their logic matters)
-        updatePayoutActionButtons('calculated', PokerApp.state.rebuysAllowed !== false);
-        
-        // --- Save payout info to Firebase ---
-        if (PokerApp.state.sessionId && window.database) {
-             const payoutInfo = {
-                transactions: transactions,
-                calculatedAt: firebase.database.ServerValue.TIMESTAMP,
-                status: 'calculated'
-            };
-            window.database.ref(`games/${PokerApp.state.sessionId}/payoutInfo`).set(payoutInfo);
-        }
+    if (!payoutResults) {
+        console.error('[PAYOUT] Payout results element not found');
+        return;
     }
+
+    // --- Save payout info to Firebase ---
+    if (PokerApp.state.sessionId && window.database) {
+        const payoutInfo = {
+            transactions: transactions,
+            calculatedAt: firebase.database.ServerValue.TIMESTAMP,
+            status: 'calculated' // Initial status
+        };
+        window.database.ref(`games/${PokerApp.state.sessionId}/payoutInfo`).set(payoutInfo)
+            .then(() => {
+                console.log('[FIREBASE] Payout info saved successfully.');
+                PokerApp.UI.showToast('Payouts calculated and saved for finalization.', 'info');
+            })
+            .catch(error => {
+                console.error('[FIREBASE] Error saving payout info:', error);
+                PokerApp.UI.showToast('Error saving payout details.', 'error');
+            });
+    } else {
+        console.warn('[PAYOUT] Cannot save payout info to Firebase: No session ID or database.');
+    }
+    // --- End Firebase save ---
+
+    payoutResults.classList.remove('payout-content-showing');
+    payoutResults.classList.add('payout-content-hiding');
+
+    // Allow fade-out to happen, then update content and fade-in
+    setTimeout(() => {
+        payoutResults.innerHTML = html;
+        
+        // Add styles for the new display
+        if (!document.querySelector('#payout-styles')) {
+            const style = document.createElement('style');
+            style.id = 'payout-styles';
+            style.textContent = `
+            .payout-wrapper {
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                width: 100%;
+            }
+            
+            .payout-summary-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 16px;
+                background: rgba(0, 0, 0, 0.3);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .payout-summary-header h3 {
+                margin: 0;
+                color: white;
+                font-size: 1.1rem;
+                font-weight: 600;
+            }
+            
+            .payout-timestamp {
+                font-size: 0.8rem;
+                color: rgba(255, 255, 255, 0.7);
+            }
+            
+            .results-container {
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                animation: fadeIn 0.5s ease-out;
+            }
+            
+            .stat-card {
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 10px;
+                padding: 20px;
+                text-align: center;
+                transition: transform 0.2s ease;
+            }
+            
+            .stat-card:hover {
+                transform: translateY(-5px);
+            }
+            
+            .stat-icon {
+                font-size: 2rem;
+                margin-bottom: 10px;
+            }
+            
+            .stat-title {
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 0.9rem;
+                margin-bottom: 5px;
+            }
+            
+            .stat-value {
+                color: white;
+                font-size: 1.4rem;
+                font-weight: 600;
+                margin-bottom: 5px;
+            }
+            
+            .stat-detail {
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 0.8rem;
+            }
+            
+            /* Payment Instructions Section */
+            .payment-instructions {
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 10px;
+                padding: 16px;
+                margin-top: 20px;
+            }
+            
+            .payment-instructions h3 {
+                margin-top: 0;
+                margin-bottom: 12px;
+                color: white;
+                font-size: 1.1rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding-bottom: 8px;
+            }
+            
+            .no-payments-message {
+                text-align: center;
+                padding: 12px;
+                color: rgba(255, 255, 255, 0.9);
+                font-weight: 500;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 6px;
+            }
+            
+            .payment-group {
+                margin-bottom: 16px;
+                animation: fadeIn 0.3s ease forwards;
+            }
+            
+            .payer {
+                font-weight: 600;
+                color: #ff4757;
+                margin-bottom: 8px;
+            }
+            
+            .payment-list {
+                padding-left: 12px;
+            }
+            
+            .payment-item {
+                display: flex;
+                align-items: center;
+                margin-bottom: 8px;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                padding: 10px;
+                transition: transform 0.2s ease;
+            }
+            
+            .payment-item:hover {
+                transform: scale(1.02);
+            }
+            
+            .payment-arrow {
+                color: rgba(255, 255, 255, 0.5);
+                margin-right: 10px;
+                font-size: 1.2rem;
+            }
+            
+            .payment-details {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex: 1;
+            }
+            
+            .payment-recipient {
+                color: #2ed573;
+                font-weight: 600;
+            }
+            
+            .payment-amount {
+                font-weight: 700;
+                font-size: 1.1rem;
+                color: white;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 4px 12px;
+                border-radius: 50px;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            /* Mobile optimizations */
+            @media (max-width: 768px) {
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                
+                .stat-card {
+                    padding: 15px;
+                }
+                
+                .stat-icon {
+                    font-size: 1.5rem;
+                }
+                
+                .stat-value {
+                    font-size: 1.2rem;
+                }
+                
+                .payment-details {
+                    flex-direction: row;
+                    align-items: center;
+                }
+                
+                .payment-recipient, .payment-amount {
+                    padding: 4px 8px;
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .stats-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        `;
+            document.head.appendChild(style);
+        }
+
+        payoutResults.classList.remove('payout-content-hiding');
+        // Force reflow before adding the class to trigger animation
+        void payoutResults.offsetWidth;
+        payoutResults.classList.add('payout-content-showing');
+
+        // Scroll to the results
+        // Delay scroll slightly to allow fade-in to start
+        setTimeout(() => {
+            // Ensure the element is still in the DOM and visible before scrolling
+            if (document.body.contains(payoutResults) && payoutResults.offsetParent !== null) {
+                 payoutResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 50); // Adjust delay as needed, should be less than animation time
+
+        console.log('[PAYOUT] Results displayed locally');
+        // PokerApp.UI.showToast('Game results calculated', 'success'); // Moved toast to Firebase save confirmation
+    }, 300); // This timeout should match the 'payout-content-hiding' animation duration
 }
 
+// Add removePlayer function
 function removePlayer(playerId) {
     if (!PokerApp.state.players) return;
 
@@ -3146,32 +3120,33 @@ function removePlayer(playerId) {
     }
 
     const performRemove = () => {
+        // Recompute against current state (the captured index may be stale by
+        // the time the removal animation ends).
+        const idx = PokerApp.state.players.findIndex(p => p.id === playerId);
+        const removedName = idx !== -1 ? PokerApp.state.players[idx].name : '';
+
         // Optimistically remove from local state for immediate UI feedback.
-        const removedPlayer = PokerApp.state.players.splice(playerIndex, 1);
-        console.log('[PLAYER] Optimistically removed player from state:', removedPlayer[0]?.name);
+        if (idx !== -1) PokerApp.state.players.splice(idx, 1);
+        console.log('[PLAYER] Optimistically removed player from state:', removedName);
 
         if (PokerApp.state.dealerId === playerId) {
-            PokerApp.state.dealerId = null; 
+            PokerApp.state.dealerId = null;
         }
 
         saveState();
         updatePlayerList(); // Re-render list which will exclude the removed row
+        updateEmptyState();
 
-        // Now, transactionally update Firebase
-        if (PokerApp.state.sessionId && window.database) {
-            const playersRef = window.database.ref(`games/${PokerApp.state.sessionId}/state/players`);
-            playersRef.transaction(function(players) {
-                if (players) {
-                    if (!Array.isArray(players)) {
-                        players = Object.values(players).filter(p => p != null);
-                    }
-                    return players.filter(p => p && p.id !== playerId);
-                }
-                return players;
-            }).catch(error => {
-                console.error("Remove player transaction failed:", error);
-                PokerApp.UI.showToast(`Failed to sync removal for ${removedPlayer[0]?.name}.`, 'error');
-                // Consider adding logic to reload state from Firebase to correct the UI
+        // Authoritative removal through the shared transaction: it filters the
+        // FRESH players array by id, so a concurrent phone rebuy to a DIFFERENT
+        // player survives. The 'value' listener reconciles the rendered list.
+        if (PokerApp.state.sessionId && window.GameData) {
+            GameData.mutateGameState(PokerApp.state.sessionId, (draft) => ({
+                players: draft.players.filter(p => p.id !== playerId),
+                nextPlayerId: draft.nextPlayerId
+            })).catch(error => {
+                console.error('Remove player transaction failed:', error);
+                PokerApp.UI.showToast(`Failed to sync removal for ${removedName}.`, 'error');
             });
         }
     };
@@ -3366,92 +3341,75 @@ function editPlayerChips(playerId) {
     
     const newAmount = prompt(`Update ${player.name}'s current chips:`, player.current_chips);
     if (newAmount === null) return; // User canceled
-    
-    const parsedAmount = parseInt(newAmount);
-    if (isNaN(parsedAmount)) {
-        PokerApp.UI.showToast('Please enter a valid number', 'error');
+
+    const parsedAmount = parseInt(newAmount, 10);
+    if (isNaN(parsedAmount) || parsedAmount < 0) {
+        PokerApp.UI.showToast('Please enter a valid non-negative number', 'error');
         return;
     }
-    
-    // Update player's chips
-    player.current_chips = parsedAmount;
-    
-    // Update UI
-    updatePlayerList();
-    
-    // Save state locally and to Firebase if needed
-    saveState();
-    if (PokerApp.state.sessionId) {
-        updatePlayersInFirebase();
-    }
-    
-    PokerApp.UI.showToast(`Updated ${player.name}'s chips to ${parsedAmount}`, 'success');
+
+    // Route through the transactional commit path so this never overwrites a
+    // concurrent phone rebuy.
+    updatePlayerChips(playerId, parsedAmount);
 }
 
 // Add to global scope
 window.editPlayerChips = editPlayerChips;
 
-// Function to update player chips directly from input field (HOST AUTHORITY)
-// HOST PRIORITY: This function has the HIGHEST priority for chip count changes
-// - Updates current_chips only (NOT initial_chips/starting stack)
-// - Payouts calculate profit/loss as: current_chips - initial_chips
-// - Host updates override any Firebase sync for 10 seconds
+// Commit a host chip edit for one player (draft-commit handler; called on the
+// input's blur / Enter, never on every keystroke).
+// - Updates current_chips only (NOT initial_chips/starting stack), so payouts
+//   still compute profit/loss as current_chips - initial_chips.
+// - Validates a non-negative integer; invalid or unchanged input is discarded
+//   and the field snaps back to the server value.
+// - Writes the minimal change through the shared transaction so a concurrent
+//   phone rebuy landing in Firebase can never be overwritten.
 function updatePlayerChips(playerId, newValue) {
     const player = PokerApp.state.players.find(p => p.id === playerId);
-    const parsedNewValue = parseInt(newValue, 10);
-
     if (!player) {
         PokerApp.UI.showToast('Player not found', 'error');
         return;
     }
 
-    if (isNaN(parsedNewValue) || parsedNewValue < 0) {
-        PokerApp.UI.showToast('Invalid chip update. Please enter a valid number.', 'error');
-        updatePlayerList(); // Revert the input field to last known good state
+    const raw = String(newValue).trim();
+    // Invalid (empty / non-integer / negative): discard and snap back.
+    if (!/^\d+$/.test(raw)) {
+        updateSinglePlayerRow(playerId);
         return;
     }
 
-    console.log(`[HOST_UPDATE] Host updating ${player.name} chips to ${parsedNewValue} (was ${player.current_chips}, starting stack: ${player.initial_chips})`);
+    const parsedNewValue = parseInt(raw, 10);
+    // Unchanged: nothing to commit.
+    if (parsedNewValue === player.current_chips) {
+        return;
+    }
 
-    // HOST AUTHORITY: Update current chips only - starting stack (initial_chips) remains unchanged
-    // This ensures payout calculations work correctly: profit/loss = current_chips - initial_chips
-    player.current_chips = parsedNewValue;
-    player.lastHostUpdate = Date.now();
-    player.hostUpdated = true;
-    
-    // Save state locally
-    saveState();
-    
-    // Update ONLY the specific player row to avoid affecting others
-    updateSinglePlayerRow(playerId);
+    console.log(`[HOST_UPDATE] Host committing ${player.name} chips to ${parsedNewValue} (was ${player.current_chips}, starting stack: ${player.initial_chips})`);
 
-    PokerApp.UI.showToast(`${player.name}'s chips updated to ${parsedNewValue}`, 'success');
-
-    // ISOLATED FIREBASE UPDATE - only update this specific player
-    if (PokerApp.state.sessionId && window.database) {
-        const playerRef = window.database.ref(`games/${PokerApp.state.sessionId}/state/players`)
-            .orderByChild('id').equalTo(playerId);
-        
-        // Use a targeted update to avoid affecting other players
-        playerRef.once('value').then(snapshot => {
-            if (snapshot.exists()) {
-                const updates = {};
-                snapshot.forEach(childSnapshot => {
-                    const key = childSnapshot.key;
-                    updates[`games/${PokerApp.state.sessionId}/state/players/${key}/current_chips`] = parsedNewValue;
-                    updates[`games/${PokerApp.state.sessionId}/state/players/${key}/lastHostUpdate`] = Date.now();
-                    updates[`games/${PokerApp.state.sessionId}/state/players/${key}/hostUpdated`] = true;
-                });
-                
-                // Apply the isolated update
-                window.database.ref().update(updates).then(() => {
-                    console.log(`[HOST_UPDATE] Successfully updated ${player.name} chips in Firebase`);
-                }).catch(error => {
-                    console.error(`[HOST_UPDATE] Firebase update failed:`, error);
-                    PokerApp.UI.showToast(`Failed to sync ${player.name}'s chips`, 'error');
-                });
+    if (PokerApp.state.sessionId && window.GameData) {
+        // Minimal change: only this player's current_chips. The fresh players
+        // array from the transaction is preserved, so rebuys survive. The
+        // 'value' listener then re-renders authoritative state.
+        GameData.mutateGameState(PokerApp.state.sessionId, (draft) => ({
+            players: draft.players.map(p =>
+                p.id === playerId ? Object.assign({}, p, { current_chips: parsedNewValue }) : p
+            ),
+            nextPlayerId: draft.nextPlayerId
+        })).then(result => {
+            if (result && result.committed) {
+                console.log(`[HOST_UPDATE] Committed ${player.name} chips in Firebase`);
+                PokerApp.UI.showToast(`${player.name}'s chips updated to ${parsedNewValue}`, 'success');
             }
+        }).catch(error => {
+            console.error('[HOST_UPDATE] Firebase update failed:', error);
+            PokerApp.UI.showToast(`Failed to sync ${player.name}'s chips`, 'error');
         });
+    } else {
+        // Offline / no session: update locally so the UI still works.
+        player.current_chips = parsedNewValue;
+        saveState();
+        updateSinglePlayerRow(playerId);
+        PokerApp.UI.showToast(`${player.name}'s chips updated to ${parsedNewValue}`, 'success');
     }
 }
 

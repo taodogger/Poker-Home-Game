@@ -3,8 +3,10 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { database } from '../lib/firebase';
-import { ref, runTransaction, get, onValue } from 'firebase/database';
+import { ref, get, onValue } from 'firebase/database';
 import Link from 'next/link';
+import { Player } from '../types';
+import { normalizePlayers, mutateGameState } from '../utils/helpers';
 
 function JoinContent() {
   const searchParams = useSearchParams();
@@ -48,10 +50,9 @@ function JoinContent() {
     if (view === 'DASHBOARD' && gameId && activePlayerName) {
         const gameRef = ref(database, `games/${gameId}/state/players`);
         const unsubscribe = onValue(gameRef, (snapshot) => {
-            const players = snapshot.val();
-            if (players) {
-                const playerList = Array.isArray(players) ? players : Object.values(players);
-                const me = playerList.find((p: any) => p.name.toLowerCase() === activePlayerName.toLowerCase());
+            const playerList = normalizePlayers(snapshot.val());
+            if (playerList.length > 0) {
+                const me = playerList.find((p) => p.name.trim().toLowerCase() === activePlayerName.trim().toLowerCase());
                 if (me) {
                     setPlayerStats({
                         initial: me.initialChips,
@@ -94,52 +95,50 @@ function JoinContent() {
       const chips = Math.floor(buyInAmount / ratio);
 
       // Run Transaction
-      const stateRef = ref(database, `games/${gameId}/state`);
-      await runTransaction(stateRef, (currentState) => {
-        if (!currentState) currentState = { players: [], nextPlayerId: 1 };
-        if (!currentState.players) currentState.players = [];
-        
-        let players = Array.isArray(currentState.players) 
-          ? currentState.players 
-          : Object.values(currentState.players);
+      const normalizedName = nameToUse.trim().toLowerCase();
+      await mutateGameState(gameId, (draft) => {
+        const existing = draft.players.find(
+          (p) => p.name.trim().toLowerCase() === normalizedName
+        );
 
-        const normalizedName = nameToUse.trim().toLowerCase();
-        const existingIndex = players.findIndex((p: any) => p && p.name && p.name.toLowerCase() === normalizedName);
-
-        if (existingIndex !== -1) {
-            // Rebuy
-            const p = players[existingIndex];
-            p.initialChips = (p.initialChips || 0) + chips;
-            p.currentChips = (p.currentChips || 0) + chips;
-            p.lastBuyIn = Date.now();
-            players[existingIndex] = p;
-        } else {
-            // Join
-            if (view === 'DASHBOARD') {
-                // If we thought we were in dashboard but player not found, recreate?
-                // Or abort? Let's recreate.
-            }
-            const newPlayer = {
-                id: currentState.nextPlayerId || 1,
-                name: nameToUse.trim(),
-                initialChips: chips,
-                currentChips: chips,
-                active: true,
-                joinedAt: Date.now()
+        if (existing) {
+            // Rebuy: update only the matched player, preserve everyone else.
+            return {
+                players: draft.players.map((p) =>
+                    p.id === existing.id
+                        ? {
+                              ...p,
+                              initialChips: (p.initialChips || 0) + chips,
+                              currentChips: (p.currentChips || 0) + chips,
+                              lastBuyIn: Date.now(),
+                          }
+                        : p
+                ),
+                nextPlayerId: draft.nextPlayerId,
             };
-            players.push(newPlayer);
-            currentState.nextPlayerId = (currentState.nextPlayerId || 1) + 1;
         }
-        
-        currentState.players = players;
-        return currentState;
+
+        // Join: append a new player.
+        const newPlayer = {
+            id: `p${draft.nextPlayerId}`,
+            name: nameToUse.trim(),
+            initialChips: chips,
+            currentChips: chips,
+            active: true,
+            joinedAt: Date.now(),
+        } as Player;
+
+        return {
+            players: [...draft.players, newPlayer],
+            nextPlayerId: draft.nextPlayerId + 1,
+        };
       });
 
       // Success
       if (view === 'JOIN') {
           localStorage.setItem('playerGameId', gameId);
-          localStorage.setItem('playerName', nameToUse);
-          setActivePlayerName(nameToUse);
+          localStorage.setItem('playerName', nameToUse.trim());
+          setActivePlayerName(nameToUse.trim());
           setView('DASHBOARD');
       }
 

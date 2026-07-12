@@ -6,6 +6,7 @@ export interface Player {
   active: boolean;
   isHost?: boolean;
   lastBuyIn?: number; // Timestamp of last buy-in/rebuy
+  joinedAt?: number; // Timestamp of first join (QR-code joiners)
 }
 
 export interface GameState {
@@ -16,7 +17,6 @@ export interface GameState {
   active: boolean;
   payoutsFinalized: boolean;
 }
-
 export interface Transaction {
   from: string;
   to: string;

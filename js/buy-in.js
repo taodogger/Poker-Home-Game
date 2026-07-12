@@ -367,32 +367,25 @@ async function handleBuyInSubmit(form) {
         let buyInAction = 'joined';
         let playerUpdateDetails = {};
 
-        await buyInDatabase.ref(`games/${gameId}/state`).transaction(
-            (currentState) => buyInTransaction(currentState, playerNameValue, chips)
-        ).then((result) => {
-            if (!result.committed) {
-                throw new Error("Buy-in transaction was not committed. Please try again.");
-            }
-            // The result.snapshot contains the new state, from which we can get details.
-            const newLastPlayer = result.snapshot.child("lastPlayer").val();
-            if (newLastPlayer.name.toLowerCase().trim() === playerNameValue.toLowerCase().trim()) {
-                 buyInAction = newLastPlayer.action;
-                 if(buyInAction === 'rebuy') {
-                     playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.addedChips, totalChips: newLastPlayer.current_chips };
-                 } else {
-                     playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.initial_chips };
-                 }
+        // Route through the shared transaction wrapper. The applied buy-in
+        // details are captured from the mutator (buyInResult) so we never
+        // re-read players/lastPlayer from the committed snapshot, which RTDB
+        // can hand back as an index-keyed object.
+        let buyInResult = null;
+        const txResult = await GameData.mutateGameState(gameId, (draft) =>
+            buyInMutator(draft, playerNameValue, chips, (info) => { buyInResult = info; })
+        );
+        if (!txResult.committed) {
+            throw new Error("Buy-in transaction was not committed. Please try again.");
+        }
+        if (buyInResult) {
+            buyInAction = buyInResult.action;
+            if (buyInAction === 'rebuy') {
+                playerUpdateDetails = { name: buyInResult.name, chips: buyInResult.addedChips, totalChips: buyInResult.current_chips };
             } else {
-                // This case is unlikely but a good fallback.
-                console.warn("Transaction player doesn't match current player. Re-finding.");
-                const players = Object.values(result.snapshot.child("players").val() || {});
-                const finalPlayerState = players.find(p => p.name.toLowerCase().trim() === playerNameValue.toLowerCase().trim());
-                if(finalPlayerState) {
-                    playerUpdateDetails = { name: finalPlayerState.name, chips: 'some', totalChips: finalPlayerState.current_chips };
-                    buyInAction = 'rebought';
-                }
+                playerUpdateDetails = { name: buyInResult.name, chips: buyInResult.initial_chips };
             }
-        });
+        }
 
         // --- Transaction Successful: UI Update ---
         BuyInPage.state.currentPlayerName = playerUpdateDetails.name; // Set global currentPlayerName
@@ -516,32 +509,25 @@ async function performBuyIn(playerName, buyInAmount, submitButton = null) {
         let buyInAction = 'joined';
         let playerUpdateDetails = {};
 
-        await buyInDatabase.ref(`games/${gameId}/state`).transaction(
-            (currentState) => buyInTransaction(currentState, playerName, chips)
-        ).then((result) => {
-            if (!result.committed) {
-                throw new Error("Buy-in transaction was not committed. Please try again.");
-            }
-            // The result.snapshot contains the new state, from which we can get details.
-            const newLastPlayer = result.snapshot.child("lastPlayer").val();
-            if (newLastPlayer.name.toLowerCase().trim() === playerName.toLowerCase().trim()) {
-                 buyInAction = newLastPlayer.action;
-                 if(buyInAction === 'rebuy') {
-                     playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.addedChips, totalChips: newLastPlayer.current_chips };
-                 } else {
-                     playerUpdateDetails = { name: newLastPlayer.name, chips: newLastPlayer.initial_chips };
-                 }
+        // Route through the shared transaction wrapper. The applied buy-in
+        // details are captured from the mutator (buyInResult) so we never
+        // re-read players/lastPlayer from the committed snapshot, which RTDB
+        // can hand back as an index-keyed object.
+        let buyInResult = null;
+        const txResult = await GameData.mutateGameState(gameId, (draft) =>
+            buyInMutator(draft, playerName, chips, (info) => { buyInResult = info; })
+        );
+        if (!txResult.committed) {
+            throw new Error("Buy-in transaction was not committed. Please try again.");
+        }
+        if (buyInResult) {
+            buyInAction = buyInResult.action;
+            if (buyInAction === 'rebuy') {
+                playerUpdateDetails = { name: buyInResult.name, chips: buyInResult.addedChips, totalChips: buyInResult.current_chips };
             } else {
-                // This case is unlikely but a good fallback.
-                console.warn("Transaction player doesn't match current player. Re-finding.");
-                const players = Object.values(result.snapshot.child("players").val() || {});
-                const finalPlayerState = players.find(p => p.name.toLowerCase().trim() === playerName.toLowerCase().trim());
-                if(finalPlayerState) {
-                    playerUpdateDetails = { name: finalPlayerState.name, chips: 'some', totalChips: finalPlayerState.current_chips };
-                    buyInAction = 'rebought';
-                }
+                playerUpdateDetails = { name: buyInResult.name, chips: buyInResult.initial_chips };
             }
-        });
+        }
 
         // --- Transaction Successful: UI Update ---
         BuyInPage.state.currentPlayerName = playerUpdateDetails.name; // Set global currentPlayerName
@@ -572,40 +558,36 @@ async function performBuyIn(playerName, buyInAmount, submitButton = null) {
     }
 }
 
-// Extracted transaction logic for clarity
-function buyInTransaction(currentState, playerName, chips) {
-    if (!currentState) {
-        currentState = { players: [], nextPlayerId: 1, lastUpdate: Date.now(), lastPlayer: null };
-    }
-    currentState.players = currentState.players || [];
-    if (!Array.isArray(currentState.players)) {
-        currentState.players = Object.values(currentState.players).filter(p => p != null);
-    }
-    if (typeof currentState.nextPlayerId !== 'number' || currentState.nextPlayerId <= 0) {
-        currentState.nextPlayerId = Math.max(0, ...currentState.players.map(p => p?.id || 0)) + 1;
-    }
-
-    const normalizedNewName = playerName.toLowerCase().trim();
-    const existingPlayerIndex = currentState.players.findIndex(p => p && p.name && p.name.toLowerCase().trim() === normalizedNewName);
-    let playerForNotification = null;
+// Pure mutator for GameData.mutateGameState. It receives the already-normalized
+// dense draft ({ players: array, nextPlayerId: number > max id }) so it never
+// has to defend against RTDB handing players back as an index-keyed object, and
+// it never trusts a stored nextPlayerId. It returns the { players, nextPlayerId }
+// shape the transaction wrapper expects. `onApply` is invoked with the
+// notification details for whichever branch ran so the caller can build the
+// welcome UI from the applied result instead of re-reading the committed
+// snapshot.
+function buyInMutator(draft, playerName, chips, onApply) {
+    const trimmedName = (playerName || '').trim();
+    const normalizedNewName = trimmedName.toLowerCase();
+    const addedChips = parseInt(chips, 10) || 0;
+    const players = draft.players.slice();
+    const existingPlayerIndex = players.findIndex(p => p && p.name && p.name.toLowerCase().trim() === normalizedNewName);
 
     if (existingPlayerIndex !== -1) { // Player exists - rebuy logic
-        const existingPlayer = currentState.players[existingPlayerIndex];
-        const currentInitial = parseInt(existingPlayer.initial_chips) || 0;
-        const currentCurrent = parseInt(existingPlayer.current_chips) || 0;
-        const addedChips = parseInt(chips) || 0;
+        const existingPlayer = players[existingPlayerIndex];
+        const currentInitial = parseInt(existingPlayer.initial_chips, 10) || 0;
+        const currentCurrent = parseInt(existingPlayer.current_chips, 10) || 0;
         const updatedPlayer = { ...existingPlayer, initial_chips: currentInitial + addedChips, current_chips: currentCurrent + addedChips, lastBuyIn: Date.now() };
-        currentState.players[existingPlayerIndex] = updatedPlayer;
-        playerForNotification = { ...updatedPlayer, action: 'rebuy', addedChips: addedChips };
-    } else { // New player
-        const newPlayer = { id: currentState.nextPlayerId, name: playerName, initial_chips: chips, current_chips: chips, joinedAt: Date.now(), active: true };
-        currentState.players.push(newPlayer);
-        playerForNotification = { ...newPlayer, action: 'join' };
-        currentState.nextPlayerId++;
+        players[existingPlayerIndex] = updatedPlayer;
+        if (onApply) onApply({ action: 'rebuy', name: updatedPlayer.name, addedChips: addedChips, current_chips: updatedPlayer.current_chips });
+        return { players: players, nextPlayerId: draft.nextPlayerId };
     }
-    currentState.lastUpdate = Date.now();
-    currentState.lastPlayer = playerForNotification;
-    return currentState;
+
+    // New player - join logic
+    const newPlayer = { id: draft.nextPlayerId, name: trimmedName, initial_chips: addedChips, current_chips: addedChips, active: true, joinedAt: Date.now() };
+    players.push(newPlayer);
+    if (onApply) onApply({ action: 'join', name: newPlayer.name, initial_chips: newPlayer.initial_chips });
+    return { players: players, nextPlayerId: draft.nextPlayerId + 1 };
 }
 
 // Update chip preview calculation (now uses the global chipRatio)
