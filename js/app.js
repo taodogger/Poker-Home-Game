@@ -2842,11 +2842,19 @@ function calculatePayouts() {
         });
     }
     
+    // Only offer sharing when there's an online game session to point the link at.
+    const canShareResults = !!(PokerApp.state.sessionId && window.database);
     html += `
                 </div>
-            </div>
+            </div>${canShareResults ? `
+            <div class="payout-share-row">
+                <button type="button" id="share-results-btn" class="poker-button share-results-button">
+                    <span class="button-icon">🔗</span>
+                    <span class="button-text">Share Results</span>
+                </button>
+            </div>` : ''}
         </div>`;
-    
+
     // Display results with animation
     const payoutResults = document.getElementById('payout-results');
     if (!payoutResults) {
@@ -2856,8 +2864,17 @@ function calculatePayouts() {
 
     // --- Save payout info to Firebase ---
     if (PokerApp.state.sessionId && window.database) {
+        // Per-player net summary for the shareable results page. Cheap: playerDiffs
+        // already carry the realized cashValue (net cents / 100) and chip delta.
+        const netSummary = playerDiffs.map(p => ({
+            name: p.name,
+            net: p.cashValue,
+            chips: p.chipDifference
+        }));
         const payoutInfo = {
+            gameName: PokerApp.state.gameName || null,
             transactions: transactions,
+            netSummary: netSummary,
             calculatedAt: firebase.database.ServerValue.TIMESTAMP,
             status: 'calculated' // Initial status
         };
@@ -2881,7 +2898,37 @@ function calculatePayouts() {
     // Allow fade-out to happen, then update content and fade-in
     setTimeout(() => {
         payoutResults.innerHTML = html;
-        
+
+        // Wire the "Share Results" button: native share sheet on mobile with a
+        // clipboard fallback. Link points at the standalone read-only settlement
+        // page (results.html), which reads games/{gameId}/payoutInfo live.
+        const shareResultsBtn = document.getElementById('share-results-btn');
+        if (shareResultsBtn) {
+            shareResultsBtn.addEventListener('click', () => {
+                const gameId = PokerApp.state.sessionId;
+                if (!gameId) {
+                    PokerApp.UI.showToast('No online game to share.', 'error');
+                    return;
+                }
+                const shareUrl = `${location.origin}/results.html?gameId=${gameId}`;
+                const shareGameName = PokerApp.state.gameName || 'Poker Game';
+                const copyFallback = () => navigator.clipboard.writeText(shareUrl)
+                    .then(() => PokerApp.UI.showToast('Results link copied to clipboard', 'success'))
+                    .catch(() => PokerApp.UI.showToast('Failed to copy results link', 'error'));
+                if (navigator.share) {
+                    navigator.share({
+                        title: `Poker payouts — ${shareGameName}`,
+                        url: shareUrl
+                    }).catch(err => {
+                        if (err && err.name === 'AbortError') return; // user dismissed the sheet
+                        copyFallback();
+                    });
+                } else {
+                    copyFallback();
+                }
+            });
+        }
+
         // Add styles for the new display
         if (!document.querySelector('#payout-styles')) {
             const style = document.createElement('style');
@@ -3084,6 +3131,19 @@ function calculatePayouts() {
                 .stats-grid {
                     grid-template-columns: 1fr;
                 }
+            }
+
+            .payout-share-row {
+                display: flex;
+                justify-content: center;
+                padding: 16px;
+                background: rgba(0, 0, 0, 0.15);
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+            }
+
+            .payout-share-row .share-results-button {
+                width: 100%;
+                max-width: 320px;
             }
         `;
             document.head.appendChild(style);

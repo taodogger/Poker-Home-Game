@@ -2,8 +2,8 @@
 main {
     display: grid;
     grid-template-columns: repeat(24, 1fr);
-    gap: 28px;
-    padding: 0 32px 48px;
+    gap: var(--spacing-lg); /* 24px — equal column + row gaps, matches card padding */
+    padding: 0 var(--spacing-xl) var(--spacing-xxl);
     max-width: 1400px;
     margin: 0 auto;
     position: relative;
@@ -14,13 +14,13 @@ main {
 main > section {
     /* Base style similar to GridItem */
     background: var(--card-bg, rgba(20, 20, 40, 0.5));
-    border-radius: 1.5rem; /* Match md:rounded-[1.5rem] */
-    padding: 1.5rem; /* Match md:p-6 */
-    border: 0.75px solid var(--surface-border, rgba(255, 255, 255, 0.1));
-    box-shadow: var(--card-shadow, 0 10px 30px rgba(0, 0, 0, 0.25));
+    border-radius: var(--border-radius-xl); /* Consistent card radius */
+    padding: var(--card-padding); /* Single shared card padding */
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    box-shadow: var(--card-shadow);
     position: relative;
     overflow: visible; /* Allow glow to extend outside */
-    transition: all var(--transition-standard);
+    transition: transform var(--transition-standard), box-shadow var(--transition-standard), border-color var(--transition-standard);
     z-index: 1; /* Ensure sections are above background */
     color: var(--text-color); /* Ensure default text color for section content */
 }
@@ -49,10 +49,19 @@ main > section:hover::before {
 
 /* Remove the old hover effect if desired, or keep it complementary */
 main > section:hover {
-     transform: translateY(-5px); /* Keep slight lift */
-     /* border-color: rgba(255, 255, 255, 0.15); */ /* Maybe remove border change if glow is enough */
-     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); /* Keep shadow */
+     transform: translateY(-3px); /* Gentle lift */
+     box-shadow: var(--card-shadow-hover); /* Softer, layered */
      z-index: 2; /* Bring hovered section forward */
+}
+
+/* Unified card header band — same flush row + spacing across every card */
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg); /* 24px — single source of header-to-content rhythm */
+    min-height: 2.4rem; /* keeps single-title and title+badge cards the same height */
 }
 
 /* Section header styles (applied to h2 within the new main > section) */
@@ -61,8 +70,9 @@ main > section h2 {
     color: white;
     font-weight: 800;
     font-size: 1.75rem;
+    line-height: 1.1; /* tight leading for large display text */
     margin-top: 0;
-    margin-bottom: 24px;
+    margin-bottom: 0; /* spacing now owned by .card-header */
     position: relative;
     letter-spacing: -0.02em;
 }
@@ -104,7 +114,7 @@ main > section h2::after {
 #players .table-container {
     flex: 1;
     overflow-y: auto;
-    margin-top: 24px;
+    margin-top: 0; /* .card-header already provides the 24px rhythm */
 }
 
 /* Right column sections - Game Controls and Payout Calculator */
@@ -139,8 +149,8 @@ main > section h2::after {
     display: flex; 
     align-items: center;
     z-index: 100;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    transition: all var(--transition-standard);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 4px 20px rgba(0, 0, 0, 0.15);
+    transition: background var(--transition-standard), box-shadow var(--transition-standard);
     /* position: relative; /* Already sticky */
     overflow: hidden;
     padding: 0 16px; 
@@ -169,11 +179,11 @@ main > section h2::after {
         radial-gradient(circle at 10% 20%, 
             rgba(var(--theme-primary-rgb), 0.15) 0%, 
             rgba(var(--theme-primary-rgb), 0) 35%),
-        radial-gradient(circle at 90% 80%, 
-            rgba(var(--theme-secondary-rgb), 0.12) 0%, 
+        radial-gradient(circle at 90% 80%,
+            rgba(var(--theme-secondary-rgb), 0.12) 0%,
             rgba(var(--theme-secondary-rgb), 0) 35%);
     opacity: 0.8;
-    transition: all 0.5s ease;
+    transition: opacity 0.5s ease, background 0.5s ease;
 }
 
 /* Subtle pattern overlay */
@@ -230,7 +240,7 @@ main > section h2::after {
     color: #fff;
     filter: blur(0.5px);
     text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
 .app-header .card-symbol-1 {

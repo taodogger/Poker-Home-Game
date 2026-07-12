@@ -50,54 +50,71 @@
     --background-color: #0a0a0a;
     --surface-color: rgba(255, 255, 255, 0.1);
     --text-color: white;
-    --accent-gradient: linear-gradient(45deg, var(--main-color), var(--secondary-color));
-    --accent-gradient-reverse: linear-gradient(-45deg, var(--main-color), var(--secondary-color));
-    --glow-gradient: linear-gradient(135deg, 
+    /* Modernized: subtler diagonal fills instead of loud 45deg neon two-tones */
+    --accent-gradient: linear-gradient(135deg, var(--main-color), var(--secondary-color));
+    --accent-gradient-reverse: linear-gradient(315deg, var(--main-color), var(--secondary-color));
+    --glow-gradient: linear-gradient(135deg,
         rgba(0, 255, 135, 0.5),
         rgba(96, 239, 255, 0.5),
         rgba(255, 59, 124, 0.5)
     );
-    
+
     /* Enhanced UI variables */
     --body-gradient: radial-gradient(circle at top right,
         rgba(0, 255, 135, 0.1),
         rgba(96, 239, 255, 0.05),
         rgba(10, 10, 10, 1) 70%
     );
-    --surface-gradient: linear-gradient(135deg, 
-        rgba(255,255,255,0.1), 
+    --surface-gradient: linear-gradient(135deg,
+        rgba(255,255,255,0.1),
         rgba(255,255,255,0.05)
     );
     --glass-effect: rgba(255, 255, 255, 0.05);
     --surface-border: rgba(255, 255, 255, 0.1);
-    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    --text-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
-    --button-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    /* Softer, layered low-opacity shadows (replaces single heavy drop shadow) */
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 8px 24px rgba(0, 0, 0, 0.22);
+    --card-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.2), 0 16px 40px rgba(0, 0, 0, 0.3);
+    --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --button-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.18);
+    --button-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.2), 0 10px 24px rgba(0, 0, 0, 0.24);
+    /* Gentle top-light for near-flat button fills */
+    --top-light: inset 0 1px 0 rgba(255, 255, 255, 0.14);
     --hover-transform: translateY(-4px);
     
     /* Typography */
     --font-primary: 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
     --font-family: 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
     
-    /* Spacing & Sizing */
-    --section-spacing: 32px;
-    --card-padding: 28px;
+    /* Spacing & Sizing — one 8px-based scale, single shared card padding */
+    --section-spacing: 24px;
+    --card-padding: 24px;
     --header-height: 70px;
-    
-    /* Other variables */
+
+    /* Border-radius scale — clean 4px steps */
     --border-radius-sm: 12px;
-    --border-radius-md: 14px;
-    --border-radius-lg: 16px;
+    --border-radius-md: 16px;
+    --border-radius-lg: 20px;
+    --border-radius-xl: 24px;
     --spacing-xs: 4px;
     --spacing-sm: 8px;
     --spacing-md: 16px;
     --spacing-lg: 24px;
     --spacing-xl: 32px;
     --spacing-xxl: 48px;
-    
+
+    /* Strong custom easing curves (Emil Kowalski) */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+    /* Duration tokens */
+    --duration-press: 140ms;
+    --duration-fast: 180ms;
+    --duration-standard: 240ms;
+
     /* Transitions */
-    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-standard: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: 180ms var(--ease-out);
+    --transition-standard: 240ms var(--ease-out);
     --transition-bounce: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
     
     /* Effects */
@@ -106,8 +123,9 @@
     --container-padding: max(1rem, env(safe-area-inset-left));
     --main-color-rgb: 30, 144, 255;
     --secondary-color-rgb: 65, 105, 225;
+    --accent-color-rgb: 255, 59, 124;
     --vibrant-gradient: linear-gradient(135deg, var(--main-color), var(--secondary-color));
-    --glow-effect: 0 0 20px rgba(var(--main-color-rgb), 0.5);
+    --glow-effect: 0 0 12px rgba(var(--main-color-rgb), 0.25);
     --card-bg: rgba(20, 20, 40, 0.5);
     
     /* Enable font features for better number display */
@@ -187,4 +205,25 @@ body {
 ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 3px;
+}
+
+/* Accessible keyboard focus ring — keyboard only, never on mouse press */
+:focus-visible {
+    outline: 2px solid var(--main-color);
+    outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Reduced motion: keep opacity/color transitions, drop movement-based motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 } 

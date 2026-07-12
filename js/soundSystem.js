@@ -1,7 +1,31 @@
 const SoundSystem = {
     audioContext: null,
     isInitializing: false, // Prevent re-entrant initialization
-    
+
+    // ------------------------------------------------------------------
+    // Sound design (Kapoker)
+    // ------------------------------------------------------------------
+    // Philosophy: sounds sit UNDER the experience, never on top. One warm
+    // timbre (sine/triangle), one key (C-major pentatonic), everything
+    // routed through a low master bus (~ -12 dB). Every voice gets an
+    // exponential attack/release so there are no note-on clicks, plus a
+    // little random detune + velocity so repeats never feel robotic.
+    // Frequent cues (chip / click) stay tiny, short and low-mid; rare
+    // milestones (payout / kaching) can breathe a little more.
+    // ------------------------------------------------------------------
+
+    master: null,        // shared output bus
+    enabled: true,       // simple on/off; honoured by the bus
+    masterVolume: 1.0,   // 0..1 user volume; honoured by the bus
+    _peak: 0.25,         // master ceiling (~ -12 dB). Final output never exceeds this.
+
+    // Warm C-major pentatonic palette (Hz). All cues draw notes from here
+    // so everything sounds like it belongs to the same instrument.
+    _scale: {
+        C4: 261.63, D4: 293.66, E4: 329.63, G4: 392.00, A4: 440.00,
+        C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880.00
+    },
+
     async init() {
         if (this.audioContext || this.isInitializing) return;
         this.isInitializing = true;
@@ -41,326 +65,151 @@ const SoundSystem = {
         return this.audioContext.state === 'running';
     },
 
-    async playPopSound(frequency = 1000) {
-        if (!await this._ensureAudioContextRunning()) return;
-        
-        const now = this.audioContext.currentTime;
-        
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        
-        const noise = this.audioContext.createBufferSource();
-        const noiseBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.05, this.audioContext.sampleRate);
-        const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < noiseBuffer.length; i++) {
-            output[i] = (Math.random() * 2 - 1) * 0.2; // Reduced noise amplitude slightly
+    _rand(min, max) {
+        return min + Math.random() * (max - min);
+    },
+
+    // Lazily build (and reuse) the master bus. Its gain is the ONLY place
+    // the overall level is set, so nothing can get loud by accident.
+    _bus() {
+        if (!this.audioContext) return null;
+        if (!this.master || this.master.context !== this.audioContext) {
+            this.master = this.audioContext.createGain();
+            this.master.connect(this.audioContext.destination);
         }
-        noise.buffer = noiseBuffer;
-        const noiseGain = this.audioContext.createGain();
-        noise.connect(noiseGain);
-        noiseGain.connect(this.audioContext.destination);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(frequency, now);
-        oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.5, now + 0.06); // Faster, shorter sweep
-        
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.6, now + 0.01); // Increased from 0.35
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15); // Shorter decay
-        
-        noiseGain.gain.setValueAtTime(0, now);
-        noiseGain.gain.linearRampToValueAtTime(0.25, now + 0.005); // Increased from 0.15
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-
-        oscillator.start(now);
-        oscillator.stop(now + 0.15);
-        noise.start(now);
-        noise.stop(now + 0.03);
+        this.master.gain.value = this.enabled ? this._peak * this.masterVolume : 0;
+        return this.master;
     },
 
-    async playUIClickSound() {
-        if (!await this._ensureAudioContextRunning()) return;
-        
-        const now = this.audioContext.currentTime;
-        
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-        
-        oscillator.type = 'triangle'; 
-        oscillator.frequency.setValueAtTime(1300, now); 
-        oscillator.frequency.exponentialRampToValueAtTime(900, now + 0.05); // Slight downward for more 'tick'
-        
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.4, now + 0.003); // Sharper attack, Increased from 0.2
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-        
-        oscillator.start(now);
-        oscillator.stop(now + 0.05);
-    },
+    // One warm, click-free voice.
+    //   - exponential attack from silence (no 0ms note-on click)
+    //   - exponential release (natural tail)
+    //   - subtle per-hit detune + velocity so repeats aren't robotic
+    //   - optional gentle low-pass to round off any harmonic edge
+    _note(freq, opts = {}) {
+        const ctx = this.audioContext;
+        if (!ctx) return;
 
-    // ENHANCED Kaching Sound - More "Kaching!"
-    async playKachingSound() {
-        if (!await this._ensureAudioContextRunning()) return;
-        const now = this.audioContext.currentTime;
+        const {
+            delay = 0,
+            dur = 0.12,
+            type = 'sine',
+            peak = 0.5,        // pre-master; final = peak * _peak * masterVolume
+            attack = 0.01,     // 5-15ms keeps it soft but present
+            detune = null,     // null => small random detune
+            glideTo = null,    // optional pitch glide
+            cutoff = null      // optional low-pass corner (Hz)
+        } = opts;
 
-        // Part 1: "Ka" - Metallic Clink/Latch
-        const kaAttackOsc = this.audioContext.createOscillator();
-        const kaAttackGain = this.audioContext.createGain();
-        kaAttackOsc.type = 'square';
-        kaAttackOsc.frequency.setValueAtTime(3200, now);
-        kaAttackOsc.frequency.exponentialRampToValueAtTime(2000, now + 0.02);
-        kaAttackGain.gain.setValueAtTime(0, now);
-        kaAttackGain.gain.linearRampToValueAtTime(0.15, now + 0.002); // Reduced from 0.5
-        kaAttackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
-        kaAttackOsc.connect(kaAttackGain);
-        kaAttackGain.connect(this.audioContext.destination);
-        kaAttackOsc.start(now);
-        kaAttackOsc.stop(now + 0.02);
+        const bus = this._bus();
+        const t = ctx.currentTime + delay;
 
-        const kaBodyOsc = this.audioContext.createOscillator();
-        const kaBodyGain = this.audioContext.createGain();
-        const kaBodyFilter = this.audioContext.createBiquadFilter();
-        kaBodyOsc.type = 'sawtooth';
-        kaBodyOsc.frequency.setValueAtTime(1200, now + 0.01); // Slightly delayed
-        kaBodyOsc.frequency.exponentialRampToValueAtTime(600, now + 0.01 + 0.05);
-        kaBodyFilter.type = 'bandpass';
-        kaBodyFilter.frequency.setValueAtTime(1500, now + 0.01);
-        kaBodyFilter.Q.value = 5;
-        kaBodyGain.gain.setValueAtTime(0, now + 0.01);
-        kaBodyGain.gain.linearRampToValueAtTime(0.1, now + 0.01 + 0.005); // Reduced from 0.35
-        kaBodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.01 + 0.06);
-        kaBodyOsc.connect(kaBodyFilter);
-        kaBodyFilter.connect(kaBodyGain);
-        kaBodyGain.connect(this.audioContext.destination);
-        kaBodyOsc.start(now + 0.01);
-        kaBodyOsc.stop(now + 0.01 + 0.06);
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
 
-        // Part 2: "Ching" - Resonant Metallic Ring (starts after "Ka")
-        const chingTime = now + 0.05; 
-        const baseRingFreq = 2800;
-        const ringGain = this.audioContext.createGain();
-        ringGain.connect(this.audioContext.destination);
-        ringGain.gain.setValueAtTime(0, chingTime);
-        ringGain.gain.linearRampToValueAtTime(0.2, chingTime + 0.02); // Bell attack, Reduced from 0.7
-        // Amplitude wobble for realism
-        ringGain.gain.linearRampToValueAtTime(0.15, chingTime + 0.15); // Reduced from 0.6
-        ringGain.gain.linearRampToValueAtTime(0.2, chingTime + 0.3); // Reduced from 0.7
-        ringGain.gain.exponentialRampToValueAtTime(0.001, chingTime + 0.7); // Longer decay
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
+        osc.detune.setValueAtTime(detune === null ? this._rand(-6, 6) : detune, t);
 
-        const freqs = [baseRingFreq, baseRingFreq * 1.503, baseRingFreq * 2.201]; // Harmonic partials for bell
-        const gains = [1, 0.4, 0.25]; // Relative amplitudes
-
-        freqs.forEach((freq, index) => {
-            const osc = this.audioContext.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, chingTime);
-            // Slight pitch decay for realism
-            osc.frequency.exponentialRampToValueAtTime(freq * 0.98, chingTime + 0.65);
-            const partialGain = this.audioContext.createGain();
-            partialGain.gain.value = gains[index];
-            osc.connect(partialGain);
-            partialGain.connect(ringGain);
-            osc.start(chingTime);
-            osc.stop(chingTime + 0.7);
-        });
-    },
-
-    // ENHANCED Reset Sound - Punchier and Layered
-    async playResetSound() {
-        if (!await this._ensureAudioContextRunning()) return;
-        const now = this.audioContext.currentTime;
-        const totalDuration = 0.35;
-
-        // 1. Initial Punch/Thump (Filtered Noise)
-        const punchNoise = this.audioContext.createBufferSource();
-        const punchBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.08, this.audioContext.sampleRate);
-        const punchOutput = punchBuffer.getChannelData(0);
-        for (let i = 0; i < punchBuffer.length; i++) {
-            punchOutput[i] = (Math.random() * 2 - 1);
+        if (cutoff) {
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass';
+            lp.frequency.setValueAtTime(cutoff, t);
+            osc.connect(lp);
+            lp.connect(g);
+        } else {
+            osc.connect(g);
         }
-        punchNoise.buffer = punchBuffer;
-        const punchFilter = this.audioContext.createBiquadFilter();
-        punchFilter.type = 'lowpass';
-        punchFilter.frequency.setValueAtTime(300, now); // Low-pass for thump
-        punchFilter.Q.value = 1;
-        const punchGain = this.audioContext.createGain();
-        punchNoise.connect(punchFilter);
-        punchFilter.connect(punchGain);
-        punchGain.connect(this.audioContext.destination);
-        punchGain.gain.setValueAtTime(0, now);
-        punchGain.gain.linearRampToValueAtTime(0.7, now + 0.005); // Increased from 0.4
-        punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-        punchNoise.start(now);
-        punchNoise.stop(now + 0.08);
+        g.connect(bus);
 
-        // 2. Cascading Sweeping Tones
-        const sweepFrequencies = [1200, 900, 600];
-        const sweepStartDelay = 0.03;
+        const v = Math.max(0.0002, peak * this._rand(0.9, 1.1)); // +/-10% velocity
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(v, t + attack);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
-        sweepFrequencies.forEach((startFreq, i) => {
-            const osc = this.audioContext.createOscillator();
-            const gain = this.audioContext.createGain();
-            osc.connect(gain);
-            gain.connect(this.audioContext.destination);
-
-            osc.type = 'triangle'; // Clearer than sine, less harsh than saw
-            const startTime = now + sweepStartDelay + (i * 0.05);
-            osc.frequency.setValueAtTime(startFreq, startTime);
-            osc.frequency.exponentialRampToValueAtTime(startFreq * 0.3, startTime + totalDuration * 0.7);
-
-            gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.35, startTime + 0.01); // Softer than punch, Increased from 0.2
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + totalDuration * 0.8);
-
-            osc.start(startTime);
-            osc.stop(startTime + totalDuration);
-        });
+        osc.start(t);
+        osc.stop(t + dur + 0.03);
     },
 
+    // Chip edit — fires on EVERY chip update, so it is deliberately kept
+    // near-silent: a single soft, short, low-mid blip. Just enough tactile
+    // confirmation to register, quiet enough to never fatigue.
     async playChipSound() {
         if (!await this._ensureAudioContextRunning()) return;
-        const now = this.audioContext.currentTime;
-        const duration = 0.07; // Slightly longer for more body
-
-        const mainOscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        const filterNode = this.audioContext.createBiquadFilter();
-
-        mainOscillator.connect(filterNode);
-        filterNode.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-
-        mainOscillator.type = 'square'; 
-        mainOscillator.frequency.setValueAtTime(2400, now); // Start a bit higher
-        mainOscillator.frequency.exponentialRampToValueAtTime(1600, now + duration * 0.3);
-        mainOscillator.frequency.exponentialRampToValueAtTime(2800, now + duration * 0.6);
-        mainOscillator.frequency.exponentialRampToValueAtTime(1200, now + duration);
-
-        filterNode.type = 'bandpass';
-        filterNode.frequency.setValueAtTime(2200, now); 
-        filterNode.frequency.exponentialRampToValueAtTime(1800, now + duration * 0.7);
-        filterNode.Q.value = 3.5; 
-
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.45, now + 0.005); // Slightly softer attack, Increased from 0.25
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-        mainOscillator.start(now);
-        mainOscillator.stop(now + duration);
+        const s = this._scale;
+        const notes = [s.E4, s.G4, s.A4];
+        const f = notes[Math.floor(Math.random() * notes.length)];
+        this._note(f, { dur: 0.06, peak: 0.25, attack: 0.006, type: 'sine', cutoff: 1600 });
     },
 
+    // New player joins — a gentle rising two-note motif. `frequency` is
+    // retained for API compatibility (old signature) but the pitch now
+    // comes from the shared palette so it matches every other cue.
+    async playPopSound(frequency = 1000) {
+        if (!await this._ensureAudioContextRunning()) return;
+        const s = this._scale;
+        this._note(s.G4, { dur: 0.12, peak: 0.50, attack: 0.008, type: 'sine', cutoff: 2200 });
+        this._note(s.C5, { delay: 0.075, dur: 0.16, peak: 0.45, attack: 0.010, type: 'sine', cutoff: 2600 });
+    },
+
+    // UI click (theme switch / reopen game) — short, soft, rounded.
+    // No pitch-sweep "tick"; this can repeat as the user browses themes.
+    async playUIClickSound() {
+        if (!await this._ensureAudioContextRunning()) return;
+        this._note(this._scale.A4, { dur: 0.045, peak: 0.35, attack: 0.005, type: 'triangle', cutoff: 1800 });
+    },
+
+    // Lobby created / calculate pressed — a warm ascending three-note
+    // chime with a soft octave shimmer on top. Replaces the old harsh
+    // square + sawtooth "cash register" metallic clang.
+    async playKachingSound() {
+        if (!await this._ensureAudioContextRunning()) return;
+        const s = this._scale;
+        [[s.C4, 0], [s.E4, 0.07], [s.G4, 0.14]].forEach(([f, d]) =>
+            this._note(f, { delay: d, dur: 0.28, peak: 0.60, attack: 0.010, type: 'sine', cutoff: 2600 }));
+        this._note(s.C5, { delay: 0.14, dur: 0.5, peak: 0.28, attack: 0.020, type: 'sine', cutoff: 3000 });
+    },
+
+    // Reset game — a gentle descending motif that reads as "clearing".
+    // Replaces the old filtered-noise thump + sawtooth-ish sweeps.
+    async playResetSound() {
+        if (!await this._ensureAudioContextRunning()) return;
+        const s = this._scale;
+        [[s.G4, 0], [s.E4, 0.08], [s.C4, 0.16]].forEach(([f, d]) =>
+            this._note(f, { delay: d, dur: 0.30, peak: 0.55, attack: 0.012, type: 'triangle', cutoff: 1800 }));
+    },
+
+    // Payout reveal — the once-a-night celebration, so it is allowed the
+    // most expression: a warm ascending pentatonic arpeggio with a soft
+    // bell shimmer that lingers. Still peaks under the master ceiling.
     async playPayoutSound() {
         if (!await this._ensureAudioContextRunning()) return;
-        const now = this.audioContext.currentTime;
-        
-        // 1. Brighter, more resonant "Ching" (similar to Kaching's ring but distinct)
-        const baseChingFreq = 2600;
-        const chingGain = this.audioContext.createGain();
-        chingGain.connect(this.audioContext.destination);
-        chingGain.gain.setValueAtTime(0, now);
-        chingGain.gain.linearRampToValueAtTime(0.7, now + 0.015); // Increased from 0.4
-        chingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5); // Fairly long ring
-
-        const chingFreqs = [baseChingFreq, baseChingFreq * 1.6, baseChingFreq * 2.5]; // Different harmonic series
-        const chingAmps = [1, 0.35, 0.2];
-
-        chingFreqs.forEach((freq, index) => {
-            const osc = this.audioContext.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, now);
-            osc.frequency.exponentialRampToValueAtTime(freq * 0.97, now + 0.45);
-            const partialGain = this.audioContext.createGain();
-            partialGain.gain.value = chingAmps[index];
-            osc.connect(partialGain);
-            partialGain.connect(chingGain);
-            osc.start(now);
-            osc.stop(now + 0.5);
-        });
-        
-        // 2. Mechanical "Register" sounds - more defined and distinct
-        const registerSoundCount = 2; // Fewer, but more distinct
-        const registerSoundInterval = 0.06;
-        const registerStartTime = now + 0.1; // Start after the initial ching begins
-
-        for (let i = 0; i < registerSoundCount; i++) {
-            const mechOsc = this.audioContext.createOscillator();
-            const mechGain = this.audioContext.createGain();
-            const mechFilter = this.audioContext.createBiquadFilter();
-
-            mechOsc.connect(mechFilter);
-            mechFilter.connect(mechGain);
-            mechGain.connect(this.audioContext.destination);
-
-            mechOsc.type = 'sawtooth';
-            mechFilter.type = 'bandpass'; // Bandpass for more focused mechanical sound
-            mechFilter.frequency.setValueAtTime(900 - i * 150, registerStartTime + (i * registerSoundInterval));
-            mechFilter.Q.value = 4;
-
-            mechOsc.frequency.setValueAtTime(300 - i * 40, registerStartTime + (i * registerSoundInterval));
-            mechOsc.frequency.exponentialRampToValueAtTime(200 - i * 30, registerStartTime + (i * registerSoundInterval) + 0.04);
-            
-            mechGain.gain.setValueAtTime(0, registerStartTime + (i * registerSoundInterval));
-            mechGain.gain.linearRampToValueAtTime(0.35, registerStartTime + (i * registerSoundInterval) + 0.003); // Increased from 0.2
-            mechGain.gain.exponentialRampToValueAtTime(0.001, registerStartTime + (i * registerSoundInterval) + 0.04);
-            
-            mechOsc.start(registerStartTime + (i * registerSoundInterval));
-            mechOsc.stop(registerStartTime + (i * registerSoundInterval) + 0.04);
-        }
+        const s = this._scale;
+        [[s.C4, 0], [s.E4, 0.09], [s.G4, 0.18], [s.A4, 0.27], [s.C5, 0.36]].forEach(([f, d]) =>
+            this._note(f, { delay: d, dur: 0.40, peak: 0.75, attack: 0.012, type: 'sine', cutoff: 3000 }));
+        // Shimmering bell partials on top, soft and lingering.
+        this._note(s.E5, { delay: 0.36, dur: 0.9, peak: 0.34, attack: 0.030, type: 'sine', cutoff: 3500 });
+        this._note(s.G5, { delay: 0.42, dur: 0.8, peak: 0.22, attack: 0.030, type: 'sine', cutoff: 3500 });
     },
 
+    // Remove player — a soft descending two-note "away" gesture. Replaces
+    // the old noise puff + 300->70Hz buzz drop.
     async playRemoveSound() {
         if (!await this._ensureAudioContextRunning()) return;
-        const now = this.audioContext.currentTime;
-        const duration = 0.22;
-        
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        const filterNode = this.audioContext.createBiquadFilter(); // Add filter for tone shaping
-        
-        // Short, slightly percussive noise puff at the start
-        const puff = this.audioContext.createBufferSource();
-        const puffBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.03, this.audioContext.sampleRate);
-        const puffOutput = puffBuffer.getChannelData(0);
-        for (let i = 0; i < puffBuffer.length; i++) {
-            puffOutput[i] = (Math.random() * 2 - 1) * 0.1; // Softer puff
-        }
-        puff.buffer = puffBuffer;
-        const puffGain = this.audioContext.createGain();
-        const puffFilter = this.audioContext.createBiquadFilter();
-        puffFilter.type = 'highpass';
-        puffFilter.frequency.setValueAtTime(1000, now);
-        puff.connect(puffFilter);
-        puffFilter.connect(puffGain);
-        puffGain.connect(this.audioContext.destination);
-        puffGain.gain.setValueAtTime(0, now);
-        puffGain.gain.linearRampToValueAtTime(0.35, now + 0.002); // Increased from 0.2
-        puffGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
-        puff.start(now);
-        puff.stop(now + 0.03);
+        const s = this._scale;
+        this._note(s.A4, { dur: 0.14, peak: 0.50, attack: 0.008, type: 'triangle', cutoff: 1600 });
+        this._note(s.E4, { delay: 0.08, dur: 0.22, peak: 0.45, attack: 0.010, type: 'triangle', cutoff: 1400 });
+    },
 
-        oscillator.connect(filterNode);
-        filterNode.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-        
-        oscillator.type = 'triangle'; 
-        filterNode.type = 'lowpass'; // Smooth out the triangle a bit
-        filterNode.frequency.setValueAtTime(800, now + 0.01);
-        filterNode.frequency.exponentialRampToValueAtTime(400, now + 0.01 + duration * 0.7);
-
-        oscillator.frequency.setValueAtTime(300, now + 0.01);
-        oscillator.frequency.exponentialRampToValueAtTime(70, now + 0.01 + duration);
-        
-        gainNode.gain.setValueAtTime(0, now + 0.01);
-        gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01 + 0.01); // Increased from 0.3
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.01 + duration);
-        
-        oscillator.start(now + 0.01);
-        oscillator.stop(now + 0.01 + duration);
+    // Payouts finalized ("Payouts Sent") — a rare confirming rising motif.
+    // The call site in app.js has always been guarded by a typeof check but
+    // this method never existed, so it was silent; now it's implemented as a
+    // gentle success chime (additive, no existing call site changes).
+    async playSuccessSound() {
+        if (!await this._ensureAudioContextRunning()) return;
+        const s = this._scale;
+        [[s.C4, 0], [s.G4, 0.08], [s.C5, 0.16]].forEach(([f, d]) =>
+            this._note(f, { delay: d, dur: 0.32, peak: 0.60, attack: 0.012, type: 'sine', cutoff: 2800 }));
     }
-}; 
+};

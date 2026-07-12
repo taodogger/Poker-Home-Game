@@ -31,8 +31,17 @@ tbody td {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* Fixed-width digits so chip counts don't shift as they change */
+tbody td.initial-chips,
+tbody td.chip-input,
+.chip-input,
+tr.totals-row td {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+}
+
 tbody tr {
-    transition: background-color 0.2s ease-in-out;
+    transition: background-color var(--transition-fast);
 }
 
 tbody tr:hover {
@@ -93,6 +102,7 @@ tbody tr:last-child td:last-child {
     font-weight: 600;
     color: var(--label-color); /* Default from :root */
     font-size: 0.95rem;
+    transition: color var(--transition-fast);
 }
 
 /* Header center section */
@@ -125,7 +135,7 @@ input { /* General input for others if not specifically typed */
     background: var(--input-background); /* Default from :root */
     border-radius: var(--border-radius-md);
     color: var(--input-text); /* Default from :root */
-    transition: all var(--transition-standard);
+    transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
     height: 48px; /* Consistent height */
     box-sizing: border-box;
 }
@@ -140,11 +150,18 @@ input[type="number"] {
     border-radius: var(--border-radius-md);
     color: var(--input-text); /* Default from :root */
     font-size: 1rem; /* Base font size */
-    transition: all var(--transition-standard);
+    transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
     height: 48px; /* Consistent height */
     box-sizing: border-box;
 }
 
+/* Tabular figures so numeric fields don't jitter as digits change */
+input[type="number"] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+}
+
+/* Focus: instant border + ring feedback, no positional shift (this input is used often) */
 input[type="text"]:focus,
 input[type="number"]:focus,
 input:focus { /* General focus */
@@ -152,12 +169,10 @@ input:focus { /* General focus */
     border-color: var(--main-color);
     background: rgba(10, 10, 10, 0.8); /* Darker background on focus */
     box-shadow: 0 0 0 3px rgba(var(--main-color-rgb), 0.2);
-    transform: translateY(-2px);
     color: white; /* Ensure text is white on focus */
 }
 
 .form-group:focus-within label {
-    transform: translateY(-2px); /* Example: subtle lift for label */
     color: var(--main-color); /* Highlight label color */
 }
 
@@ -185,9 +200,10 @@ input:focus { /* General focus */
     border: none;
     color: white;
     cursor: pointer;
-    transition: all var(--transition-bounce); /* Use bounce for pop */
+    /* Specific properties only; press feedback wants a fast ease-out, never `all` */
+    transition: transform var(--duration-press) var(--ease-out), box-shadow var(--transition-fast), filter var(--transition-fast);
     text-align: center;
-    box-shadow: var(--button-shadow);
+    box-shadow: var(--button-shadow), var(--top-light);
     position: relative;
     overflow: hidden;
 }
@@ -197,31 +213,33 @@ input:focus { /* General focus */
     font-size: 1.1em;
 }
 
-.poker-button:active {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(var(--main-color-rgb), 0.3);
+.poker-button:hover {
+    box-shadow: var(--button-shadow-hover), var(--top-light);
+    filter: brightness(1.06);
 }
 
-.poker-button:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--button-shadow-hover);
-    filter: brightness(1.1);
+/* Instant, physical press feedback */
+.poker-button:active {
+    transform: scale(0.97);
+    box-shadow: var(--button-shadow), var(--top-light);
+    filter: brightness(0.98);
 }
 
 /* Specific button overrides */
 .reset-button {
     background: linear-gradient(135deg, #4a5568, #2d3748); /* Original reset style */
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--button-shadow), var(--top-light);
     color: white; /* Ensure text is white for this specific button */
 }
 
 .reset-button:hover {
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--button-shadow-hover), var(--top-light);
     background: linear-gradient(135deg, #5a6578, #3d4758); /* Slightly lighter hover */
 }
 
 .reset-button:active {
-    box-shadow: 0 5px 15px rgba(var(--main-color-rgb), 0.3); /* Or a neutral shadow */
+    transform: scale(0.97);
+    box-shadow: var(--button-shadow), var(--top-light);
 }
 
 /* Button Group for ratio and reset */
@@ -236,16 +254,16 @@ input:focus { /* General focus */
 }
 
 .button-group .reset-button {
-    background: linear-gradient(135deg, #e53e3e, #c53030); 
+    background: linear-gradient(135deg, #e53e3e, #c53030);
     color: white;
-    font-weight: 700; 
-    box-shadow: 0 6px 15px rgba(229, 62, 62, 0.3); 
+    font-weight: 700;
+    box-shadow: var(--button-shadow), var(--top-light);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .button-group .reset-button:hover {
-    background: linear-gradient(135deg, #c53030, #9b2c2c); 
-    box-shadow: 0 10px 20px rgba(229, 62, 62, 0.4); 
+    background: linear-gradient(135deg, #c53030, #9b2c2c);
+    box-shadow: var(--button-shadow-hover), var(--top-light);
 }
 
 /* Game Control Buttons (Start, Simulate, End) */
@@ -267,11 +285,15 @@ input:focus { /* General focus */
     text-transform: uppercase;
     letter-spacing: 2px;
     border-radius: var(--border-radius-md);
-    transition: all var(--transition-standard);
+    transition: transform var(--duration-press) var(--ease-out), box-shadow var(--transition-fast), filter var(--transition-fast);
     position: relative;
     overflow: hidden;
     border: none;
     cursor: pointer;
+}
+
+.action-button:active {
+    transform: scale(0.97);
 }
 
 .action-button::before { /* Shine effect */
@@ -287,7 +309,7 @@ input:focus { /* General focus */
         rgba(255, 255, 255, 0.3),
         transparent
     );
-    transition: 0.5s;
+    transition: left 0.5s var(--ease-out);
 }
 
 .action-button:hover::before {
@@ -337,14 +359,17 @@ input:focus { /* General focus */
     padding: 0 10px;
     cursor: pointer;
     line-height: 1; /* Ensure vertical alignment */
-    transition: all 0.2s ease-in-out;
-    text-shadow: 0 0 5px rgba(255, 100, 100, 0.5);
+    transition: color var(--transition-fast), transform var(--transition-fast);
     font-weight: bold; /* Make the 'X' bolder */
 }
 
 .remove-player-btn:hover {
     color: rgb(255, 50, 50);
     transform: scale(1.2);
+}
+
+.remove-player-btn:active {
+    transform: scale(0.92);
 }
 
 /* Make sure the hover effect on the button doesn't get a weird overlay from parent hover states */
@@ -405,12 +430,16 @@ input:focus { /* General focus */
     cursor: pointer;
     max-width: 300px;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .join-url:hover {
     background: rgba(0, 0, 0, 0.4);
-    /* border-color: var(--main-color); /* If it had a border */
-    transform: translateY(-2px);
+    transform: translateY(-1px);
+}
+
+.join-url:active {
+    transform: scale(0.99);
 }
 
 .click-to-copy {
@@ -419,7 +448,7 @@ input:focus { /* General focus */
     font-size: 0.9rem;
     margin-top: var(--spacing-xs);
     opacity: 0.8;
-    transition: all var(--transition-standard);
+    transition: color var(--transition-fast), opacity var(--transition-fast);
 }
 
 .join-url:hover .click-to-copy {
@@ -678,6 +707,7 @@ input:focus { /* General focus */
     position: relative;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     background: linear-gradient(135deg, var(--swatch-main-color, #ccc) 70%, var(--swatch-secondary-color, #aaa) 70%);
+    transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .theme-swatch:hover {
@@ -686,10 +716,14 @@ input:focus { /* General focus */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
+.theme-swatch:active {
+    transform: scale(1.05);
+}
+
 .theme-swatch.active {
     border-color: white;
     transform: scale(1.1);
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3); 
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .theme-random-btn {
@@ -698,7 +732,7 @@ input:focus { /* General focus */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.2s ease-in-out;
+    transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
     position: relative;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     background: transparent;
@@ -715,6 +749,10 @@ input:focus { /* General focus */
     transform: scale(1.15) rotate(-15deg);
     border-color: rgba(255, 255, 255, 0.6);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theme-random-btn:active {
+    transform: scale(1.02) rotate(-15deg);
 }
 
 /* Style poker buttons within the payout calculator for consistent width */

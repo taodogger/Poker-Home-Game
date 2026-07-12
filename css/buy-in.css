@@ -6,16 +6,13 @@ body.buy-in-body {
     justify-content: center;
     padding: 3rem 1.5rem;
     font-family: var(--font-primary, 'SF Pro Rounded', sans-serif);
-    overflow: hidden; 
-    background: var(--vibrant-gradient);
-    background-size: 200% 200%;
-    animation: vibrantBodyGradientShift 25s ease infinite alternate;
-}
-
-@keyframes vibrantBodyGradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    overflow: hidden;
+    /* Modernized: dark base with soft themed accent glows instead of a loud moving neon wash */
+    background:
+        radial-gradient(115% 75% at 50% -10%, rgba(var(--main-color-rgb), 0.22), transparent 62%),
+        radial-gradient(100% 60% at 50% 112%, rgba(var(--secondary-color-rgb), 0.12), transparent 60%),
+        var(--background-color, #0a0a0a);
+    background-attachment: fixed;
 }
 
 .buy-in-body .container {
